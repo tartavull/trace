@@ -1,0 +1,3 @@
+[submodule "trace/thirdparty/neuroglancer"]
+	path = trace/thirdparty/neuroglancer
+	url = https://github.com/google/neuroglancer

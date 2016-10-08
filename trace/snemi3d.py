@@ -33,8 +33,7 @@ def maybe_create_hdf5(folder, filename):
         f.create_dataset('main',data=arr)
 
 def maybe_create_dataset():
-  current_dir = os.path.dirname(os.path.abspath(__file__))
-  snemi3d_dir = current_dir + '/snemi3d/'
+  snemi3d_dir = folder()
   if not os.path.exists(snemi3d_dir):
     os.mkdir(snemi3d_dir)
     
@@ -45,6 +44,11 @@ def maybe_create_dataset():
   maybe_create_hdf5(snemi3d_dir, "test-input.zip")
   maybe_create_hdf5(snemi3d_dir, "train-labels.zip")
   maybe_create_hdf5(snemi3d_dir, "train-input.zip")
+
+def folder():
+  current_dir = os.path.dirname(os.path.abspath(__file__))
+  snemi3d_dir = current_dir + '/snemi3d/'
+  return snemi3d_dir
 
 if __name__ == '__main__':
   maybe_create_dataset()
