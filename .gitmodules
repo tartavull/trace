@@ -1,3 +1,6 @@
 [submodule "trace/thirdparty/neuroglancer"]
 	path = trace/thirdparty/neuroglancer
 	url = https://github.com/google/neuroglancer
+[submodule "trace/thirdparty/DataProvider"]
+	path = trace/thirdparty/DataProvider
+	url = https://github.com/torms3/DataProvider

@@ -86,3 +86,7 @@ dist: clean ## builds source and wheel package
 
 install: clean ## install the package to the active Python's site-packages
 	python setup.py install
+
+submodules:
+	cd $(PWD)/trace/thirdparty/neuroglancer/python &&	python setup.py install
+	cd $(PWD)/trace/thirdparty/DataProvider/python && make
