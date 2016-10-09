@@ -3,6 +3,7 @@ from __future__ import print_function
 import os
 import sys
 import webbrowser
+import subprocess
 
 import h5py
 import neuroglancer
@@ -93,5 +94,23 @@ def add_affinities(folder, filename, viewer):
     except IOError:
         print(filename+'.h5 not found')
 
+
+
+@cli.command()
+@click.argument('dataset', type=click.Choice(['train', 'test']), default='test')
+@click.option('--high', type=float, default=0.9)
+@click.option('--low', type=float, default=0.3)
+@click.option('--dust', type=int, default=250)
+def watershed(dataset, high, low, dust):
+    """
+    TODO Explain what each argument is, dust is currently ignored
+    """
+    curent_dir = os.path.dirname(os.path.abspath(__file__))
+    subprocess.call(["julia",
+                     curent_dir+"/thirdparty/watershed/watershed.jl",
+                     snemi3d.folder()+dataset+"-affinities.h5",
+                     snemi3d.folder()+dataset+"-labels.h5",
+                     str(high),
+                     str(low)])
 if __name__ == '__main__':
     cli()

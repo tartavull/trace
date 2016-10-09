@@ -8,6 +8,9 @@ test_trace
 Tests for `trace` module.
 """
 
+import os.path
+import os
+
 import pytest
 
 from contextlib import contextmanager
@@ -16,8 +19,7 @@ from click.testing import CliRunner
 from trace import trace
 from trace import cli
 from trace import snemi3d
-
-import os.path
+from trace import augmentation
 
 class TestTrace(object):
 
@@ -41,6 +43,19 @@ class TestTrace(object):
         runner.invoke(cli.cli,['download'])
         assert os.path.exists(snemi3d.folder()+'/test-input.h5')
 
+    def test_watershed(self):
+        """
+        Create affinities from train-labels and save them as
+        test-affinities.h5
+        And then run wateshed on it using the cli
+        """
+        snemi3d.maybe_create_dataset()
+        augmentation.maybe_create_affinities('train')
+        os.rename(snemi3d.folder()+"train-affinities.h5",snemi3d.folder()+"test-affinities.h5")
+        runner = CliRunner()
+        result = runner.invoke(cli.cli,['watershed'])
+        assert result.exit_code == 0
+        assert os.path.exists(snemi3d.folder()+'test-labels.h5')
     @classmethod
     def teardown_class(cls):
         pass

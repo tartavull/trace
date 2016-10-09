@@ -4,3 +4,6 @@
 [submodule "trace/thirdparty/DataProvider"]
 	path = trace/thirdparty/DataProvider
 	url = https://github.com/torms3/DataProvider
+[submodule "trace/thirdparty/watershed"]
+	path = trace/thirdparty/watershed
+	url = https://github.com/tartavull/watershed

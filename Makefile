@@ -90,3 +90,5 @@ install: clean ## install the package to the active Python's site-packages
 submodules:
 	cd $(PWD)/trace/thirdparty/neuroglancer/python &&	python setup.py install
 	cd $(PWD)/trace/thirdparty/DataProvider/python && make && mv ../../trace/thirdparty/DataProvider/python/warping/_warping.so ./warping/ && rm -rf ../../trace
+	julia -e 'Pkg.add("HDF5")'
+	julia -e 'Pkg.add("DataStructures")'

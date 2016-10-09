@@ -56,5 +56,5 @@ coverage.xml
 target/
 
 #dataset folders
-trace/snemi3d
+trace/snemi3d/*
 
