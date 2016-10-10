@@ -2,6 +2,7 @@ click>=6.6
 tifffile
 h5py
 cython>=0.22.1
+tensorflow
 
 #required by DataProvider
 matplotlib 

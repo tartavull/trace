@@ -11,7 +11,6 @@ import numpy as np
 import click
 
 import snemi3d
-import augmentation
 
 @click.group()
 def cli():
@@ -33,6 +32,7 @@ def visualize(dataset, aff):
     neuroglancer.set_static_content_source(url='https://neuroglancer-demo.appspot.com')
     viewer = neuroglancer.Viewer(voxel_size=[6, 6, 30])
     if aff:
+        import augmentation
         augmentation.maybe_create_affinities(dataset)
         add_affinities(snemi3d_dir, dataset+'-affinities', viewer)
     else:
@@ -112,5 +112,23 @@ def watershed(dataset, high, low, dust):
                      snemi3d.folder()+dataset+"-labels.h5",
                      str(high),
                      str(low)])
+
+@cli.command()
+def train():
+    """
+    Train an N4 models to predict affinities
+    """
+    import trace
+    trace.train()
+
+
+@cli.command()
+def predict():
+    """
+    Realods a model previously trained
+    """
+    import trace
+    trace.predict()
+
 if __name__ == '__main__':
     cli()

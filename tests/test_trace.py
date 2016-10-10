@@ -56,6 +56,14 @@ class TestTrace(object):
         result = runner.invoke(cli.cli,['watershed'])
         assert result.exit_code == 0
         assert os.path.exists(snemi3d.folder()+'test-labels.h5')
+
+    def test_train(self):
+        """      
+        Train model for 100 steps and verify a model was created
+        """
+        trace.train(100)
+        assert os.path.exists('/tmp/snemi3d/model.ckpt')
+
     @classmethod
     def teardown_class(cls):
         pass
