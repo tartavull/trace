@@ -12,6 +12,7 @@ Trace
 
 Map your brain with Deep Learning
 
+Blog post https://medium.com/p/map-your-brain-with-deep-learning-17737d36bf80
 
 * Free software: MIT license
 * Documentation: https://tartavull.github.io/trace

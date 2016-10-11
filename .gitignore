@@ -57,4 +57,7 @@ target/
 
 #dataset folders
 trace/snemi3d/*
+trace/thirdparty/neuroglancer
+trace/thirdparty/watershed
+trace/thirdparty/DataProvider
 
