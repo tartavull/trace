@@ -6,7 +6,7 @@ import h5py
 import numpy as np
 
 import snemi3d
-from thirdparty.DataProvider.python.data_provider import VolumeDataProvider
+from dataprovider.data_provider import VolumeDataProvider
 
 def set_path_to_config(dataset):
     config = RawConfigParser()
