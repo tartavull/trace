@@ -1,4 +1,5 @@
 from __future__ import print_function
+from __future__ import division
 from ConfigParser import RawConfigParser
 import os.path
 
@@ -46,31 +47,21 @@ def maybe_create_affinities(dataset):
         f.create_dataset('main',data=affinities)
 
 
-def batch_iterator(batch_size):
+def batch_iterator(fov, output_patch, input_patch):
     dataset = 'train'
-    net_spec = {'label':(1,95,95),'input':(1,95,95)}
+    net_spec = {'label':(1,input_patch,input_patch),'input':(1,input_patch,input_patch)}
     params = {'augment': [] , 'drange':[0]}
     set_path_to_config(dataset)
     spec = snemi3d.folder()+dataset+'.spec'
     dp = VolumeDataProvider(spec, net_spec, params)
 
     while True:
-        inputs = []
-        labels = []
-        for i in xrange(batch_size):
-            sample = dp.random_sample()
-            inpt, label = sample['input'], sample['label']
-            inpt = inpt.reshape(95,95,1)
-            label = label[0:2,0,47:48,47:48].reshape(2) #central pixel, only x,y affinities
-
-            inputs.append(inpt)
-            labels.append(label)
-        yield inputs, labels
-
-
-def secuential_iterator(batch_size):
-    with h5py.File(snemi3d.folder()+'test-input.h5','r') as input_file:
-        with h5py.File(snemi3d.folder()+'test-affinities.h5','w') as output_file:
-            output_file.create_dataset('main', shape=input_file['main'].shape)
+        sample = dp.random_sample()
+        inpt, label = sample['input'], sample['label']
+        inpt = inpt.reshape(1,input_patch,input_patch,1)
+        label = label[0:2,0,fov//2:fov//2+output_patch,fov//2:fov//2+output_patch]
+        label = label.reshape(1, output_patch,output_patch,2) #central output patch, only x,y affinities
+        yield inpt, label
+        
 if __name__ == '__main__':
-    secuential_iterator(1)
+    batch_iterator(1).next()
