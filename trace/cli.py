@@ -30,6 +30,7 @@ def visualize(dataset, aff):
     """
     snemi3d_dir = snemi3d.folder()
     neuroglancer.set_static_content_source(url='https://neuroglancer-demo.appspot.com')
+    neuroglancer.set_server_bind_address(bind_address='172.17.0.2', bind_port=4125)
     viewer = neuroglancer.Viewer(voxel_size=[6, 6, 30])
     if aff:
         import augmentation
