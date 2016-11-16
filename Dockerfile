@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         tcl8.6-dev \
         tk8.6-dev \
         python-tk \
+        screen \
         && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
@@ -24,6 +25,15 @@ RUN add-apt-repository ppa:staticfloat/juliareleases && \
         add-apt-repository ppa:staticfloat/julia-deps && \
         apt-get update && \
         apt-get install -y julia
+
+# Install some convenience tools
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        screen \
+        tmux \
+        vim \
+        && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # Add some pip dependencies
 RUN pip --no-cache-dir install \
