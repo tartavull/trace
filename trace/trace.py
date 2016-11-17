@@ -95,13 +95,13 @@ def create_simple_network(inpt, out, learning_rate=0.1):
 
     return Net()
 
-def create_network(inpt, out, learning_rate=0.05):
+def create_network(inpt, out, learning_rate=0.0001):
     class Net:
         # layer 0
         image = tf.placeholder(tf.float32, shape=[1, inpt, inpt, 1])
         target = tf.placeholder(tf.float32, shape=[1, out, out, 2])
-        targetImage = tf.image.resize_images(target[:,:out//2,:out//2,:], (out, out))
-        input_summary = tf.image_summary('input image', image[:,FOV//2:FOV//2+out,FOV//2:FOV//2+out,:], method=1)
+        targetImage = tf.image.resize_images(target[:,:out//2,:out//2,:], (out, out), method=1)
+        input_summary = tf.image_summary('input image', image[:,FOV//2:FOV//2+out,FOV//2:FOV//2+out,:])
         target_x_summary = tf.image_summary('target x affinities', targetImage[:,:,:,:1])
         target_y_summary = tf.image_summary('target y affinities', targetImage[:,:,:,1:])
 
@@ -190,28 +190,20 @@ def create_network(inpt, out, learning_rate=0.05):
 
         summary_op = tf.merge_all_summaries()
 
-        batch = tf.Variable(0)
-        decaying_rate = tf.train.exponential_decay(
-                learning_rate,
-                batch,
-                1000,
-                0.92,
-                staircase=True)
-
-        train_step = tf.train.AdamOptimizer(learning_rate).minimize(cross_entropy, global_step=batch)
+        train_step = tf.train.AdamOptimizer(learning_rate).minimize(cross_entropy)
        
         # Add ops to save and restore all the variables.
         saver = tf.train.Saver()
 
     return Net()
 
-def train(n_iterations=30000):
+def train(n_iterations=200000):
 
     net = create_network(INPT, OUTPT)
     print ('Run tensorboard to visualize training progress')
     with tf.Session() as sess:
         summary_writer = tf.train.SummaryWriter(
-                       snemi3d.folder()+'tmp/longTrain/', graph=sess.graph)
+                       snemi3d.folder()+'tmp/longTrain3/', graph=sess.graph)
 
         sess.run(tf.initialize_all_variables())
         for step, (inputs, affinities) in enumerate(batch_iterator(FOV,OUTPT,INPT)):
@@ -229,7 +221,7 @@ def train(n_iterations=30000):
 
             if step % 1000 == 0:
                 # Save the variables to disk.
-                save_path = net.saver.save(sess, snemi3d.folder()+"tmp/longTrain/model.ckpt")
+                save_path = net.saver.save(sess, snemi3d.folder()+"tmp/longTrain3/model.ckpt")
                 print("Model saved in file: %s" % save_path)
 
             if step == n_iterations:
@@ -248,7 +240,7 @@ def predict():
             net = create_network(inputShape, outputShape)
             with tf.Session() as sess:
                 # Restore variables from disk.
-                net.saver.restore(sess, snemi3d.folder()+"tmp/longTrain/model.ckpt")
+                net.saver.restore(sess, snemi3d.folder()+"tmp/longTrain3/model.ckpt")
                 print("Model restored.")
 
                 #TODO pad the image with zeros so that the ouput covers the whole dataset
@@ -256,8 +248,10 @@ def predict():
                     print ('z: {} of {}'.format(z,inpt.shape[0]))
                     pred = sess.run(net.sigmoid_prediction,
                             feed_dict={net.image: inpt[z].reshape(1, inputShape, inputShape, 1)})
-                    pred = pred.reshape(2, outputShape, outputShape)
+                    reshapedPred = np.zeros(shape=(2, outputShape, outputShape))
+                    reshapedPred[0] = pred[0,:,:,0].reshape(outputShape, outputShape)
+                    reshapedPred[1] = pred[0,:,:,1].reshape(outputShape, outputShape)
                     out[0:2,
                         z,
                         FOV//2:FOV//2+outputShape,
-                        FOV//2:FOV//2+outputShape] = pred
+                        FOV//2:FOV//2+outputShape] = reshapedPred
