@@ -62,6 +62,32 @@ def batch_iterator(fov, output_patch, input_patch):
         label = label[0:2,0,fov//2:fov//2+output_patch,fov//2:fov//2+output_patch]
         label = label.reshape(1, output_patch,output_patch,2) #central output patch, only x,y affinities
         yield inpt, label
+
+def alternating_example_iterator(fov, output_patch, input_patch):
+    dataset = 'train'
+    net_spec = {'label':(1,input_patch,input_patch),'input':(1,input_patch,input_patch)}
+    params = {'augment': [] , 'drange':[0]}
+    set_path_to_config(dataset)
+    spec = snemi3d.folder()+dataset+'.spec'
+    dp = VolumeDataProvider(spec, net_spec, params)
+
+    desiredLabel = 1
+    while True:
+        sample = dp.random_sample()
+        inpt, label = sample['input'], sample['label']
+        label = label[0:2,0,fov//2:fov//2+output_patch,fov//2:fov//2+output_patch]
+        if desiredLabel == 0 and label[0,0,0] != 0 and label[1,0,0] != 0:
+            continue
+        elif desiredLabel == 1 and (label[0,0,0] == 0 or label[1,0,0] == 0):
+            continue
+        if desiredLabel == 1:
+            desiredLabel = 0
+        else:
+            desiredLabel = 1
+
+        label = label.reshape(1, output_patch,output_patch,2) #central output patch, only x,y affinities
+        inpt = inpt.reshape(1,input_patch,input_patch,1)
+        yield inpt, label
         
 if __name__ == '__main__':
     batch_iterator(1).next()
