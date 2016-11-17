@@ -101,7 +101,7 @@ def create_network(inpt, out, learning_rate=0.05):
         image = tf.placeholder(tf.float32, shape=[1, inpt, inpt, 1])
         target = tf.placeholder(tf.float32, shape=[1, out, out, 2])
         targetImage = tf.image.resize_images(target[:,:out//2,:out//2,:], (out, out))
-        input_summary = tf.image_summary('input image', image[:,FOV//2:FOV//2+out,FOV//2:FOV//2+out,:], method=ResizeMethod.NEAREST_NEIGHBOR)
+        input_summary = tf.image_summary('input image', image[:,FOV//2:FOV//2+out,FOV//2:FOV//2+out,:], method=1)
         target_x_summary = tf.image_summary('target x affinities', targetImage[:,:,:,:1])
         target_y_summary = tf.image_summary('target y affinities', targetImage[:,:,:,1:])
 
@@ -211,7 +211,7 @@ def train(n_iterations=30000):
     print ('Run tensorboard to visualize training progress')
     with tf.Session() as sess:
         summary_writer = tf.train.SummaryWriter(
-                       snemi3d.folder()+'tmp/complex3/', graph=sess.graph)
+                       snemi3d.folder()+'tmp/longTrain/', graph=sess.graph)
 
         sess.run(tf.initialize_all_variables())
         for step, (inputs, affinities) in enumerate(batch_iterator(FOV,OUTPT,INPT)):
@@ -229,7 +229,7 @@ def train(n_iterations=30000):
 
             if step % 1000 == 0:
                 # Save the variables to disk.
-                save_path = net.saver.save(sess, snemi3d.folder()+"tmp/complex3/model.ckpt")
+                save_path = net.saver.save(sess, snemi3d.folder()+"tmp/longTrain/model.ckpt")
                 print("Model saved in file: %s" % save_path)
 
             if step == n_iterations:
@@ -248,7 +248,7 @@ def predict():
             net = create_network(inputShape, outputShape)
             with tf.Session() as sess:
                 # Restore variables from disk.
-                net.saver.restore(sess, snemi3d.folder()+"tmp/complex3/model.ckpt")
+                net.saver.restore(sess, snemi3d.folder()+"tmp/longTrain/model.ckpt")
                 print("Model restored.")
 
                 #TODO pad the image with zeros so that the ouput covers the whole dataset
