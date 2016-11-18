@@ -61,3 +61,5 @@ trace/thirdparty/neuroglancer
 trace/thirdparty/watershed
 trace/thirdparty/DataProvider
 
+.idea/
+

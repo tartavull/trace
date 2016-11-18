@@ -6,7 +6,7 @@ import webbrowser
 import subprocess
 
 import h5py
-import neuroglancer
+
 import numpy as np
 import click
 
@@ -24,12 +24,17 @@ def download():
 @cli.command()
 @click.argument('dataset', type=click.Choice(['train', 'test']))
 @click.option('--aff/--no-aff', default=False, help="Display only the affinities.")
-def visualize(dataset, aff):
+@click.option('--ip', default='172.17.0.2', help="IP address for serving")
+@click.option('--port', default=4125, help="Port for serving")
+def visualize(dataset, aff, ip, port):
     """
     Opens a tab in your webbrowser showing the chosen dataset
     """
+    import neuroglancer
+
     snemi3d_dir = snemi3d.folder()
     neuroglancer.set_static_content_source(url='https://neuroglancer-demo.appspot.com')
+    neuroglancer.set_server_bind_address(bind_address=ip, bind_port=port)
     viewer = neuroglancer.Viewer(voxel_size=[6, 6, 30])
     if aff:
         import augmentation
@@ -38,7 +43,7 @@ def visualize(dataset, aff):
     else:
         add_file(snemi3d_dir, dataset+'-input', viewer)
         add_file(snemi3d_dir, dataset+'-labels', viewer)
-    
+
     print('open your brower at:')
     print(viewer.__str__())
     webbrowser.open(viewer.__str__())
