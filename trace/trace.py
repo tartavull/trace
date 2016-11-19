@@ -43,6 +43,10 @@ def create_network(inpt, out, learning_rate=0.001):
         image = tf.placeholder(tf.float32, shape=[1, inpt, inpt, 1])
         target = tf.placeholder(tf.float32, shape=[1, out, out, 2])
 
+        # method=0 is bilinear interpolation. Switch to method=1 for nearest
+        # neighbor interpolation.
+        targetImage = tf.image.resize_images(target[:,:out//2,:out//2,:], (out, out), method=0)
+
         # layer 1 - original stride 1
         W_conv1 = weight_variable([4, 4, 1, 48])
         b_conv1 = bias_variable([48])
@@ -86,7 +90,7 @@ def create_network(inpt, out, learning_rate=0.001):
         prediction = conv2d(h_fc1, W_fc2, dilation=16) + b_fc2
 
         sigmoid_prediction = tf.nn.sigmoid(prediction)
-        cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(prediction,target))
+        cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(prediction,targetImage))
         loss_summary = tf.scalar_summary('cross_entropy', cross_entropy)
         train_step = tf.train.AdamOptimizer(learning_rate).minimize(cross_entropy)
        
@@ -133,7 +137,7 @@ def predict():
         net.saver.restore(sess, snemi3d.folder()+"tmp/model.ckpt")
         print("Model restored.")
         with h5py.File(snemi3d.folder()+'test-input.h5','r') as input_file:
-            inpt = input_file['main']
+            inpt = input_file['main'][:].astype(np.float32) / 255.0
             with h5py.File(snemi3d.folder()+'test-affinities.h5','w') as output_file:
                 output_file.create_dataset('main', shape=(3,)+input_file['main'].shape)
                 out = output_file['main']
@@ -145,8 +149,10 @@ def predict():
                         for x in xrange(0,inpt.shape[1]-INPT, OUTPT):
                             pred = sess.run(net.sigmoid_prediction,
                                 feed_dict={net.image: inpt[z,y:y+INPT,x:x+INPT].reshape(1,INPT,INPT,1)})
-                            pred = pred.reshape(2,OUTPT,OUTPT)
+                            reshapedPred = np.zeros(shape=(2, OUTPT, OUTPT))
+                            reshapedPred[0] = pred[0,:,:,0].reshape(OUTPT, OUTPT)
+                            reshapedPred[1] = pred[0,:,:,1].reshape(OUTPT, OUTPT)
                             out[0:2,
                                 z,
                                 y+FOV//2:y+FOV//2+OUTPT,
-                                x+FOV//2:x+FOV//2+OUTPT] = pred
+                                x+FOV//2:x+FOV//2+OUTPT] = reshapedPred
