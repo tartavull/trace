@@ -43,10 +43,6 @@ def create_network(inpt, out, learning_rate=0.001):
         image = tf.placeholder(tf.float32, shape=[1, inpt, inpt, 1])
         target = tf.placeholder(tf.float32, shape=[1, out, out, 2])
 
-        # method=0 is bilinear interpolation. Switch to method=1 for nearest
-        # neighbor interpolation.
-        targetImage = tf.image.resize_images(target[:,:out//2,:out//2,:], (out, out), method=0)
-
         # layer 1 - original stride 1
         W_conv1 = weight_variable([4, 4, 1, 48])
         b_conv1 = bias_variable([48])
@@ -90,7 +86,7 @@ def create_network(inpt, out, learning_rate=0.001):
         prediction = conv2d(h_fc1, W_fc2, dilation=16) + b_fc2
 
         sigmoid_prediction = tf.nn.sigmoid(prediction)
-        cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(prediction,targetImage))
+        cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(prediction,target))
         loss_summary = tf.scalar_summary('cross_entropy', cross_entropy)
         train_step = tf.train.AdamOptimizer(learning_rate).minimize(cross_entropy)
        
