@@ -60,8 +60,11 @@ def batch_iterator(fov, output_patch, input_patch):
         inpt, label = sample['input'], sample['label']
         inpt = inpt.reshape(1,input_patch,input_patch,1)
         label = label[0:2,0,fov//2:fov//2+output_patch,fov//2:fov//2+output_patch]
-        label = label.reshape(1, output_patch,output_patch,2) #central output patch, only x,y affinities
-        yield inpt, label
+        reshapedLabel = np.zeros(shape=(1, output_patch, output_patch, 2))
+        #central output patch, only x,y affinities
+        reshapedLabel[0,:,:,0] = label[0]
+        reshapedLabel[0,:,:,1] = label[1]
+        yield inpt, reshapedLabel
         
 if __name__ == '__main__':
     batch_iterator(1).next()
