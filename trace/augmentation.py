@@ -48,7 +48,7 @@ def maybe_create_affinities(dataset):
 
 
 def batch_iterator(fov, output_patch, input_patch):
-    dataset = 'train'
+    dataset = 'training'
     net_spec = {'label':(1,input_patch,input_patch),'input':(1,input_patch,input_patch)}
     params = {'augment': [] , 'drange':[0]}
     set_path_to_config(dataset)
@@ -60,8 +60,11 @@ def batch_iterator(fov, output_patch, input_patch):
         inpt, label = sample['input'], sample['label']
         inpt = inpt.reshape(1,input_patch,input_patch,1)
         label = label[0:2,0,fov//2:fov//2+output_patch,fov//2:fov//2+output_patch]
-        label = label.reshape(1, output_patch,output_patch,2) #central output patch, only x,y affinities
-        yield inpt, label
+        reshapedLabel = np.zeros(shape=(1, output_patch, output_patch, 2))
+        reshapedLabel[0,:,:,0] = label[0]
+        reshapedLabel[0,:,:,1] = label[1]
+        #central output patch, only x,y affinities
+        yield inpt, reshapedLabel
 
 def alternating_example_iterator(fov, output_patch, input_patch):
     dataset = 'train'

@@ -12,8 +12,8 @@ from augmentation import batch_iterator
 from augmentation import alternating_example_iterator
 
 
-FOV = 95
-OUTPT = 101
+FOV = 115
+OUTPT = 151
 INPT = OUTPT + FOV - 1
 
 
@@ -42,15 +42,15 @@ def max_pool(x, dilation=None, strides=[2, 2], window_shape=[2, 2]):
   return tf.nn.pool(x, window_shape=window_shape, dilation_rate= [dilation, dilation],
                        strides=strides, padding='VALID', pooling_type='MAX')
 
-def create_simple_network(inpt, out, learning_rate=0.1):
+def create_simple_network(inpt, out, learning_rate=0.001):
     class Net:
         # layer 0
         image = tf.placeholder(tf.float32, shape=[1, inpt, inpt, 1])
         target = tf.placeholder(tf.float32, shape=[1, out, out, 2])
-        targetImage = tf.image.resize_images(target[:,:out//2,:out//2,:], (out, out), method=1)
-        input_summary = tf.image_summary('input image', image[:,FOV//2:FOV//2+out,FOV//2:FOV//2+out,:])
-        target_x_summary = tf.image_summary('target x affinities', targetImage[:,:,:,:1])
-        target_y_summary = tf.image_summary('target y affinities', targetImage[:,:,:,1:])
+        input_summary = tf.image_summary('input image', image)
+        output_patch_summary = tf.image_summary('output patch', image[:,FOV//2:FOV//2+out,FOV//2:FOV//2+out,:])
+        target_x_summary = tf.image_summary('full target x affinities', target[:,:,:,:1])
+        target_y_summary = tf.image_summary('full target y affinities', target[:,:,:,1:])
 
         # layer 1 - original stride 1
         W_conv1 = weight_variable('W_conv1', [FOV, FOV, 1, 2])
@@ -67,28 +67,20 @@ def create_simple_network(inpt, out, learning_rate=0.1):
         x_affinity_summary = tf.image_summary('x-affinity predictions', sigmoid_prediction[:,:,:,:1])
         y_affinity_summary = tf.image_summary('y-affinity predictions', sigmoid_prediction[:,:,:,1:])
 
-        cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(prediction,targetImage))
+        cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(prediction,target))
         #cross_entropy = tf.reduce_mean(tf.mul(sigmoid_cross_entropy, (target - 1) * (-9) + 1))
 
         loss_summary = tf.scalar_summary('cross_entropy', cross_entropy)
 
         binary_prediction = tf.round(sigmoid_prediction) 
-        pixel_error = tf.reduce_mean(tf.cast(tf.abs(binary_prediction - targetImage), tf.float32))
+        pixel_error = tf.reduce_mean(tf.cast(tf.abs(binary_prediction - target), tf.float32))
         pixel_error_summary = tf.scalar_summary('pixel_error', pixel_error)
-        avg_affinity = tf.reduce_mean(tf.cast(targetImage, tf.float32))
+        avg_affinity = tf.reduce_mean(tf.cast(target, tf.float32))
         avg_affinity_summary = tf.scalar_summary('average_affinity', avg_affinity)
 
         summary_op = tf.merge_all_summaries()
 
-        batch = tf.Variable(0)
-        decaying_rate = tf.train.exponential_decay(
-                learning_rate,
-                batch,
-                200,
-                0.95,
-                staircase=True)
-
-        train_step = tf.train.MomentumOptimizer(decaying_rate, 0.9).minimize(cross_entropy, global_step=batch)
+        train_step = tf.train.AdamOptimizer(learning_rate).minimize(cross_entropy)
        
         # Add ops to save and restore all the variables.
         saver = tf.train.Saver()
@@ -100,10 +92,10 @@ def create_network(inpt, out, learning_rate=0.0001):
         # layer 0
         image = tf.placeholder(tf.float32, shape=[1, inpt, inpt, 1])
         target = tf.placeholder(tf.float32, shape=[1, out, out, 2])
-        targetImage = tf.image.resize_images(target[:,:out//2,:out//2,:], (out, out), method=1)
-        input_summary = tf.image_summary('input image', image[:,FOV//2:FOV//2+out,FOV//2:FOV//2+out,:])
-        target_x_summary = tf.image_summary('target x affinities', targetImage[:,:,:,:1])
-        target_y_summary = tf.image_summary('target y affinities', targetImage[:,:,:,1:])
+        input_summary = tf.image_summary('input image', image)
+        output_patch_summary = tf.image_summary('output patch', image[:,FOV//2:FOV//2+out,FOV//2:FOV//2+out,:])
+        target_x_summary = tf.image_summary('full target x affinities', target[:,:,:,:1])
+        target_y_summary = tf.image_summary('full target y affinities', target[:,:,:,1:])
 
         # layer 1 - original stride 1
         W_conv1 = weight_variable('W_conv1', [4, 4, 1, 48])
@@ -130,7 +122,7 @@ def create_network(inpt, out, learning_rate=0.0001):
         h_pool2 = max_pool(h_conv2, strides=[1,1], dilation=2)
 
         # layer 5 - original stride 1
-        W_conv3 = weight_variable('W_conv3', [4, 4, 48, 48])
+        W_conv3 = weight_variable('W_conv3', [5, 5, 48, 48])
         b_conv3 = bias_variable([48])
         h_conv3 = tf.nn.relu(conv2d(h_pool2, W_conv3, dilation=4) + b_conv3)
 
@@ -156,7 +148,7 @@ def create_network(inpt, out, learning_rate=0.0001):
 
 
         # layer 9 - original stride 1
-        W_fc1 = weight_variable('W_fc1', [3, 3, 48, 200])
+        W_fc1 = weight_variable('W_fc1', [4, 4, 48, 200])
         b_fc1 = unbiased_bias_variable([200])
         h_fc1 = tf.nn.relu(conv2d(h_pool4, W_fc1, dilation=16) + b_fc1)
 
@@ -176,14 +168,15 @@ def create_network(inpt, out, learning_rate=0.0001):
         sigmoid_prediction = tf.nn.sigmoid(prediction)
 
         sigmoid_prediction_hist = tf.histogram_summary('sigmoid prediction activations', sigmoid_prediction)
-        image_summary = tf.image_summary('x-affinity predictions', sigmoid_prediction[:,:,:,:1])
+        x_affinity_summary = tf.image_summary('x-affinity predictions', sigmoid_prediction[:,:,:,:1])
+        y_affinity_summary = tf.image_summary('y-affinity predictions', sigmoid_prediction[:,:,:,1:])
 
-        cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(prediction,targetImage))
-        #cross_entropy = tf.reduce_mean(tf.mul(sigmoid_cross_entropy, (targetImage - 1) * (-9) + 1))
+        cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(prediction,target))
+        #cross_entropy = tf.reduce_mean(tf.mul(sigmoid_cross_entropy, (target - 1) * (-9) + 1))
         loss_summary = tf.scalar_summary('cross_entropy', cross_entropy)
 
         binary_prediction = tf.round(sigmoid_prediction) 
-        pixel_error = tf.reduce_mean(tf.cast(tf.abs(binary_prediction - targetImage), tf.float32))
+        pixel_error = tf.reduce_mean(tf.cast(tf.abs(binary_prediction - target), tf.float32))
         pixel_error_summary = tf.scalar_summary('pixel_error', pixel_error)
         avg_affinity = tf.reduce_mean(tf.cast(target, tf.float32))
         avg_affinity_summary = tf.scalar_summary('average_affinity', avg_affinity)
@@ -197,13 +190,13 @@ def create_network(inpt, out, learning_rate=0.0001):
 
     return Net()
 
-def train(n_iterations=200000):
+def train(n_iterations=120000):
 
     net = create_network(INPT, OUTPT)
     print ('Run tensorboard to visualize training progress')
     with tf.Session() as sess:
         summary_writer = tf.train.SummaryWriter(
-                       snemi3d.folder()+'tmp/longTrain3/', graph=sess.graph)
+                       snemi3d.folder()+'tmp/trainValSplit/', graph=sess.graph)
 
         sess.run(tf.initialize_all_variables())
         for step, (inputs, affinities) in enumerate(batch_iterator(FOV,OUTPT,INPT)):
@@ -221,7 +214,7 @@ def train(n_iterations=200000):
 
             if step % 1000 == 0:
                 # Save the variables to disk.
-                save_path = net.saver.save(sess, snemi3d.folder()+"tmp/longTrain3/model.ckpt")
+                save_path = net.saver.save(sess, snemi3d.folder()+"tmp/trainValSplit/model.ckpt")
                 print("Model saved in file: %s" % save_path)
 
             if step == n_iterations:
@@ -240,7 +233,7 @@ def predict():
             net = create_network(inputShape, outputShape)
             with tf.Session() as sess:
                 # Restore variables from disk.
-                net.saver.restore(sess, snemi3d.folder()+"tmp/longTrain3/model.ckpt")
+                net.saver.restore(sess, snemi3d.folder()+"tmp/trainValSplit/model.ckpt")
                 print("Model restored.")
 
                 #TODO pad the image with zeros so that the ouput covers the whole dataset
