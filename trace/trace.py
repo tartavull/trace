@@ -54,7 +54,7 @@ def create_simple_network(inpt, out, learning_rate=0.001):
 
         # layer 1 - original stride 1
         W_conv1 = weight_variable('W_conv1', [FOV, FOV, 1, 2])
-        b_conv1 = bias_variable([2])
+        b_conv1 = unbiased_bias_variable([2])
         prediction = conv2d(image, W_conv1, dilation=1) + b_conv1
 
         w1_hist = tf.histogram_summary('W_conv1 weights', W_conv1)
@@ -99,7 +99,7 @@ def create_network(inpt, out, learning_rate=0.0001):
 
         # layer 1 - original stride 1
         W_conv1 = weight_variable('W_conv1', [4, 4, 1, 48])
-        b_conv1 = bias_variable([48])
+        b_conv1 = unbiased_bias_variable([48])
         h_conv1 = tf.nn.relu(conv2d(image, W_conv1, dilation=1) + b_conv1)
 
         w1_hist = tf.histogram_summary('W_conv1 weights', W_conv1)
@@ -130,7 +130,7 @@ def create_network(inpt, out, learning_rate=0.0001):
 
         # layer 3 - original stride 1
         W_conv2 = weight_variable('W_conv2', [5, 5, 48, 48])
-        b_conv2 = bias_variable([48])
+        b_conv2 = unbiased_bias_variable([48])
         h_conv2 = tf.nn.relu(conv2d(h_pool1, W_conv2, dilation=2) + b_conv2)
 
         w2_hist = tf.histogram_summary('W_conv2 weights', W_conv2)
@@ -161,7 +161,7 @@ def create_network(inpt, out, learning_rate=0.0001):
 
         # layer 5 - original stride 1
         W_conv3 = weight_variable('W_conv3', [5, 5, 48, 48])
-        b_conv3 = bias_variable([48])
+        b_conv3 = unbiased_bias_variable([48])
         h_conv3 = tf.nn.relu(conv2d(h_pool2, W_conv3, dilation=4) + b_conv3)
 
         w3_hist = tf.histogram_summary('W_conv3 weights', W_conv3)
@@ -191,7 +191,7 @@ def create_network(inpt, out, learning_rate=0.0001):
 
         # layer 7 - original stride 1
         W_conv4 = weight_variable('W_conv4', [4, 4, 48, 48])
-        b_conv4 = bias_variable([48])
+        b_conv4 = unbiased_bias_variable([48])
         h_conv4 = tf.nn.relu(conv2d(h_pool3, W_conv4, dilation=8) + b_conv4)
 
         w4_hist = tf.histogram_summary('W_conv4 weights', W_conv4)
@@ -365,7 +365,7 @@ def predict():
             net = create_network(inputShape, outputShape)
             with tf.Session() as sess:
                 # Restore variables from disk.
-                net.saver.restore(sess, snemi3d.folder()+"tmp/FOV115_OUTPT151/model.ckpt")
+                net.saver.restore(sess, snemi3d.folder()+"tmp/FOV115_OUTPT151_bias0/model.ckpt")
                 print("Model restored.")
 
                 #TODO pad the image with zeros so that the ouput covers the whole dataset
