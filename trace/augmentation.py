@@ -8,6 +8,7 @@ import numpy as np
 
 import snemi3d
 from dataprovider.data_provider import VolumeDataProvider
+import dataprovider.transform as transform
 
 def set_path_to_config(dataset):
     config = RawConfigParser()
@@ -36,13 +37,13 @@ def maybe_create_affinities(dataset):
         return
     #there is a little bug in DataProvider that doesn't let us do it
     #for the actual size of the dataset 100,1024,1024
-    patch_size = (99,1023,1023)
+    patch_size = (100,1024,1024)
     net_spec = {'label':patch_size}
     params = {'augment': [] , 'drange':[0]}
     set_path_to_config(dataset)
     spec = snemi3d.folder()+dataset+'.spec'
     dp = VolumeDataProvider(spec, net_spec, params)
-    affinities =  dp.random_sample()['label']
+    #affinities =  dp.random_sample()['label']
     with h5py.File(snemi3d.folder()+dataset+'-affinities.h5','w') as f:
         f.create_dataset('main',data=affinities)
 
