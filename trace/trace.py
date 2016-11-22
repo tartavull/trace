@@ -90,10 +90,8 @@ def create_simple_network(inpt, out, learning_rate=0.001):
 def create_network(inpt, out, learning_rate=0.0001):
     class Net:
         # layer 0
-        image = tf.placeholder(tf.float32, shape=[None, inpt, inpt, 1])
-        targetImage = tf.placeholder(tf.float32, shape=[2, None, out, out])
-        target = tf.placeholder(tf.float32, shape=[None, out, out, 2])
-        target = tf.transpose(targetImage, (1,2,3,0))
+        image = tf.placeholder(tf.float32, shape=[1, inpt, inpt, 1])
+        target = tf.placeholder(tf.float32, shape=[1, out, out, 2])
         input_summary = tf.image_summary('input image', image)
         output_patch_summary = tf.image_summary('output patch', image[:,FOV//2:FOV//2+out,FOV//2:FOV//2+out,:])
         target_x_summary = tf.image_summary('target x affinities', target[:,:,:,:1])
@@ -113,7 +111,7 @@ def create_network(inpt, out, learning_rate=0.0001):
         cy = 12
         iy = inpt - 3
         ix = iy
-        h_conv1_packed = tf.reshape(h_conv1[0], (iy, ix, 96))
+        h_conv1_packed = tf.reshape(h_conv1, (iy, ix, 96))
         iy += 4
         ix += 4
         h_conv1_packed = tf.image.resize_image_with_crop_or_pad(h_conv1_packed, iy, ix)
@@ -144,7 +142,7 @@ def create_network(inpt, out, learning_rate=0.0001):
         cy = 12
         iy = inpt - 3 - 1 - (2 * 4)
         ix = iy
-        h_conv2_packed = tf.reshape(h_conv2[0], (iy, ix, 96))
+        h_conv2_packed = tf.reshape(h_conv2, (iy, ix, 96))
         iy += 4
         ix += 4
         h_conv2_packed = tf.image.resize_image_with_crop_or_pad(h_conv2_packed, iy, ix)
@@ -175,7 +173,7 @@ def create_network(inpt, out, learning_rate=0.0001):
         cy = 12
         iy = inpt - 3 - 1 - (2 * 4) - (2 * 1) - (4 * 4)
         ix = iy
-        h_conv3_packed = tf.reshape(h_conv3[0], (iy, ix, 96))
+        h_conv3_packed = tf.reshape(h_conv3, (iy, ix, 96))
         iy += 4
         ix += 4
         h_conv3_packed = tf.image.resize_image_with_crop_or_pad(h_conv3_packed, iy, ix)
@@ -205,7 +203,7 @@ def create_network(inpt, out, learning_rate=0.0001):
         cy = 12
         iy = inpt - 3 - 1 - (2 * 4) - (2 * 1) - (4 * 4) - (4 * 1) - (8 * 3)
         ix = iy
-        h_conv4_packed = tf.reshape(h_conv4[0], (iy, ix, 96))
+        h_conv4_packed = tf.reshape(h_conv4, (iy, ix, 96))
         iy += 4
         ix += 4
         h_conv4_packed = tf.image.resize_image_with_crop_or_pad(h_conv4_packed, iy, ix)
@@ -233,7 +231,7 @@ def create_network(inpt, out, learning_rate=0.0001):
         cy = 20
         iy = out
         ix = out
-        h_fc1_packed = tf.reshape(h_fc1[0], (iy, ix, 200))
+        h_fc1_packed = tf.reshape(h_fc1, (iy, ix, 200))
         iy += 4
         ix += 4
         h_fc1_packed = tf.image.resize_image_with_crop_or_pad(h_fc1_packed, iy, ix)
@@ -342,7 +340,7 @@ def evaluate(dataset):
         with h5py.File(snemi3d.folder()+dataset+'-affinities.h5','r') as label_file:
             inputShape = inpt.shape[1]
             outputShape = inpt.shape[1] - FOV + 1
-            labels = label_file['main'][0:2,:,FOV//2:FOV//2+outputShape,FOV//2:FOV//2+outputShape]
+            labels = label_file['main']
 
             net = create_network(inputShape, outputShape)
             with tf.Session() as sess:
@@ -351,12 +349,18 @@ def evaluate(dataset):
                 print("Model restored.")
 
                 #TODO pad the image with zeros so that the ouput covers the whole dataset
+                totalPixelError = 0.0
+                for z in xrange(inpt.shape[0]):
+                    print ('z: {} of {}'.format(z,inpt.shape[0]))
+                    reshapedLabel = np.einsum('dzyx->zyxd', labels[0:2,z:z+1,FOV//2:FOV//2+outputShape,FOV//2:FOV//2+outputShape])
 
-                pixel_error = sess.run(net.pixel_error,
-                        feed_dict={net.image: inpt.reshape(inpt.shape[0], inputShape, inputShape, 1),
-                                   net.targetImage: labels})
+                    pixelError = sess.run(net.pixel_error,
+                            feed_dict={net.image: inpt[z].reshape(1, inputShape, inputShape, 1),
+                                       net.target: reshapedLabel})
 
-                print('Average pixel error: ' + str(pixel_error))
+                    totalPixelError += pixelError
+
+                print('Average pixel error: ' + str(totalPixelError / inpt.shape[0]))
 
 
 
