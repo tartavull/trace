@@ -150,10 +150,10 @@ def create_network(inpt, out, learning_rate=0.001):
         # layer 18   - up-sample 2x2 convolution  
         W_conv18 = weight_variable([2, 2, 384, 384])
         b_conv18 = bias_variable([384])
-        h_conv18 = tf.nn.relu(deconv2d(h_conv17, W_conv18) + b_conv18)
+        h_conv18 = tf.nn.relu(deconv2d(h_conv17, W_conv18, [384, 384]) + b_conv18)
 
         # layer 18.5 - combine upsampling with Step 8.5
-        comb_conv18 = crop_and_concat(h_conv8, h_conv18, [32])
+        comb_conv18 = crop_and_concat(h_conv8, h_conv18, [2])
 
         # layer 19   - 3x3 convolution  
         W_conv19 = weight_variable([3, 3, 384, 192])
@@ -168,10 +168,10 @@ def create_network(inpt, out, learning_rate=0.001):
         # layer 21   - up-sample 2x2 convolution  
         W_conv21 = weight_variable([2, 2, 192, 192])
         b_conv21 = bias_variable([192])
-        h_conv21 = tf.nn.relu(deconv2d(h_conv20, W_conv21) + b_conv21)
+        h_conv21 = tf.nn.relu(deconv2d(h_conv20, W_conv21, [192, 192]) + b_conv21)
 
         # layer 21.5 - combine upsampling with Step 5.5
-        comb_conv21 = crop_and_concat(h_conv5, h_conv21, [64])
+        comb_conv21 = crop_and_concat(h_conv5, h_conv21, [4])
 
         # layer 22   - 3x3 convolution  
         W_conv22 = weight_variable([3, 3, 192, 96])
@@ -186,10 +186,10 @@ def create_network(inpt, out, learning_rate=0.001):
         # layer 24   - up-sample 2x2 convolution  
         W_conv24 = weight_variable([2, 2, 96, 96])
         b_conv24 = bias_variable([96])
-        h_conv24 = tf.nn.relu(deconv2d(h_conv23, W_conv24) + b_conv24)
+        h_conv24 = tf.nn.relu(deconv2d(h_conv23, W_conv24, [96, 96]) + b_conv24)
 
         # layer 24.5 - combine upsampling with Step 2.5
-        comb_conv24 = crop_and_concat(h_conv2, h_conv24, [128])
+        comb_conv24 = crop_and_concat(h_conv2, h_conv24, [8])
 
         # layer 25   - 3x3 convolution  
         W_conv25 = weight_variable([3, 3, 96, 48])
