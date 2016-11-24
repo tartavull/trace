@@ -37,7 +37,7 @@ def deconv2d(x, W, shape):
   x_shape = tf.shape(x)
   output_shape = tf.pack([x_shape[0], x_shape[1] * 2, x_shape[2] * 2, x_shape[3]//2])
   return tf.nn.conv2d_transpose(x, W, output_shape, 
-    strides=[1, stride, stride, 1], padding='VALID')
+    strides=[1, 1, 1, 1], padding='VALID')
 
 # crops x, appends to y to form the output shape, and returns new tensor
 def crop_and_concat(x, y, output_shape):
