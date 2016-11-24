@@ -135,7 +135,7 @@ def create_network(inpt, out, learning_rate=0.001):
         h_conv15 = tf.nn.relu(deconv2d(h_conv14, W_conv15, [768, 768]) + b_conv15)
 
         # layer 15.5 - combine upsampling with Step 11.5
-        comb_conv15 = crop_and_concat(h_conv11, h_conv15, [16])
+        comb_conv15 = crop_and_concat(h_conv11, h_conv15, [1])
 
         # layer 16   - 3x3 convolution  
         W_conv16 = weight_variable([3, 3, 768, 384])
