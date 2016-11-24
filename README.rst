@@ -53,6 +53,8 @@ session, not in screen.
 
     - If your docker is still not starting, and you already committed an image,
       you can restart your docker entirely by doing this:
+      (THIS WILL DELETE EVERYTHING IN YOUR DOCKER SO MAKE YOU COMMITTED A 
+      DOCKER IMAGE FIRST)
         
         sudo service docker stop
         sudo rm -rf /var/lib/docker
