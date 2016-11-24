@@ -36,8 +36,7 @@ def conv2d(x, W, dilation=None):
 def deconv2d(x, W, shape):
   x_shape = tf.shape(x)
   output_shape = tf.pack([x_shape[0], x_shape[1] * 2, x_shape[2] * 2, x_shape[3]//2])
-  return tf.nn.conv2d_transpose(x, W, output_shape, 
-    strides=[1, 1, 1, 1], padding='VALID')
+  return tf.nn.conv2d_transpose(x, W, output_shape, strides=[1, 1, 1, 1], padding='VALID')
 
 # crops x, appends to y to form the output shape, and returns new tensor
 def crop_and_concat(x, y, output_shape):
@@ -132,7 +131,7 @@ def create_network(inpt, out, learning_rate=0.001):
         # layer 15   - up-sample 2x2 convolution  
         W_conv15 = weight_variable([2, 2, 768, 768])
         b_conv15 = bias_variable([768])
-        h_conv15 = tf.nn.relu(deconv2d(h_conv14, W_conv15, [768, 768]) + b_conv15)
+        h_conv15 = tf.nn.relu(deconv2d(h_conv14, W_conv15, [368, 368]) + b_conv15)
 
         # layer 15.5 - combine upsampling with Step 11.5
         comb_conv15 = crop_and_concat(h_conv11, h_conv15, [1])
