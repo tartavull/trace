@@ -51,8 +51,11 @@ session, not in screen.
 
     - DO NOT RUN THIS MORE THAN ONCE
 
-    - If your docker is still not starting, and you already committed an image,
-      you can restart your docker entirely by doing this:
+    - If your docker is still not starting, and you already committed an image
+      and uploaded it to dockerhub you can restart your docker entirely by
+      doing this:
+      (THIS WILL DELETE EVERYTHING IN YOUR DOCKER SO MAKE YOU COMMITTED A 
+      DOCKER IMAGE AND UPLOADED IT TO DOCKERHUB)
         
         sudo service docker stop
         sudo rm -rf /var/lib/docker
