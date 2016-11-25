@@ -1,34 +1,22 @@
-# Ubuntu 14.04 Trusty support
+language: python
 sudo: required
 dist: trusty
-
-addons:
-  apt:
-    sources:
-    # add PPAs with more up-to-date toolchains
-    - ubuntu-toolchain-r-test
-    - llvm-toolchain-precise-3.6
-    packages:
-    # install toolchains
-    - gcc-5
-    - g++-5
-before_install:
-- sudo add-apt-repository ppa:staticfloat/juliareleases -y
-- sudo add-apt-repository ppa:staticfloat/julia-deps -y
-- sudo apt-get -qq update
-- sudo apt-get install -qq julia
-- sudo apt-get install -qq python-numpy python-scipy
-- if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
-    pip install https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.9.0-cp27-none-linux_x86_64.whl;
-  elif [[ "$TRAVIS_PYTHON_VERSION" == "3.4" ]]; then
-    pip install https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.9.0-cp34-cp34m-linux_x86_64.whl;
-  fi
-- pip install cython
-install:
-- pip install -r requirements.txt
-- python setup.py install
-- make submodules
-language: python
 python:
 - '2.7'
-script: make test
+services:
+- docker
+before_install:
+- docker login -u $DOCKER_USER -p $DOCKER_PASS
+- export REPO=tartavull/trace
+- export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "latest"; else echo $TRAVIS_BRANCH
+  ; fi`
+install:
+- docker build -f Dockerfile.gpu -t $REPO:$TAG .
+- docker images
+script: docker run $REPO:$TAG /bin/sh -c "cd /home/trace && make test"
+after_success:
+- docker push $REPO:$TAG
+env:
+  global:
+  - secure: mdgYE/E5WzPSLN+6clGfafW/lRUPu4+X4S5YIK0hEncvf31RjlE7a6apvm2luRoVfr8oYk0BkunTULDcgke9Sb0mbztHbGqguYojjHGNvc+7dlIkooh4OfdNmiLSKQ9VrTexrgXUM/aPgEwkBvI6UGju8j/RJeORmdzdFTWewPTm7wFKDbhnlSZDPgd+cnMrD1hHvERivMqoXSaoCjoL48XZlSP+svtu42sCyAMycTLAy5QqsQdc7xHpDfNV/GSVG5O5hI+c9VeUP1T15PyBhw/8VaZUsCbl51B85pvIGg/I/v18l5EU34qFXUGRbDXVdNSg9g1HefhTX5qGwFXUEkftaqDLRLjlD9O7LyStU2cOUD7lAIoJvUimOxOVOcZummem1a+Tv5vqBzc6cJTMUFNqFYEi2OTrw24X71lyuzpI8GZ/LGe+GiXOHXge8VbLlZzWZZFA//QsRt4u7SWvbdvq9NyV6522xinUYQ5hE32aKWeQyjlcrg0G6deKd85+H2F1XhNCjgWo3u7la9jfUTWp6qC9h4GllFV4Y0bCXHycAdjVQAfW35x0FtwNhzk4Atu9yEsbqhsFAvdM3s4Fi+i/qunvaTLgS7/i549mvAPVzol7tsnpzqjmAsoOIwfnOB+EdXnhZuzpHXHdB14Rr1KXRtax3SWJJ4Teani0Vi8=
+  - secure: JoOk/6e/GdxPwf2uX4u+Tx458ZiHM7HmVG28I66i/CQvRZ+fessejs7bRpWyafxkz7hhq8gLlcbML1yR1G5LavEzTTiq+tCpQF0Rd5T+w0WCqPjiBkK46BnQ/bwL9cHqpOqK7fEYe3bIYbuum4LCG8hM/IN4s6Yse0nJ7mEdw5YM67xHoSA4CkpJO9fzktHXH+BQaXritSVnBiy3qdnOPgzuM3JPqK4dwoywj6A6F5S9gecRfIl/IS4nMi6LQ4wakD9CzoZyRBToS/hfkVbE4xvTuNgjhKPhSBkePmBOlEbP1VtWT9ZnXO7J2D/HWMAh/Uu1q/PKyzJ5AYuYWCPP3/Sxai2qhdaWsPmPjLbyf01wDC7r2GcWn2VBkeaXPWjx/y1Vy1EZVTEK+Kv3RTzIn7afwv30s4l/YAvIfB13XECuHdVRW6Odio4PKbcwbZYL5TWajvX/G9wZsiM5hcAMfzEaOCUvDT3sUW8z/TbT0cI4ZRzW1X94l4ex46VVzJ4KWKKD4xteGh0JFvCFkpqPK3VkfWSGClE2WqJdTq5Q66JFuFPqQEXtpeInJ7AIcFMczu+Z3PMn+bmGZE+djiJkba+xwrMrpGAZrD06TWYkZOIqgBeIp4HK9KNaMfXVaMcw7ANDR+AOvAOv+59gBxYzwNh1ouUbMAoR0CskvL8PkHU=
