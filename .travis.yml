@@ -8,14 +8,17 @@ services:
 before_install:
 - docker login -u $DOCKER_USER -p $DOCKER_PASS
 - export REPO=tartavull/trace
+- export REPOGPU=tartavull/tracegpu
 - export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "latest"; else echo $TRAVIS_BRANCH
   ; fi`
 install:
-- docker build -f Dockerfile.gpu -t $REPO:$TAG .
+- docker build -f Dockerfile -t $REPO:$TAG .
 - docker images
 script: docker run $REPO:$TAG /bin/sh -c "cd /home/trace && make test"
 after_success:
 - docker push $REPO:$TAG
+- docker build -f Dockerfile.gpu -t $REPOGPU:$TAG .
+- docker push $REPOGPU:$TAG
 env:
   global:
   - secure: mdgYE/E5WzPSLN+6clGfafW/lRUPu4+X4S5YIK0hEncvf31RjlE7a6apvm2luRoVfr8oYk0BkunTULDcgke9Sb0mbztHbGqguYojjHGNvc+7dlIkooh4OfdNmiLSKQ9VrTexrgXUM/aPgEwkBvI6UGju8j/RJeORmdzdFTWewPTm7wFKDbhnlSZDPgd+cnMrD1hHvERivMqoXSaoCjoL48XZlSP+svtu42sCyAMycTLAy5QqsQdc7xHpDfNV/GSVG5O5hI+c9VeUP1T15PyBhw/8VaZUsCbl51B85pvIGg/I/v18l5EU34qFXUGRbDXVdNSg9g1HefhTX5qGwFXUEkftaqDLRLjlD9O7LyStU2cOUD7lAIoJvUimOxOVOcZummem1a+Tv5vqBzc6cJTMUFNqFYEi2OTrw24X71lyuzpI8GZ/LGe+GiXOHXge8VbLlZzWZZFA//QsRt4u7SWvbdvq9NyV6522xinUYQ5hE32aKWeQyjlcrg0G6deKd85+H2F1XhNCjgWo3u7la9jfUTWp6qC9h4GllFV4Y0bCXHycAdjVQAfW35x0FtwNhzk4Atu9yEsbqhsFAvdM3s4Fi+i/qunvaTLgS7/i549mvAPVzol7tsnpzqjmAsoOIwfnOB+EdXnhZuzpHXHdB14Rr1KXRtax3SWJJ4Teani0Vi8=

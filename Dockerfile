@@ -42,10 +42,11 @@ RUN pip --no-cache-dir install \
         tqdm
 
 # Get the code for trace
-RUN git clone --depth=50 https://github.com/tartavull/trace.git /home/trace/
+ADD ./ /home/trace
 WORKDIR /home/trace
 RUN git submodule update --init --recursive && \
     pip install -r requirements.txt && \
+    pip install -r requirements_dev.txt && \
     make submodules
 
 # Make sure we can get all remote branches
