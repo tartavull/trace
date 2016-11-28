@@ -147,6 +147,35 @@ def train(n_iterations=40000):
             if step == n_iterations:
                 break
 
+def evaluate(dataset):
+    from tqdm import tqdm
+    with h5py.File(snemi3d.folder()+dataset+'-input.h5','r') as input_file:
+        inpt = input_file['main'][:].astype(np.float32) / 255.0
+        with h5py.File(snemi3d.folder()+dataset+'-affinities.h5','r') as label_file:
+            inputShape = inpt.shape[1]
+            outputShape = inpt.shape[1] - FOV + 1
+            labels = label_file['main']
+
+            net = create_network(inputShape, outputShape)
+            with tf.Session() as sess:
+                # Restore variables from disk.
+                net.saver.restore(sess, snemi3d.folder()+"tmp/FOV115_OUTPT151_96map/model.ckpt")
+                print("Model restored.")
+
+                #TODO pad the image with zeros so that the ouput covers the whole dataset
+                totalPixelError = 0.0
+                for z in xrange(inpt.shape[0]):
+                    print ('z: {} of {}'.format(z,inpt.shape[0]))
+                    reshapedLabel = np.einsum('dzyx->zyxd', labels[0:2,z:z+1,FOV//2:FOV//2+outputShape,FOV//2:FOV//2+outputShape])
+
+                    pixelError = sess.run(net.pixel_error,
+                            feed_dict={net.image: inpt[z].reshape(1, inputShape, inputShape, 1),
+                                       net.target: reshapedLabel})
+
+                    totalPixelError += pixelError
+
+                print('Average pixel error: ' + str(totalPixelError / inpt.shape[0]))
+
 def predict():
     from tqdm import tqdm
     net = create_network(INPT, OUTPT)
@@ -154,9 +183,9 @@ def predict():
         # Restore variables from disk.
         net.saver.restore(sess, snemi3d.folder()+"tmp/model.ckpt")
         print("Model restored.")
-        with h5py.File(snemi3d.folder()+'test-input.h5','r') as input_file:
+        with h5py.File(snemi3d.folder()+'validation-input.h5','r') as input_file:
             inpt = input_file['main'][:].astype(np.float32) / 255.0
-            with h5py.File(snemi3d.folder()+'test-affinities.h5','w') as output_file:
+            with h5py.File(snemi3d.folder()+'validation-affinities.h5','w') as output_file:
                 output_file.create_dataset('main', shape=(3,)+input_file['main'].shape)
                 out = output_file['main']
 
