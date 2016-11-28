@@ -37,17 +37,17 @@ def maybe_create_dataset():
   if not os.path.exists(snemi3d_dir):
     os.mkdir(snemi3d_dir)
     
-  base_url = "http://brainiac2.mit.edu/SNEMI3D/sites/default/files/"
-  maybe_download(base_url, snemi3d_dir, "train-input.zip")
-  maybe_download(base_url, snemi3d_dir, "train-labels.zip")
-  maybe_download(base_url, snemi3d_dir, "test-input.zip")
-  maybe_create_hdf5(snemi3d_dir, "test-input.zip")
+  base_url = "http://brainiac2.mit.edu/isbi_challenge/sites/default/files/"
+  maybe_download(base_url, snemi3d_dir, "train-volume.tif")
+  maybe_download(base_url, snemi3d_dir, "train-labels.tif")
+  maybe_download(base_url, snemi3d_dir, "test-volume.tif")
+  maybe_create_hdf5(snemi3d_dir, "test-volume.zip")
   maybe_create_hdf5(snemi3d_dir, "train-labels.zip")
-  maybe_create_hdf5(snemi3d_dir, "train-input.zip")
+  maybe_create_hdf5(snemi3d_dir, "train-volume.zip")
 
 def folder():
   current_dir = os.path.dirname(os.path.abspath(__file__))
-  snemi3d_dir = current_dir + '/snemi3d/'
+  snemi3d_dir = current_dir + '/snemi_final/'
   return snemi3d_dir
 
 if __name__ == '__main__':
