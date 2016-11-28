@@ -34,6 +34,7 @@ Setting up Neuroglancer
 
 1) Change the second argument of neuroglancer.set_server_bind_address to your
 server's ip address.
+
 2) Unblock inbound port 4125 on your server.
 
 
@@ -81,7 +82,7 @@ Go into the folder with the training input and labels, and start the python
 interactive shell.
 
 If the data is in tif format:
-```
+::
     import tifffile
     import h5py
     import dataprovider.transform as transform
@@ -109,16 +110,13 @@ If the data is in tif format:
         f.create_dataset('main', data=labels[:,:27,:,:])
     with h5py.File('validation-affinities.h5', 'w') as f:
         f.create_dataset('main', data=labels[:,27:,:,:])
-```
 
 If the data is in h5 format, everything is the same, except the input/label
-files can be read in this way instead:
-
-```
+files can be read in this way instead
+::
     import h5py
     with h5py.File('[name of your training input].h5', 'r') as f:
         input = f['main']
-```
 
     
 Layer Activation/Weight Visualisation
