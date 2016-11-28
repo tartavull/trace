@@ -22,6 +22,10 @@ def download():
     snemi3d.maybe_create_dataset()
 
 @cli.command()
+def convertresult():
+    snemi3d.convert_result()
+
+@cli.command()
 @click.argument('dataset', type=click.Choice(['train', 'test']))
 @click.option('--aff/--no-aff', default=False, help="Display only the affinities.")
 @click.option('--ip', default='172.17.0.2', help="IP address for serving")
@@ -35,6 +39,7 @@ def visualize(dataset, aff, ip, port):
     snemi3d_dir = snemi3d.folder()
     neuroglancer.set_static_content_source(url='https://neuroglancer-demo.appspot.com')
     neuroglancer.set_server_bind_address(bind_address=ip, bind_port=port)
+    neuroglancer.set_server_bind_address(bind_address='172.17.0.2', bind_port=4125)
     viewer = neuroglancer.Viewer(voxel_size=[6, 6, 30])
     if aff:
         import augmentation
@@ -45,7 +50,7 @@ def visualize(dataset, aff, ip, port):
         add_file(snemi3d_dir, dataset+'-labels', viewer)
 
     print('open your brower at:')
-    print(viewer.__str__().replace('172.17.0.2', '54.166.106.209')) # Replace the second argument with your own server's ip address
+    print(viewer.__str__().replace('172.17.0.2', '52.53.186.131')) # Replace the second argument with your own server's ip address
     webbrowser.open(viewer.__str__())
     print("press any key to exit")
     raw_input()

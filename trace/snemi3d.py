@@ -8,6 +8,7 @@ import urllib
 import zipfile
 import h5py
 from tifffile import TiffFile
+from libtiff import TIFF
 
 def maybe_download(base_url, folder, filename):
   full_url = base_url + filename
@@ -44,6 +45,16 @@ def maybe_create_dataset():
   maybe_create_hdf5(snemi3d_dir, "test-volume.zip")
   maybe_create_hdf5(snemi3d_dir, "train-labels.zip")
   maybe_create_hdf5(snemi3d_dir, "train-volume.zip")
+
+def convert_result():
+  file_name = 'test-labels'
+  full_path = folder() + file_name
+  path_without_ext, ext = os.path.splitext(full_path)
+  with h5py.File(path_without_ext+'.h5') as f:
+    arr = f['main'][()]
+    tiff = TIFF.open(path_without_ext+'.tiff', mode='w')
+    tiff.write_image(arr)
+    tiff.close()
 
 def folder():
   current_dir = os.path.dirname(os.path.abspath(__file__))
