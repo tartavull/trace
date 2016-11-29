@@ -212,25 +212,7 @@ def train(n_iterations=10000, validation=False):
 
 
 def _mirrorAcrossBorders(data, fov):
-    mirrored_data = np.zeros(shape=(data.shape[0], data.shape[1] + fov - 1, data.shape[2] + fov - 1))
-    mirrored_data[:,fov//2:-(fov//2),fov//2:-(fov//2)] = data
-    for i in range(data.shape[0]):
-        # Mirror the left side
-        mirrored_data[i,fov//2:-(fov//2),:fov//2] = np.fliplr(data[i,:,:fov//2])
-        # Mirror the right side
-        mirrored_data[i,fov//2:-(fov//2),-(fov//2):] = np.fliplr(data[i,:,-(fov//2):])
-        # Mirror the top side
-        mirrored_data[i,:fov//2,fov//2:-(fov//2)] = np.flipud(data[i,:fov//2,:])
-        # Mirror the bottom side
-        mirrored_data[i,-(fov//2):,fov//2:-(fov//2)] = np.flipud(data[i,-(fov//2):,:])
-        # Mirror the top left corner
-        mirrored_data[i,:fov//2,:fov//2] = np.fliplr(np.transpose(np.fliplr(np.transpose(data[i,:fov//2,:fov//2]))))
-        # Mirror the top right corner
-        mirrored_data[i,:fov//2,-(fov//2):] = np.transpose(np.fliplr(np.transpose(np.fliplr(data[i,:fov//2,-(fov//2):]))))
-        # Mirror the bottom left corner
-        mirrored_data[i,-(fov//2):,:fov//2] = np.transpose(np.fliplr(np.transpose(np.fliplr(data[i,-(fov//2):,:fov//2]))))
-        # Mirror the bottom right corner
-        mirrored_data[i,-(fov//2):,-(fov//2):] = np.fliplr(np.transpose(np.fliplr(np.transpose(data[i,-(fov//2):,-(fov//2):]))))
+    mirrored_data = np.pad(data, [(0, 0), (fov//2, fov//2), (fov//2, fov//2)], mode='reflect')
     return mirrored_data
 
 
