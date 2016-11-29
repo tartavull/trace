@@ -134,7 +134,9 @@ def create_network(inpt, out, learning_rate=0.001):
 
     return Net()
 
-def train(n_iterations=10000, validation=True):
+# Set validation to true and ensure that the appropriate truncated file is
+# present to do validation testing.
+def train(n_iterations=10000, validation=False):
     if validation:
         validation_input_file = h5py.File(snemi3d.folder()+'validation-input.h5','r')
         validation_input = validation_input_file['main'][:5,:,:].astype(np.float32) / 255.0
