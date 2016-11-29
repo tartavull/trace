@@ -199,36 +199,25 @@ def predict(model, config, split):
     ckpt_folder = config.folder + model.model_name + '/'
     prefix = config.folder + split
 
-    with tf.Session() as sess:
-        # Restore variables from disk.
-        model.saver.restore(sess, ckpt_folder + 'model.ckpt')
-        print("Model restored.")
-        with h5py.File(prefix + '-input.h5','r') as input_file:
-            inpt = input_file['main'][:].astype(np.float32) / 255.0
-            with h5py.File(prefix + '-affinities.h5', 'w') as output_file:
-                output_file.create_dataset('main', shape=(3,)+input_file['main'].shape)
-                out = output_file['main']
+    with h5py.File(prefix + '-input.h5', 'r') as input_file:
+        inpt = input_file['main'][:].astype(np.float32) / 255.0
+        mirrored_inpt = _mirror_across_borders(inpt, model.fov)
+        num_layers = mirrored_inpt.shape[0]
+        input_shape = mirrored_inpt.shape[1]
+        with h5py.File(config.folder + split + '-affinities.h5', 'w') as output_file:
+            output_file.create_dataset('main', shape=(3,) + input_file['main'].shape)
+            out = output_file['main']
 
-                OUTPT = model.out
-                INPT = model.inpt
-                FOV = model.fov
-
-                # TODO: pad the image with zeros so that the ouput covers the whole dataset
-                for z in xrange(inpt.shape[0]):
-                    print('z: {} of {}'.format(z,inpt.shape[0]))
-                    for y in xrange(0,inpt.shape[1]-INPT, OUTPT):
-                        for x in xrange(0,inpt.shape[1]-INPT, OUTPT):
-                            pred = sess.run(model.sigmoid_prediction, feed_dict={
-                                model.image: inpt[z,y:y+INPT,x:x+INPT].reshape(1,INPT,INPT,1)
-                            })
-
-                            reshapedPred = np.zeros(shape=(2, OUTPT, OUTPT))
-                            reshapedPred[0] = pred[0,:,:,0].reshape(OUTPT, OUTPT)
-                            reshapedPred[1] = pred[0,:,:,1].reshape(OUTPT, OUTPT)
-                            out[0:2,
-                                z,
-                                y+FOV//2:y+FOV//2+OUTPT,
-                                x+FOV//2:x+FOV//2+OUTPT] = reshapedPred
+            with tf.Session() as sess:
+                # Restore variables from disk.
+                model.saver.restore(sess, ckpt_folder + 'model.ckpt')
+                print("Model restored.")
+                for z in range(num_layers):
+                    pred = sess.run(net.sigmoid_prediction,
+                                    feed_dict={
+                                        model.image: mirrored_inpt[z].reshape(1, input_shape, input_shape, 1)})
+                    reshaped_pred = np.einsum('zyxd->dzyx', pred)
+                    out[0:2, z] = reshaped_pred[:,0]
 
 
 def grid_search():
