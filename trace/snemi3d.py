@@ -46,6 +46,19 @@ def maybe_create_dataset():
   maybe_create_hdf5(snemi3d_dir, "train-labels.zip")
   maybe_create_hdf5(snemi3d_dir, "train-volume.zip")
 
+def maybe_create_dataset_original():
+  snemi3d_dir = folder_original()
+  if not os.path.exists(snemi3d_dir):
+    os.mkdir(snemi3d_dir)
+    
+  base_url = "http://brainiac2.mit.edu/SNEMI3D/sites/default/files/"
+  maybe_download(base_url, snemi3d_dir, "train-input.zip")
+  maybe_download(base_url, snemi3d_dir, "train-labels.zip")
+  maybe_download(base_url, snemi3d_dir, "test-input.zip")
+  maybe_create_hdf5(snemi3d_dir, "test-input.zip")
+  maybe_create_hdf5(snemi3d_dir, "train-labels.zip")
+  maybe_create_hdf5(snemi3d_dir, "train-input.zip")
+
 def convert_result():
   file_name = 'test-labels'
   full_path = folder() + file_name
@@ -57,6 +70,11 @@ def convert_result():
     tiff.close()
 
 def folder():
+  current_dir = os.path.dirname(os.path.abspath(__file__))
+  snemi3d_dir = current_dir + '/snemi_final/'
+  return snemi3d_dir
+
+def folder_original():
   current_dir = os.path.dirname(os.path.abspath(__file__))
   snemi3d_dir = current_dir + '/snemi_final/'
   return snemi3d_dir

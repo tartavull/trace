@@ -22,6 +22,16 @@ def download():
     snemi3d.maybe_create_dataset()
 
 @cli.command()
+def download_original():
+    import snemi3d
+    snemi3d.maybe_create_dataset_original()
+
+@cli.command()
+def evaluate():
+    import trace
+    trace.evaluate('validation')
+
+@cli.command()
 def convertresult():
     snemi3d.convert_result()
 

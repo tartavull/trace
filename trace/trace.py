@@ -133,13 +133,17 @@ def train(n_iterations=40000):
             
             if step % 10 == 0:
                 print ('step :'+str(step))
-                summary = sess.run(net.loss_summary, 
+                summary = sess.run(net.summary_op, 
                     feed_dict={net.image: inputs,
                                net.target: affinities})
             
                 summary_writer.add_summary(summary, step)
 
             if step % 1000 == 0:
+                image_summary = sess.run(net.image_summary_op,
+                      feed_dict={net.image: inputs,
+                                 net.target: affinities})
+                summary_writer.add_summary(image_summary, step)
                 # Save the variables to disk.
                 save_path = net.saver.save(sess, snemi3d.folder()+"tmp/model.ckpt")
                 print("Model saved in file: %s" % save_path)
@@ -148,6 +152,7 @@ def train(n_iterations=40000):
                 break
 
 def evaluate(dataset):
+    print ('hello there')
     from tqdm import tqdm
     with h5py.File(snemi3d.folder()+dataset+'-input.h5','r') as input_file:
         inpt = input_file['main'][:].astype(np.float32) / 255.0
@@ -159,7 +164,7 @@ def evaluate(dataset):
             net = create_network(inputShape, outputShape)
             with tf.Session() as sess:
                 # Restore variables from disk.
-                net.saver.restore(sess, snemi3d.folder()+"tmp/FOV115_OUTPT151_96map/model.ckpt")
+                net.saver.restore(sess, snemi3d.folder()+"tmp/model.ckpt")
                 print("Model restored.")
 
                 #TODO pad the image with zeros so that the ouput covers the whole dataset
@@ -183,9 +188,9 @@ def predict():
         # Restore variables from disk.
         net.saver.restore(sess, snemi3d.folder()+"tmp/model.ckpt")
         print("Model restored.")
-        with h5py.File(snemi3d.folder()+'validation-input.h5','r') as input_file:
+        with h5py.File(snemi3d.folder()+'test-input.h5','r') as input_file:
             inpt = input_file['main'][:].astype(np.float32) / 255.0
-            with h5py.File(snemi3d.folder()+'validation-affinities.h5','w') as output_file:
+            with h5py.File(snemi3d.folder()+'test-affinities.h5','w') as output_file:
                 output_file.create_dataset('main', shape=(3,)+input_file['main'].shape)
                 out = output_file['main']
 
