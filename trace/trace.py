@@ -21,7 +21,7 @@ OUTPT = 101
 INPT = FOV + 2 * (OUTPT//2)
 
 # Change this for each run to save the results in a new folder
-tmp_dir = 'tmp/run1/'
+tmp_dir = 'tmp/run2/'
 
 def weight_variable(shape):
   """
@@ -141,11 +141,16 @@ def train(n_iterations=10000, validation=False):
         validation_input_file = h5py.File(snemi3d.folder()+'validation-input.h5','r')
         validation_input = validation_input_file['main'][:5,:,:].astype(np.float32) / 255.0
         num_validation_layers = validation_input.shape[0]
-        validation_input_shape = validation_input.shape[1]
-        validation_output_shape = validation_input.shape[1] - FOV + 1
+        mirrored_validation_input = _mirrorAcrossBorders(validation_input)
+        validation_input_shape = mirrored_validation_input.shape[1]
+        validation_output_shape = mirrored_validation_input.shape[1] - FOV + 1
+        reshaped_validation_input = mirrored_validation_input.reshape(num_validation_layers, validation_input_shape, validation_input_shape, 1)
+        validation_input_file.close()
 
         validation_label_file = h5py.File(snemi3d.folder()+'validation-affinities.h5','r')
-        validation_labels = validation_label_file['main'][:,:5,:,:]
+        validation_labels = validation_label_file['main']
+        reshaped_labels = np.einsum('dzyx->zyxd', validation_labels[0:2])
+        validation_label_file.close()
 
     with tf.variable_scope('foo'):
         net = create_network(INPT, OUTPT)
@@ -176,16 +181,11 @@ def train(n_iterations=10000, validation=False):
                 # Measure validation error
 
                 # Compute pixel error
-                reshaped_label = np.einsum('dzyx->zyxd', 
-                        validation_labels[0:2,:,
-                            FOV//2:FOV//2+validation_output_shape,
-                            FOV//2:FOV//2+validation_output_shape])
 
                 validation_sigmoid_prediction, validation_pixel_error_summary = \
                         sess.run([validation_net.sigmoid_prediction, validation_net.validation_pixel_error_summary],
-                            feed_dict={validation_net.image: 
-                                validation_input.reshape(num_validation_layers, validation_input_shape, validation_input_shape, 1),
-                                validation_net.target: reshaped_label})
+                            feed_dict={validation_net.image: reshaped_validation_input,
+                                       validation_net.target: reshaped_labels})
 
                 summary_writer.add_summary(validation_pixel_error_summary, step)
 
@@ -210,12 +210,36 @@ def train(n_iterations=10000, validation=False):
             if step == n_iterations:
                 break
 
+
+def _mirrorAcrossBorders(data):
+    mirrored_data = np.zeros(shape=(data.shape[0], data.shape[1] + FOV - 1, data.shape[2] + FOV - 1))
+    mirrored_data[:,FOV//2:-(FOV//2),FOV//2:-(FOV//2)] = data
+    for i in range(data.shape[0]):
+        # Mirror the left side
+        mirrored_data[i,FOV//2:-(FOV//2),:FOV//2] = np.fliplr(data[i,:,:FOV//2])
+        # Mirror the right side
+        mirrored_data[i,FOV//2:-(FOV//2),-(FOV//2):] = np.fliplr(data[i,:,-(FOV//2):])
+        # Mirror the top side
+        mirrored_data[i,:FOV//2,FOV//2:-(FOV//2)] = np.flipud(data[i,:FOV//2,:])
+        # Mirror the bottom side
+        mirrored_data[i,-(FOV//2):,FOV//2:-(FOV//2)] = np.flipud(data[i,-(FOV//2):,:])
+        # Mirror the top left corner
+        mirrored_data[i,:FOV//2,:FOV//2] = np.fliplr(np.transpose(np.fliplr(np.transpose(data[i,:FOV//2,:FOV//2]))))
+        # Mirror the top right corner
+        mirrored_data[i,:FOV//2,-(FOV//2):] = np.transpose(np.fliplr(np.transpose(np.fliplr(data[i,:FOV//2,-(FOV//2):]))))
+        # Mirror the bottom left corner
+        mirrored_data[i,-(FOV//2):,:FOV//2] = np.transpose(np.fliplr(np.transpose(np.fliplr(data[i,-(FOV//2):,:FOV//2]))))
+        # Mirror the bottom right corner
+        mirrored_data[i,-(FOV//2):,-(FOV//2):] = np.fliplr(np.transpose(np.fliplr(np.transpose(data[i,-(FOV//2):,-(FOV//2):]))))
+    return mirrored_data
+
+
 def _evaluateRandError(sigmoid_prediction, num_layers, output_shape, watershed_high=0.9, watershed_low=0.3):
     # Save affinities to temporary file
     #TODO pad the image with zeros so that the ouput covers the whole dataset
     tmp_aff_file = 'validation-tmp-affinities.h5'
     tmp_label_file = 'validation-tmp-labels.h5'
-    ground_truth_file = 'validation-labels-truncated.h5'
+    ground_truth_file = 'validation-generated-labels.h5'
 
     with h5py.File(snemi3d.folder()+tmp_dir+tmp_aff_file,'w') as output_file:
         output_file.create_dataset('main', shape=(3, num_layers, output_shape, output_shape))
@@ -283,29 +307,24 @@ def _evaluateRandError(sigmoid_prediction, num_layers, output_shape, watershed_h
     return results
 
 def predict():
-    from tqdm import tqdm
-    net = create_network(INPT, OUTPT)
-    with tf.Session() as sess:
-        # Restore variables from disk.
-        net.saver.restore(sess, snemi3d.folder()+tmp_dir+'model.ckpt')
-        print("Model restored.")
-        with h5py.File(snemi3d.folder()+'test-input.h5','r') as input_file:
-            inpt = input_file['main'][:].astype(np.float32) / 255.0
-            with h5py.File(snemi3d.folder()+'test-affinities.h5','w') as output_file:
-                output_file.create_dataset('main', shape=(3,)+input_file['main'].shape)
-                out = output_file['main']
+    with h5py.File(snemi3d.folder()+'test-input.h5','r') as input_file:
+        inpt = input_file['main'][:].astype(np.float32) / 255.0
+        mirrored_inpt = _mirrorAcrossBorders(inpt)
+        num_layers = mirrored_inpt.shape[0]
+        input_shape = mirrored_inpt.shape[1]
+        output_shape = mirrored_inpt.shape[1] - FOV + 1
+        with h5py.File(snemi3d.folder()+'test-affinities.h5','w') as output_file:
+            output_file.create_dataset('main', shape=(3,)+input_file['main'].shape)
+            out = output_file['main']
 
-                #TODO pad the image with zeros so that the ouput covers the whole dataset
-                for z in xrange(inpt.shape[0]):
-                    print ('z: {} of {}'.format(z,inpt.shape[0]))
-                    for y in xrange(0,inpt.shape[1]-INPT, OUTPT):
-                        for x in xrange(0,inpt.shape[1]-INPT, OUTPT):
-                            pred = sess.run(net.sigmoid_prediction,
-                                feed_dict={net.image: inpt[z,y:y+INPT,x:x+INPT].reshape(1,INPT,INPT,1)})
-                            reshapedPred = np.zeros(shape=(2, OUTPT, OUTPT))
-                            reshapedPred[0] = pred[0,:,:,0].reshape(OUTPT, OUTPT)
-                            reshapedPred[1] = pred[0,:,:,1].reshape(OUTPT, OUTPT)
-                            out[0:2,
-                                z,
-                                y+FOV//2:y+FOV//2+OUTPT,
-                                x+FOV//2:x+FOV//2+OUTPT] = reshapedPred
+            with tf.variable_scope('foo'):
+                net = create_network(input_shape, output_shape)
+            with tf.Session() as sess:
+                # Restore variables from disk.
+                net.saver.restore(sess, snemi3d.folder()+tmp_dir+'model.ckpt')
+                print("Model restored.")
+
+                pred = sess.run(net.sigmoid_prediction,
+                        feed_dict={net.image: mirrored_inpt.reshape(num_layers, input_shape, input_shape, 1)})
+                reshaped_pred = np.einsum('zyxd->dzyx', pred)
+                out[0:2] = reshaped_pred
