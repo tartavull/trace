@@ -150,7 +150,7 @@ def train(model_type, dataset):
     Train an N4 models to predict affinities
     """
 
-    trace.train(model_dict[model_type], config_dict[dataset])
+    trace.train(model_dict(model_type), config_dict(dataset))
 
 
 @cli.command()
@@ -162,7 +162,7 @@ def predict(model_type, dataset, split):
     Realods a model previously trained
     """
     import trace
-    trace.predict(model_dict[model_type], config_dict[dataset], split)
+    trace.predict(model_dict(model_type), config_dict(dataset), split)
 
 
 @cli.command()
