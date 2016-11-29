@@ -29,7 +29,7 @@ def snemi3d_config():
 def isbi_config():
     return DatasetConfig(
         dataset='isbi',
-        base_url='http://brainiac2.mit.edu/SNEMI3D/sites/default/files/',
+        base_url='http://brainiac2.mit.edu/isbi_challenge/sites/default/files/',
         train_input_base='train-volume',
         validation_input_base='validation-volume',
         train_labels_base='train-labels',
