@@ -49,7 +49,7 @@ def visualize(dataset, split, aff, ip, port):
     """
     import neuroglancer
 
-    direct = dataset_config.folder(dataset)
+    config = config_dict(dataset)
 
     neuroglancer.set_static_content_source(url='https://neuroglancer-demo.appspot.com')
     neuroglancer.set_server_bind_address(bind_address=ip, bind_port=port)
@@ -57,10 +57,10 @@ def visualize(dataset, split, aff, ip, port):
     if aff:
         import augmentation
         augmentation.maybe_create_affinities(split)
-        add_affinities(direct, split + '-affinities', viewer)
+        add_affinities(config.folder, split + '-affinities', viewer)
     else:
-        add_file(direct, split + '-input', viewer)
-        add_file(direct, split + '-labels', viewer)
+        add_file(config.folder, split + '-input', viewer)
+        add_file(config.folder, split + '-labels', viewer)
 
     print('open your brower at:')
     print(viewer.__str__().replace('172.17.0.2', '54.166.106.209')) # Replace the second argument with your own server's ip address
