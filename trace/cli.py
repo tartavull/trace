@@ -131,13 +131,13 @@ def watershed(dataset, split, high, low, dust):
     TODO Explain what each argument is, dust is currently ignored
     """
 
-    direct = dataset_config.folder(dataset)
+    config = config_dict(dataset)
 
     curent_dir = os.path.dirname(os.path.abspath(__file__))
     subprocess.call(["julia",
                      curent_dir +"/thirdparty/watershed/watershed.jl",
-                     direct + split + "-affinities.h5",
-                     direct + split + "-labels.h5",
+                     config.folder + split + "-affinities.h5",
+                     config.folder + split + "-labels.h5",
                      str(high),
                      str(low)])
 
