@@ -60,7 +60,10 @@ def batch_iterator(config, fov, output_patch, input_patch):
     split = 'train'
     dataset_prefix = config.folder + split
     set_path_to_config(dataset_prefix)
-    spec =  dataset_prefix + '.spec'
+
+    spec = dataset_prefix + '.spec'
+
+    print(spec)
 
     net_spec = {
         'label': (1, input_patch, input_patch),
