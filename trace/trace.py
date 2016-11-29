@@ -3,18 +3,25 @@
 from __future__ import print_function
 from __future__ import division
 
+import os
+import subprocess
 import h5py
 import tensorflow as tf
 import numpy as np
 
 import snemi3d
 from augmentation import batch_iterator
+from thirdparty.segascorus import io_utils
+from thirdparty.segascorus import utils
+from thirdparty.segascorus.metrics import *
 
 
 FOV = 95
 OUTPT = 101
 INPT = FOV + 2 * (OUTPT//2)
 
+# Change this for each run to save the results in a new folder
+tmp_dir = 'tmp/run1/'
 
 def weight_variable(shape):
   """
@@ -40,8 +47,8 @@ def max_pool(x, dilation=None, strides=[2, 2], window_shape=[2, 2]):
 def create_network(inpt, out, learning_rate=0.001):
     class Net:
         # layer 0
-        image = tf.placeholder(tf.float32, shape=[1, inpt, inpt, 1])
-        target = tf.placeholder(tf.float32, shape=[1, out, out, 2])
+        image = tf.placeholder(tf.float32, shape=[None, inpt, inpt, 1])
+        target = tf.placeholder(tf.float32, shape=[None, out, out, 2])
 
         # layer 1 - original stride 1
         W_conv1 = weight_variable([4, 4, 1, 48])
@@ -89,19 +96,65 @@ def create_network(inpt, out, learning_rate=0.001):
         cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(prediction,target))
         loss_summary = tf.scalar_summary('cross_entropy', cross_entropy)
         train_step = tf.train.AdamOptimizer(learning_rate).minimize(cross_entropy)
+
+        binary_prediction = tf.round(sigmoid_prediction) 
+        pixel_error = tf.reduce_mean(tf.cast(tf.abs(binary_prediction - target), tf.float32))
+        pixel_error_summary = tf.summary.scalar('pixel_error', pixel_error)
+        validation_pixel_error_summary = tf.summary.scalar('validation pixel_error', pixel_error)
+
+        rand_f_score = tf.placeholder(tf.float32)
+        rand_f_score_merge = tf.placeholder(tf.float32)
+        rand_f_score_split = tf.placeholder(tf.float32)
+        vi_f_score = tf.placeholder(tf.float32)
+        vi_f_score_merge = tf.placeholder(tf.float32)
+        vi_f_score_split = tf.placeholder(tf.float32)
+
+        rand_f_score_summary = tf.summary.scalar('rand f score', rand_f_score)
+        rand_f_score_merge_summary = tf.summary.scalar('rand f merge score', rand_f_score_merge)
+        rand_f_score_split_summary = tf.summary.scalar('rand f split score', rand_f_score_split)
+        vi_f_score_summary = tf.summary.scalar('vi f score', vi_f_score)
+        vi_f_score_merge_summary = tf.summary.scalar('vi f merge score', vi_f_score_merge)
+        vi_f_score_split_summary = tf.summary.scalar('vi f split score', vi_f_score_split)
+
+        score_summary_op = tf.summary.merge([rand_f_score_summary,
+                                             rand_f_score_merge_summary,
+                                             rand_f_score_split_summary,
+                                             vi_f_score_summary,
+                                             vi_f_score_merge_summary,
+                                             vi_f_score_split_summary
+                                            ])
+
+        summary_op = tf.summary.merge([loss_summary,
+                                       pixel_error_summary
+                                       ])
+
        
         # Add ops to save and restore all the variables.
         saver = tf.train.Saver()
 
     return Net()
 
-def train(n_iterations=10000):
+def train(n_iterations=10000, validation=True):
+    if validation:
+        validation_input_file = h5py.File(snemi3d.folder()+'validation-input.h5','r')
+        validation_input = validation_input_file['main'][:5,:,:].astype(np.float32) / 255.0
+        num_validation_layers = validation_input.shape[0]
+        validation_input_shape = validation_input.shape[1]
+        validation_output_shape = validation_input.shape[1] - FOV + 1
 
-    net = create_network(INPT, OUTPT)
+        validation_label_file = h5py.File(snemi3d.folder()+'validation-affinities.h5','r')
+        validation_labels = validation_label_file['main'][:,:5,:,:]
+
+    with tf.variable_scope('foo'):
+        net = create_network(INPT, OUTPT)
+    if validation:
+        with tf.variable_scope('foo', reuse=True):
+            validation_net = create_network(validation_input_shape, validation_output_shape)
+
     print ('Run tensorboard to visualize training progress')
     with tf.Session() as sess:
         summary_writer = tf.train.SummaryWriter(
-                       snemi3d.folder()+'tmp/', graph=sess.graph)
+                       snemi3d.folder()+tmp_dir, graph=sess.graph)
 
         sess.run(tf.global_variables_initializer())
         for step, (inputs, affinities) in enumerate(batch_iterator(FOV,OUTPT,INPT)):
@@ -111,26 +164,128 @@ def train(n_iterations=10000):
             
             if step % 10 == 0:
                 print ('step :'+str(step))
-                summary = sess.run(net.loss_summary, 
+                summary = sess.run(net.summary_op, 
                     feed_dict={net.image: inputs,
                                net.target: affinities})
             
                 summary_writer.add_summary(summary, step)
+            
+            if validation and step % 100 == 0:
+                # Measure validation error
+
+                # Compute pixel error
+                reshaped_label = np.einsum('dzyx->zyxd', 
+                        validation_labels[0:2,:,
+                            FOV//2:FOV//2+validation_output_shape,
+                            FOV//2:FOV//2+validation_output_shape])
+
+                validation_sigmoid_prediction, validation_pixel_error_summary = \
+                        sess.run([validation_net.sigmoid_prediction, validation_net.validation_pixel_error_summary],
+                            feed_dict={validation_net.image: 
+                                validation_input.reshape(num_validation_layers, validation_input_shape, validation_input_shape, 1),
+                                validation_net.target: reshaped_label})
+
+                summary_writer.add_summary(validation_pixel_error_summary, step)
+
+                # Calculate rand and VI scores
+                scores = _evaluateRandError(validation_sigmoid_prediction, num_validation_layers, validation_output_shape, watershed_high=0.95)
+                score_summary = sess.run(net.score_summary_op,
+                         feed_dict={net.rand_f_score: scores['Rand F-Score Full'],
+                                    net.rand_f_score_merge: scores['Rand F-Score Merge'],
+                                    net.rand_f_score_split: scores['Rand F-Score Split'],
+                                    net.vi_f_score: scores['VI F-Score Full'],
+                                    net.vi_f_score_merge: scores['VI F-Score Merge'],
+                                    net.vi_f_score_split: scores['VI F-Score Split'],
+                            })
+
+                summary_writer.add_summary(score_summary, step)
 
             if step % 1000 == 0:
                 # Save the variables to disk.
-                save_path = net.saver.save(sess, snemi3d.folder()+"tmp/model.ckpt")
+                save_path = net.saver.save(sess, snemi3d.folder()+tmp_dir + 'model.ckpt')
                 print("Model saved in file: %s" % save_path)
 
             if step == n_iterations:
                 break
+
+def _evaluateRandError(sigmoid_prediction, num_layers, output_shape, watershed_high=0.9, watershed_low=0.3):
+    # Save affinities to temporary file
+    #TODO pad the image with zeros so that the ouput covers the whole dataset
+    tmp_aff_file = 'validation-tmp-affinities.h5'
+    tmp_label_file = 'validation-tmp-labels.h5'
+    ground_truth_file = 'validation-labels-truncated.h5'
+
+    with h5py.File(snemi3d.folder()+tmp_dir+tmp_aff_file,'w') as output_file:
+        output_file.create_dataset('main', shape=(3, num_layers, output_shape, output_shape))
+        out = output_file['main']
+
+        reshaped_pred = np.einsum('zyxd->dzyx', sigmoid_prediction)
+        out[0:2,:,:,:] = reshaped_pred
+
+    # Do watershed segmentation
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    subprocess.call(["julia",
+                     current_dir+"/thirdparty/watershed/watershed.jl",
+                     snemi3d.folder()+tmp_dir+tmp_aff_file,
+                     snemi3d.folder()+tmp_dir+tmp_label_file,
+                     str(watershed_high),
+                     str(watershed_low)])
+
+    # Compute rand f score
+    # --------------------
+
+    # Parameters
+    calc_rand_score = True
+    calc_rand_error = False
+    calc_variation_score = True
+    calc_variation_information = False
+    relabel2d = True
+    foreground_restricted = True
+    split_0_segment = True
+    other = None
+
+    seg1 = io_utils.import_file(snemi3d.folder()+tmp_dir+tmp_label_file)
+    seg2 = io_utils.import_file(snemi3d.folder()+ground_truth_file)
+    prep = utils.parse_fns(utils.prep_fns,
+                            [relabel2d, foreground_restricted])
+    seg1, seg2 = utils.run_preprocessing(seg1, seg2, prep)
+
+    om = utils.calc_overlap_matrix(seg1, seg2, split_0_segment)
+
+    #Calculating each desired metric
+    metrics = utils.parse_fns( utils.metric_fns,
+                                [calc_rand_score,
+                                calc_rand_error,
+                                calc_variation_score,
+                                calc_variation_information] )
+
+    results = {}
+    for (name,metric_fn) in metrics:
+        if relabel2d:
+            full_name = "2D {}".format(name)
+        else:
+            full_name = name
+
+        (f,m,s) = metric_fn( om, full_name, other )
+        results["{} Full".format(name)] = f
+        results["{} Merge".format(name)] = m
+        results["{} Split".format(name)] = s
+
+    print('Rand F-Score Full: ' + str(results['Rand F-Score Full']))
+    print('Rand F-Score Split: ' + str(results['Rand F-Score Split']))
+    print('Rand F-Score Merge: ' + str(results['Rand F-Score Merge']))
+    print('VI F-Score Full: ' + str(results['VI F-Score Full']))
+    print('VI F-Score Split: ' + str(results['VI F-Score Split']))
+    print('VI F-Score Merge: ' + str(results['VI F-Score Merge']))
+
+    return results
 
 def predict():
     from tqdm import tqdm
     net = create_network(INPT, OUTPT)
     with tf.Session() as sess:
         # Restore variables from disk.
-        net.saver.restore(sess, snemi3d.folder()+"tmp/model.ckpt")
+        net.saver.restore(sess, snemi3d.folder()+tmp_dir+'model.ckpt')
         print("Model restored.")
         with h5py.File(snemi3d.folder()+'test-input.h5','r') as input_file:
             inpt = input_file['main'][:].astype(np.float32) / 255.0

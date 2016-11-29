@@ -47,7 +47,7 @@ def maybe_create_dataset():
 
 def folder():
   current_dir = os.path.dirname(os.path.abspath(__file__))
-  snemi3d_dir = current_dir + '/snemi3d/'
+  snemi3d_dir = current_dir + '/isbi/'
   return snemi3d_dir
 
 if __name__ == '__main__':
