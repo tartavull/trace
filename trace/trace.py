@@ -52,7 +52,7 @@ def predict(model, config, split):
         # Restore variables from disk.
         model.saver.restore(sess, ckpt_folder + 'model.ckpt')
         print("Model restored.")
-        with h5py.File(prefix + 'input.h5','r') as input_file:
+        with h5py.File(prefix + '-input.h5','r') as input_file:
             inpt = input_file['main'][:].astype(np.float32) / 255.0
             with h5py.File(prefix + '-affinities.h5', 'w') as output_file:
                 output_file.create_dataset('main', shape=(3,)+input_file['main'].shape)

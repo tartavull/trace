@@ -9,19 +9,21 @@ import h5py
 import click
 
 import dataset_config
-
 import trace
 import models
 
 
-config_dict = {
-    'snemi3d': dataset_config.snemi3d_config(),
-    'isbi': dataset_config.isbi_config()
-}
+def config_dict(x):
+    return {
+        'snemi3d': dataset_config.snemi3d_config(),
+        'isbi': dataset_config.isbi_config()
+    }[x]
 
-model_dict = {
-    'n4': models.default_N4()
-}
+
+def model_dict(x):
+    return {
+        'n4': models.default_N4()
+    }[x]
 
 
 @click.group()
