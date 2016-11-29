@@ -1,5 +1,5 @@
 [files]
-img = /home/it2/code/trace/trace/isbi/train-volumes.h5
+img = /home/it2/code/trace/trace/isbi/train-volume.h5
 lbl = /home/it2/code/trace/trace/isbi/train-labels.h5
 
 [params]
