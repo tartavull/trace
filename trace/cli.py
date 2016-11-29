@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 import os
-import sys
 import webbrowser
 import subprocess
 
@@ -10,45 +9,51 @@ import h5py
 import numpy as np
 import click
 
-import snemi3d
+import dataset_config
+
 
 @click.group()
 def cli():
     pass
 
-@cli.command()
-def download():
-    import snemi3d
-    snemi3d.maybe_create_dataset()
 
 @cli.command()
-@click.argument('dataset', type=click.Choice(['train', 'test']))
+def download():
+    import dataset_config
+    dataset_config.maybe_create_all_datasets(0.9)
+
+
+@cli.command()
+@click.argument('split', type=click.Choice(['train', 'validation', 'test']))
+@click.argument('dataset', type=click.Choice(['snemi3d', 'isbi']))
 @click.option('--aff/--no-aff', default=False, help="Display only the affinities.")
 @click.option('--ip', default='172.17.0.2', help="IP address for serving")
 @click.option('--port', default=4125, help="Port for serving")
-def visualize(dataset, aff, ip, port):
+def visualize(dataset, split, aff, ip, port):
     """
     Opens a tab in your webbrowser showing the chosen dataset
     """
     import neuroglancer
 
-    snemi3d_dir = snemi3d.folder()
+    direct = dataset_config.folder(dataset)
+
     neuroglancer.set_static_content_source(url='https://neuroglancer-demo.appspot.com')
     neuroglancer.set_server_bind_address(bind_address=ip, bind_port=port)
     viewer = neuroglancer.Viewer(voxel_size=[6, 6, 30])
     if aff:
         import augmentation
-        augmentation.maybe_create_affinities(dataset)
-        add_affinities(snemi3d_dir, dataset+'-affinities', viewer)
+        augmentation.maybe_create_affinities(split)
+        add_affinities(direct, split + '-affinities', viewer)
     else:
-        add_file(snemi3d_dir, dataset+'-input', viewer)
-        add_file(snemi3d_dir, dataset+'-labels', viewer)
+        add_file(direct, split + '-input', viewer)
+        add_file(direct, split + '-labels', viewer)
 
     print('open your brower at:')
     print(viewer.__str__().replace('172.17.0.2', '54.166.106.209')) # Replace the second argument with your own server's ip address
     webbrowser.open(viewer.__str__())
     print("press any key to exit")
-    raw_input()
+    input()
+
 
 def add_file(folder, filename, viewer):
     try:
@@ -57,6 +62,7 @@ def add_file(folder, filename, viewer):
             viewer.add(arr, name=filename)
     except IOError:
         print(filename+' not found')
+
 
 def add_affinities(folder, filename, viewer):
     """
@@ -100,21 +106,24 @@ def add_affinities(folder, filename, viewer):
         print(filename+'.h5 not found')
 
 
-
 @cli.command()
-@click.argument('dataset', type=click.Choice(['train', 'test']), default='test')
+@click.argument('split', type=click.Choice(['train', 'validation', 'test']))
+@click.argument('dataset', type=click.Choice(['snemi3d', 'isbi']))
 @click.option('--high', type=float, default=0.9)
 @click.option('--low', type=float, default=0.3)
 @click.option('--dust', type=int, default=250)
-def watershed(dataset, high, low, dust):
+def watershed(dataset, split, high, low, dust):
     """
     TODO Explain what each argument is, dust is currently ignored
     """
+
+    direct = dataset_config.folder(dataset)
+
     curent_dir = os.path.dirname(os.path.abspath(__file__))
     subprocess.call(["julia",
-                     curent_dir+"/thirdparty/watershed/watershed.jl",
-                     snemi3d.folder()+dataset+"-affinities.h5",
-                     snemi3d.folder()+dataset+"-labels.h5",
+                     curent_dir +"/thirdparty/watershed/watershed.jl",
+                     direct + split + "-affinities.h5",
+                     direct + split + "-labels.h5",
                      str(high),
                      str(low)])
 
