@@ -227,8 +227,7 @@ def predict(model, config, split):
                     out[0:2, z] = reshaped_pred[:,0]
 
             # Average x and y affinities to get a probabilistic boundary map
-            with tifffile.TiffFile(config.folder + split + 'map.tif', 'w') as submission_map:
-                tifffile.imsave(config.folder + split + 'map.tif', (out[0] + out[1])/2)
+            tifffile.imsave(config.folder + split + '-map.tif', (out[0] + out[1])/2)
 
 
 def __grid_search(config, remaining_params, current_params, results_dict):
