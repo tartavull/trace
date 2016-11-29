@@ -7,10 +7,13 @@ import h5py
 import tensorflow as tf
 import numpy as np
 import subprocess
+import tifffile
 
 from thirdparty.segascorus import io_utils
 from thirdparty.segascorus import utils
 from thirdparty.segascorus.metrics import *
+
+import models
 
 import os
 
@@ -57,7 +60,7 @@ def train(model, config, n_iterations=10000, validation=True):
 
                 summary_writer.add_summary(summary, step)
 
-            if validation and step % 300 == 0:
+            if validation and step % 500 == 0:
                 # Measure validation error
 
                 # Compute pixel error
@@ -90,6 +93,10 @@ def train(model, config, n_iterations=10000, validation=True):
 
             if step == n_iterations:
                 break
+
+    return scores
+
+
 
 
 def _mirror_across_borders(data, fov):
@@ -219,6 +226,36 @@ def predict(model, config, split):
                     reshaped_pred = np.einsum('zyxd->dzyx', pred)
                     out[0:2, z] = reshaped_pred[:,0]
 
+            # Average x and y affinities to get a probabilistic boundary map
+            with tifffile.TiffFile(config.folder + split + 'map.tif', 'w') as submission_map:
+                tifffile.imsave(config.folder + split + 'map.tif', (out[0] + out[1])/2)
 
-def grid_search():
-    pass
+
+def __grid_search(config, remaining_params, current_params, results_dict):
+    if len(remaining_params) > 0:
+        # Get a parameter
+        param, values = remaining_params.popitem()
+
+        # For each potential parameter, copy current_params and add the potential parameter to next_params
+        for value in values:
+            next_params = current_params.copy()
+            next_params[param] = value
+
+            # Perform grid search on the remaining params
+            __grid_search(config, remaining_params=remaining_params.copy(), current_params=next_params,
+                          results_dict=results_dict)
+    else:
+        model = models.N4(current_params)
+        results_dict[model.model_name] = train(model, config, n_iterations=500)  # temp
+
+
+def grid_search(config, params_lists):
+    tf.Graph().as_default()
+
+    # Mapping between parameter set and metrics.
+    results_dict = dict()
+
+    # perform the recursive grid search
+    __grid_search(config, params_lists, dict(), results_dict)
+
+    return results_dict
