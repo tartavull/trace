@@ -41,7 +41,7 @@ def visualize(dataset, aff):
         add_file(snemi3d_dir, dataset+'-labels', viewer)
     
     print('open your brower at:')
-    print(viewer.__str__().replace('172.17.0.2', '54.166.106.209')) # Replace the second argument with your own server's ip address
+    print(viewer.__str__().replace('172.17.0.2', '54.89.114.140')) # Replace the second argument with your own server's ip address
     webbrowser.open(viewer.__str__())
     print("press any key to exit")
     raw_input()
