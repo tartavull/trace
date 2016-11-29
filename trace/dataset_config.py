@@ -170,6 +170,7 @@ def affinitize_isbi(folder, train_labels_h5, validation_labels_h5):
     with h5py.File(folder + train_labels_h5, 'r') as file:
         data = file['main'][:]
         aff = transform.affinitize(data)
+        aff[2] = 0
 
     with h5py.File(folder + train_aff, 'w') as file:
         file.create_dataset('main', data=aff)
@@ -178,6 +179,7 @@ def affinitize_isbi(folder, train_labels_h5, validation_labels_h5):
     with h5py.File(folder + validation_labels_h5, 'r') as file:
         data = file['main'][:]
         aff = transform.affinitize(data)
+        aff[2] = 0
 
     with h5py.File(folder + validation_aff, 'w') as file:
         file.create_dataset('main', data=aff)
