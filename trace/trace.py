@@ -213,7 +213,7 @@ def predict(model, config, split):
                 model.saver.restore(sess, ckpt_folder + 'model.ckpt')
                 print("Model restored.")
                 for z in range(num_layers):
-                    pred = sess.run(net.sigmoid_prediction,
+                    pred = sess.run(model.sigmoid_prediction,
                                     feed_dict={
                                         model.image: mirrored_inpt[z].reshape(1, input_shape, input_shape, 1)})
                     reshaped_pred = np.einsum('zyxd->dzyx', pred)
