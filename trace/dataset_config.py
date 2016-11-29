@@ -3,6 +3,7 @@ Download and decompress SNEMI3D
 """
 
 from __future__ import print_function
+import os
 import os.path
 import urllib
 import zipfile
@@ -30,11 +31,11 @@ def isbi_config():
     return DatasetConfig(
         dataset='isbi',
         base_url='http://brainiac2.mit.edu/isbi_challenge/sites/default/files/',
-        train_input_base='train-volume',
-        validation_input_base='validation-volume',
+        train_input_base='train-input',
+        validation_input_base='validation-input',
         train_labels_base='train-labels',
         validation_labels_base='validation-labels',
-        test_input_base='test-volume',
+        test_input_base='test-input',
         needs_unzipping=False,
         needs_affinitizing=True
     )
@@ -104,6 +105,7 @@ def maybe_split(folder, training_fn, validation_fn, label_fn, label_validation_f
     if not os.path.exists(folder + validation_fn):
         print(str.format('splitting {} into {}% training,  {}% into validation', training_fn, 100*train_fraction,
                          100*(1-train_fraction)))
+        print(folder + training_fn)
         with tif.TiffFile(folder + training_fn) as file:
             total_set = file.asarray()
             num_slices = total_set.shape[0]
@@ -146,9 +148,13 @@ def maybe_create_dataset(config, train_frac):
         maybe_unzip(config.folder, config.train_labels_zip)
         maybe_unzip(config.folder, config.test_input_zip)
     else:
-        maybe_download(config.base_url, config.folder, config.train_input_tif)
+        # Kinda funky that the datasets have different named files
+        maybe_download(config.base_url, config.folder, 'train-volume.tif')
         maybe_download(config.base_url, config.folder, config.train_labels_tif)
-        maybe_download(config.base_url, config.folder, config.test_input_tif)
+        maybe_download(config.base_url, config.folder, 'test-volume.tif')
+
+        os.rename(config.folder + 'train-volume.tif', config.folder + config.train_input_tif)
+        os.rename(config.folder + 'test-volume.tif', config.folder + config.test_input_tif)
 
     # Split the training dataset into train and validation
     maybe_split(config.folder, config.train_input_tif, config.validation_input_tif, config.train_labels_tif,
