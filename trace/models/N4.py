@@ -31,7 +31,8 @@ class N4:
         self.inpt = self.fov + 2 * (self.out // 2)
 
         # layer 0
-        self.image = tf.placeholder(tf.float32, shape=[1, self.inpt, self.inpt, 1])
+        # Normally would have shape [1, inpt, inpt, 1], but None allows us to have a flexible validation set
+        self.image = tf.placeholder(tf.float32, shape=[1, None, None, 1])
         self.target = tf.placeholder(tf.float32, shape=[1, self.out, self.out, 2])
 
         # layer 1 - original stride 1
@@ -80,6 +81,37 @@ class N4:
         self.cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(self.prediction, self.target))
         self.loss_summary = tf.scalar_summary('cross_entropy', self.cross_entropy)
         self.train_step = tf.train.AdamOptimizer(learning_rate).minimize(self.cross_entropy)
+
+        self.binary_prediction = tf.round(self.sigmoid_prediction)
+        self.pixel_error = tf.reduce_mean(tf.cast(tf.abs(self.binary_prediction - self.target), tf.float32))
+        self.pixel_error_summary = tf.summary.scalar('pixel_error', self.pixel_error)
+        self.validation_pixel_error_summary = tf.summary.scalar('validation pixel_error', self.pixel_error)
+
+        self.rand_f_score = tf.placeholder(tf.float32)
+        self.rand_f_score_merge = tf.placeholder(tf.float32)
+        self.rand_f_score_split = tf.placeholder(tf.float32)
+        self.vi_f_score = tf.placeholder(tf.float32)
+        self.vi_f_score_merge = tf.placeholder(tf.float32)
+        self.vi_f_score_split = tf.placeholder(tf.float32)
+
+        self.rand_f_score_summary = tf.summary.scalar('rand f score', self.rand_f_score)
+        self.rand_f_score_merge_summary = tf.summary.scalar('rand f merge score', self.rand_f_score_merge)
+        self.rand_f_score_split_summary = tf.summary.scalar('rand f split score', self.rand_f_score_split)
+        self.vi_f_score_summary = tf.summary.scalar('vi f score', self.vi_f_score)
+        self.vi_f_score_merge_summary = tf.summary.scalar('vi f merge score', self.vi_f_score_merge)
+        self.vi_f_score_split_summary = tf.summary.scalar('vi f split score', self.vi_f_score_split)
+
+        self.score_summary_op = tf.summary.merge([self.rand_f_score_summary,
+                                                 self.rand_f_score_merge_summary,
+                                                 self.rand_f_score_split_summary,
+                                                 self.vi_f_score_summary,
+                                                 self.vi_f_score_merge_summary,
+                                                 self.vi_f_score_split_summary
+                                                 ])
+
+        self.summary_op = tf.summary.merge([self.loss_summary,
+                                       self.pixel_error_summary
+                                       ])
 
         # Add ops to save and restore all the variables.
         self.saver = tf.train.Saver()
