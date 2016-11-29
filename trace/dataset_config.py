@@ -162,7 +162,7 @@ def maybe_create_dataset(config, train_frac):
     maybe_create_hdf5(config.folder, config.test_input_tif)
 
 
-# Ugly hack for transforming into proper dataset
+# Ugly hack for transforming isbi into proper dataset
 def affinitize_isbi(folder, train_labels_h5, validation_labels_h5):
     train_aff = 'train-affinities.h5'
     validation_aff = 'validation-affinities.h5'
@@ -185,7 +185,7 @@ def affinitize_isbi(folder, train_labels_h5, validation_labels_h5):
         file.create_dataset('main', data=aff)
 
 
-    # Run julia
+    # Run watershed to recreate affinities
     current_dir = os.path.dirname(os.path.abspath(__file__))
     subprocess.call(["julia",
                      current_dir + "/thirdparty/watershed/watershed.jl",
@@ -210,7 +210,6 @@ def maybe_create_all_datasets(train_frac):
     isbi_conf = isbi_config()
     maybe_create_dataset(isbi_conf, train_frac)
     affinitize_isbi(isbi_conf.folder, isbi_conf.train_labels_h5, isbi_conf.validation_labels_h5)
-
 
 
 if __name__ == '__main__':

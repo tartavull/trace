@@ -6,10 +6,22 @@ import subprocess
 
 import h5py
 
-import numpy as np
 import click
 
 import dataset_config
+
+import trace
+import models
+
+
+config_dict = {
+    'snemi3d': dataset_config.snemi3d_config(),
+    'isbi': dataset_config.isbi_config()
+}
+
+model_dict = {
+    'n4': models.default_N4()
+}
 
 
 @click.group()
@@ -127,22 +139,33 @@ def watershed(dataset, split, high, low, dust):
                      str(high),
                      str(low)])
 
+
 @cli.command()
-def train():
+@click.argument('model_type', type=click.Choice(['n4']))
+@click.argument('dataset', type=click.Choice(['snemi3d', 'isbi']))
+def train(model_type, dataset):
     """
     Train an N4 models to predict affinities
     """
-    import trace
-    trace.train()
+
+    trace.train(model_dict[model_type], config_dict[dataset])
 
 
 @cli.command()
-def predict():
+@click.argument('model_type', type=click.Choice(['n4']))
+@click.argument('dataset', type=click.Choice(['snemi3d', 'isbi']))
+@click.argument('split', type=click.Choice(['train', 'validation', 'test']))
+def predict(model_type, dataset, split):
     """
     Realods a model previously trained
     """
     import trace
-    trace.predict()
+    trace.predict(model_dict[model_type], config_dict[dataset], split)
+
+
+@cli.command()
+def grid():
+    trace.grid_search()
 
 if __name__ == '__main__':
     cli()
