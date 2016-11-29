@@ -17,7 +17,7 @@ import os
 from augmentation import batch_iterator
 
 
-def train(model, config, n_iterations=10000, validation=False):
+def train(model, config, n_iterations=10000, validation=True):
     if validation:
         validation_input_file = h5py.File(config.folder + config.validation_input_h5, 'r')
         validation_input = validation_input_file['main'][:5,:,:].astype(np.float32) / 255.0
@@ -57,7 +57,7 @@ def train(model, config, n_iterations=10000, validation=False):
 
                 summary_writer.add_summary(summary, step)
 
-            if validation and step % 100 == 0:
+            if validation and step % 300 == 0:
                 # Measure validation error
 
                 # Compute pixel error
@@ -70,7 +70,7 @@ def train(model, config, n_iterations=10000, validation=False):
                 summary_writer.add_summary(validation_pixel_error_summary, step)
 
                 # Calculate rand and VI scores
-                scores = _evaluate_rand_error(validation_sigmoid_prediction, num_validation_layers,
+                scores = _evaluate_rand_error(config, model, validation_sigmoid_prediction, num_validation_layers,
                                               validation_output_shape, watershed_high=0.95)
                 score_summary = sess.run(model.score_summary_op,
                                          feed_dict={model.rand_f_score: scores['Rand F-Score Full'],
@@ -125,7 +125,7 @@ def _evaluate_rand_error(config, model, sigmoid_prediction, num_layers, output_s
     # TODO pad the image with zeros so that the ouput covers the whole dataset
     tmp_aff_file = 'validation-tmp-affinities.h5'
     tmp_label_file = 'validation-tmp-labels.h5'
-    ground_truth_file = 'validation-generated-labels.h5'
+    ground_truth_file = 'validation-labels.h5'
 
     base = config.folder + model.model_name + '/'
 
@@ -159,7 +159,7 @@ def _evaluate_rand_error(config, model, sigmoid_prediction, num_layers, output_s
     other = None
 
     seg1 = io_utils.import_file(base + tmp_label_file)
-    seg2 = io_utils.import_file(base + ground_truth_file)
+    seg2 = io_utils.import_file(config.folder + ground_truth_file)
     prep = utils.parse_fns(utils.prep_fns,
                             [relabel2d, foreground_restricted])
     seg1, seg2 = utils.run_preprocessing(seg1, seg2, prep)

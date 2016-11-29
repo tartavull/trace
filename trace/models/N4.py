@@ -32,8 +32,8 @@ class N4:
 
         # layer 0
         # Normally would have shape [1, inpt, inpt, 1], but None allows us to have a flexible validation set
-        self.image = tf.placeholder(tf.float32, shape=[1, None, None, 1])
-        self.target = tf.placeholder(tf.float32, shape=[1, self.out, self.out, 2])
+        self.image = tf.placeholder(tf.float32, shape=[None, None, None, 1])
+        self.target = tf.placeholder(tf.float32, shape=[None, None, None, 2])
 
         # layer 1 - original stride 1
         W_conv1 = weight_variable([4, 4, 1, map_1])
