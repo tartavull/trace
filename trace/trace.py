@@ -28,11 +28,11 @@ def train(model, config, n_iterations=10000, validation=False):
         reshaped_validation_input = mirrored_validation_input.reshape(num_validation_layers, validation_input_shape, validation_input_shape, 1)
         validation_input_file.close()
 
-        validation_label_file = h5py.File(snemi3d.folder()+'validation-affinities.h5','r')
+        validation_label_file = h5py.File(config.folder + 'validation-affinities.h5','r')
         validation_labels = validation_label_file['main']
         reshaped_labels = np.einsum('dzyx->zyxd', validation_labels[0:2])
         validation_label_file.close()
-        
+
     print('Run tensorboard to visualize training progress')
 
     ckpt_folder = config.folder + model.model_name + '/'
