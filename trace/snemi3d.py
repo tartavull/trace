@@ -41,9 +41,9 @@ def maybe_create_dataset():
   maybe_download(base_url, snemi3d_dir, "train-volume.tif")
   maybe_download(base_url, snemi3d_dir, "train-labels.tif")
   maybe_download(base_url, snemi3d_dir, "test-volume.tif")
-  maybe_create_hdf5(snemi3d_dir, "train-volume.zip")
-  maybe_create_hdf5(snemi3d_dir, "train-labels.zip")
-  maybe_create_hdf5(snemi3d_dir, "train-volume.zip")
+  maybe_create_hdf5(snemi3d_dir, "train-volume.tif")
+  maybe_create_hdf5(snemi3d_dir, "train-labels.tif")
+  maybe_create_hdf5(snemi3d_dir, "train-volume.tif")
 
 def folder():
   current_dir = os.path.dirname(os.path.abspath(__file__))
