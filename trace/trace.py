@@ -278,7 +278,7 @@ def train(n_iterations=10000):
         summary_writer = tf.train.SummaryWriter(
                        snemi3d.folder()+'tmp/', graph=sess.graph)
 
-        sess.run(tf.initialize_all_variables())
+        sess.run(tf.global_variables_initializer())
         for step, (inputs, affinities) in enumerate(batch_iterator(FOV,OUTPT,INPT)):
             sess.run(net.train_step, 
                     feed_dict={net.image: inputs,
