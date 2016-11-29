@@ -268,7 +268,7 @@ def create_network(inpt, out, learning_rate=0.001):
         # Add ops to save and restore all the variables.
         saver = tf.train.Saver()
 
-    return UNet()
+    return Net()
 
 def train(n_iterations=10000):
 
