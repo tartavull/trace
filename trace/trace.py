@@ -16,6 +16,7 @@ from thirdparty.segascorus.metrics import *
 import models
 
 import os
+import sys
 
 from augmentation import batch_iterator
 
@@ -244,8 +245,13 @@ def __grid_search(config, remaining_params, current_params, results_dict):
             __grid_search(config, remaining_params=remaining_params.copy(), current_params=next_params,
                           results_dict=results_dict)
     else:
-        model = models.N4(current_params)
-        results_dict[model.model_name] = train(model, config, n_iterations=500)  # temp
+        try:
+            print('Training this model:')
+            print(current_params)
+            model = models.N4(current_params)
+            results_dict[model.model_name] = train(model, config, n_iterations=500)  # temp
+        except:
+            print("Failed to train this model, ", sys.exc_info()[0])
 
 
 def grid_search(config, params_lists):

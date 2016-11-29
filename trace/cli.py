@@ -169,6 +169,19 @@ def predict(model_type, dataset, split):
 @click.argument('dataset', type=click.Choice(['snemi3d', 'isbi']))
 def grid(dataset):
     # Grid search on N4, that's it right now
+
+    params = {
+        'm1': [48, 64],
+        'm2': [48, 64],
+        'm3': [48, 64],
+        'm4': [48, 64],
+        'fc': [200, 300],
+        'lr': 0.001,
+        'out': [101, 120]
+    }
+
+
+
     trace.grid_search(config_dict(dataset), params)
 
 
