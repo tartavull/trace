@@ -12,6 +12,7 @@ import os.path
 import os
 
 import pytest
+import models
 
 from contextlib import contextmanager
 from click.testing import CliRunner
@@ -56,7 +57,7 @@ class TestTrace(object):
         snemi3d_config = dataset_config.snemi3d_config()
 
         dataset_config.maybe_create_all_datasets(0.9)
-        augmentation.maybe_create_affinities('train')
+        augmentation.maybe_create_affinities(dataset_config.folder + 'train')
         os.rename(snemi3d_config.folder + "train-affinities.h5", snemi3d_config.folder + "test-affinities.h5")
         runner = CliRunner()
         result = runner.invoke(cli.cli,['watershed'])
@@ -67,7 +68,9 @@ class TestTrace(object):
         """
         Train model for 10 steps and verify a model was created
         """
-        trace.train(10)
+        model = models.default_N4()
+        config = dataset_config.snemi3d_config()
+        trace.train(model, config)
 
     @classmethod
     def teardown_class(cls):
