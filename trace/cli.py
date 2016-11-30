@@ -176,11 +176,9 @@ def grid(dataset):
         'm3': [48, 64],
         'm4': [48, 64],
         'fc': [200, 300],
-        'lr': 0.001,
+        'lr': [0.001],
         'out': [101, 120]
     }
-
-
 
     trace.grid_search(config_dict(dataset), params)
 
