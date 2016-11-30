@@ -7,3 +7,4 @@
 [submodule "trace/thirdparty/segascorus"]
 	path = trace/thirdparty/segascorus
 	url = https://github.com/seung-lab/segascorus.git
+	ignore = dirty
