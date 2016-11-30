@@ -4,3 +4,7 @@
 [submodule "trace/thirdparty/watershed"]
 	path = trace/thirdparty/watershed
 	url = https://github.com/tartavull/watershed
+[submodule "trace/thirdparty/segascorus"]
+	path = trace/thirdparty/segascorus
+	url = https://github.com/seung-lab/segascorus.git
+	ignore = dirty
