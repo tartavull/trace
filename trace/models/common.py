@@ -17,7 +17,7 @@ def bias_variable(shape):
   return tf.Variable(initial)
 
 
-def conv2d(x, W, dilation=None):
+def conv2d(x, W, dilation=None, padding = 'VALID'):
   return tf.nn.convolution(x, W, strides=[1, 1], padding='VALID', dilation_rate= [dilation, dilation])
 
 
