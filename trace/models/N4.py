@@ -12,7 +12,7 @@ def default_N4():
         'fc': 200,
         'lr': 0.001,
         'out': 101,
-        'keep_prob': .50
+        'keep_prob': .70
     }
     return N4(params)
 
@@ -49,7 +49,7 @@ class N4:
         bn_conv1 = tf.nn.batch_normalization(s_conv1, mean=mean_bn1, variance=var_bn1, 
             offset=offset_bn1, scale=scale_bn1, variance_epsilon=.0005)
         dh_conv1 = tf.nn.relu(bn_conv1)
-        h_conv1  = tf.nn.dropout(h_fc1, keep_prob)
+        h_conv1  = tf.nn.dropout(dh_conv1, keep_prob)
 
         # layer 2 - original stride 2
         h_pool1 = max_pool(h_conv1, strides=[1, 1], dilation=1)
@@ -57,7 +57,15 @@ class N4:
         # layer 3 - original stride 1
         W_conv2 = weight_variable([5, 5, map_1, map_2])
         b_conv2 = bias_variable([map_2])
-        h_conv2 = tf.nn.relu(conv2d(h_pool1, W_conv2, dilation=2) + b_conv2)
+        s_conv2 = tf.nn.relu(conv2d(h_pool1, W_conv2, dilation=2) + b_conv2)
+
+        mean_bn2, var_bn2 = tf.nn.moments(s_conv2, [0])
+        offset_bn2 = tf.Variable(tf.zeros([map_2]))
+        scale_bn2  = tf.Variable(tf.ones([map_2]))
+        bn_conv2 = tf.nn.batch_normalization(s_conv2, mean=mean_bn2, variance=var_bn2, 
+            offset=offset_bn2, scale=scale_bn2, variance_epsilon=.0005)
+        dh_conv2 = tf.nn.relu(bn_conv2)
+        h_conv2  = tf.nn.dropout(dh_conv2, keep_prob)
 
         # layer 4 - original stride 2
         h_pool2 = max_pool(h_conv2, strides=[1, 1], dilation=2)
@@ -65,7 +73,15 @@ class N4:
         # layer 5 - original stride 1
         W_conv3 = weight_variable([4, 4, map_2, map_3])
         b_conv3 = bias_variable([map_3])
-        h_conv3 = tf.nn.relu(conv2d(h_pool2, W_conv3, dilation=4) + b_conv3)
+        s_conv3 = tf.nn.relu(conv2d(h_pool2, W_conv3, dilation=4) + b_conv3)
+
+        mean_bn3, var_bn3 = tf.nn.moments(s_conv3, [0])
+        offset_bn3 = tf.Variable(tf.zeros([map_3]))
+        scale_bn3  = tf.Variable(tf.ones([map_3]))
+        bn_conv3 = tf.nn.batch_normalization(s_conv3, mean=mean_bn3, variance=var_bn3, 
+            offset=offset_bn3, scale=scale_bn3, variance_epsilon=.0005)
+        dh_conv3 = tf.nn.relu(bn_conv3)
+        h_conv3  = tf.nn.dropout(dh_conv3, keep_prob)
 
         # layer 6 - original stride 2
         h_pool3 = max_pool(h_conv3, strides=[1, 1], dilation=4)
@@ -73,7 +89,15 @@ class N4:
         # layer 7 - original stride 1
         W_conv4 = weight_variable([4, 4, map_3, map_4])
         b_conv4 = bias_variable([map_4])
-        h_conv4 = tf.nn.relu(conv2d(h_pool3, W_conv4, dilation=8) + b_conv4)
+        s_conv4 = tf.nn.relu(conv2d(h_pool3, W_conv4, dilation=8) + b_conv4)
+
+        mean_bn4, var_bn4 = tf.nn.moments(s_conv4, [0])
+        offset_bn4 = tf.Variable(tf.zeros([map_4]))
+        scale_bn4  = tf.Variable(tf.ones([map_4]))
+        bn_conv4 = tf.nn.batch_normalization(s_conv4, mean=mean_bn4, variance=var_bn4, 
+            offset=offset_bn4, scale=scale_bn4, variance_epsilon=.0005)
+        dh_conv4 = tf.nn.relu(bn_conv4)
+        h_conv4  = tf.nn.dropout(dh_conv4, keep_prob)
 
         # layer 8 - original stride 2
         h_pool4 = max_pool(h_conv4, strides=[1, 1], dilation=8)
@@ -81,7 +105,15 @@ class N4:
         # layer 9 - original stride 1
         W_fc1 = weight_variable([3, 3, map_4, fc])
         b_fc1 = bias_variable([fc])
-        h_fc1 = tf.nn.relu(conv2d(h_pool4, W_fc1, dilation=16) + b_fc1)
+        s_fc1 = tf.nn.relu(conv2d(h_pool4, W_fc1, dilation=16) + b_fc1)
+
+        mean_fc1, var_fc1 = tf.nn.moments(s_fc1, [0])
+        offset_fc1 = tf.Variable(tf.zeros([map_4]))
+        scale_fc1  = tf.Variable(tf.ones([map_4]))
+        bn_fc1 = tf.nn.batch_normalization(s_fc1, mean=mean_fc1, variance=var_fc1, 
+            offset=offset_fc1, scale=scale_fc1, variance_epsilon=.0005)
+        dh_fc1 = tf.nn.relu(bn_fc1)
+        h_fc1  = tf.nn.dropout(dh_fc1, keep_prob)
 
         # layer 10 - original stride 2
         W_fc2 = weight_variable([1, 1, fc, 2])
