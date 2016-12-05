@@ -284,7 +284,7 @@ class N4_BN:
         
         batch_mean4, batch_var4 = tf.nn.moments(h_conv4,[0])
         scale4 = tf.Variable(tf.ones([map_4]))
-        beta4 = tf.Variable(tf.zeros([map_3]))
+        beta4 = tf.Variable(tf.zeros([map_4]))
         BN4 = tf.nn.batch_normalization(h_conv4,batch_mean4,batch_var4,beta4,scale4,epsilon)
         relu4 = tf.nn.relu(BN4)
 

@@ -99,7 +99,7 @@ def train(model, config, n_iterations=10000, validation=True):
 
     return scores
 
-def train_bn(model, config, n_iterations=10000, validation=True, batch_size = 5):
+def train_bn(model, config, n_iterations=10000, validation=True, batch_size = 2):
     if validation:
         validation_input_file = h5py.File(config.folder + config.validation_input_h5, 'r')
         validation_input = validation_input_file['main'][:5,:,:].astype(np.float32) / 255.0
@@ -117,12 +117,13 @@ def train_bn(model, config, n_iterations=10000, validation=True, batch_size = 5)
 
 
     ckpt_folder = config.folder + model.model_name + '/'
+    scores = None
 
     with tf.Session() as sess:
         summary_writer = tf.train.SummaryWriter(ckpt_folder, graph=sess.graph)
 
         sess.run(tf.global_variables_initializer())
-        for step, (inputs, affinities) in enumerate(batch_iterator_bn(config, model.fov, model.out, model.inpt)):
+        for step, (inputs, affinities) in enumerate(batch_iterator_bn(config, model.fov, model.out, model.inpt, batch_size=batch_size)):
 
             sess.run(model.train_step, feed_dict={
                 model.image: inputs,
@@ -165,7 +166,7 @@ def train_bn(model, config, n_iterations=10000, validation=True, batch_size = 5)
                                                     })
 
                 summary_writer.add_summary(score_summary, step)
-            
+
             if step % 1000 == 0:
                 # Save the variables to disk.
                 save_path = model.saver.save(sess, ckpt_folder + 'model.ckpt')

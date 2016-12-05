@@ -147,7 +147,9 @@ def watershed(dataset, split, high, low, dust):
 @cli.command()
 @click.argument('model_type', type=click.Choice(['n4', 'bn_n4']))
 @click.argument('dataset', type=click.Choice(['snemi3d', 'isbi']))
-def train(model_type, dataset):
+@click.option('--bs', default=1, help="Batch size")
+@click.option('--iter', default=10000, help="Iterations")
+def train(model_type, dataset, bs, iter):
     """
     Train an N4 models to predict affinities
     """
@@ -155,7 +157,8 @@ def train(model_type, dataset):
     if model_type == 'n4':
         trace.train(model_dict(model_type), config_dict(dataset))
     elif model_type == 'bn_n4':
-        trace.train_bn(model_dict(model_type), config_dict(dataset),validation=False)
+        trace.train_bn(model_dict(model_type), config_dict(dataset),validation=True, 
+            n_iterations=iter, batch_size = bs)
 
 
 @cli.command()
