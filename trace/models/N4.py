@@ -41,8 +41,8 @@ class N4:
         s_conv1  = conv2d(self.image, W_conv1, dilation=1) + b_conv1
 
         mean_bn1, var_bn1 = tf.nn.moments(s_conv1, [0])
-        offset_bn1 = tf.Variable(tf.zeros([192, 192, map_1]))
-        scale_bn1  = tf.Variable(tf.ones([192, 192, map_1]))
+        offset_bn1 = tf.Variable(tf.zeros([map_1]))
+        scale_bn1  = tf.Variable(tf.ones([map_1]))
         bn_conv1 = tf.nn.batch_normalization(s_conv1, mean=mean_bn1, variance=var_bn1, 
             offset=offset_bn1, scale=scale_bn1, variance_epsilon=.0005)
         h_conv1 = tf.nn.relu(bn_conv1)
