@@ -11,6 +11,7 @@ import click
 import dataset_config
 import trace
 import models
+from models import N4
 
 
 def config_dict(x):
@@ -22,7 +23,8 @@ def config_dict(x):
 
 def model_dict(x):
     return {
-        'n4': models.default_N4()
+        'n4': models.default_N4(),
+        'bn_n4': models.default_bnN4()
     }[x]
 
 
@@ -143,14 +145,17 @@ def watershed(dataset, split, high, low, dust):
 
 
 @cli.command()
-@click.argument('model_type', type=click.Choice(['n4']))
+@click.argument('model_type', type=click.Choice(['n4', 'bn_n4']))
 @click.argument('dataset', type=click.Choice(['snemi3d', 'isbi']))
 def train(model_type, dataset):
     """
     Train an N4 models to predict affinities
     """
 
-    trace.train(model_dict(model_type), config_dict(dataset))
+    if model_type == 'n4':
+        trace.train(model_dict(model_type), config_dict(dataset))
+    elif model_type == 'bn_n4':
+        trace.train_bn(model_dict(model_type), config_dict(dataset),validation=False)
 
 
 @cli.command()

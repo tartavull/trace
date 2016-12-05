@@ -2,6 +2,8 @@ import tensorflow as tf
 
 from common import conv2d, bias_variable, weight_variable, max_pool
 
+import numpy as np
+
 
 def default_N4():
     params = {
@@ -14,6 +16,18 @@ def default_N4():
         'out': 101
     }
     return N4(params)
+
+def default_bnN4():
+    params = {
+        'm1': 48,
+        'm2': 48,
+        'm3': 48,
+        'm4': 48,
+        'fc': 200,
+        'lr': 0.001,
+        'out': 101
+    }
+    return N4_BN(params)
 
 
 class N4:
@@ -85,7 +99,7 @@ class N4:
         self.binary_prediction = tf.round(self.sigmoid_prediction)
         self.pixel_error = tf.reduce_mean(tf.cast(tf.abs(self.binary_prediction - self.target), tf.float32))
         self.pixel_error_summary = tf.summary.scalar('pixel_error', self.pixel_error)
-        self.validation_pixel_error_summary = tf.summary.scalar('validation pixel_error', self.pixel_error)
+        self.validation_pixel_error_summary = tf.summary.scalar('validation_pixel_error', self.pixel_error)
 
         self.rand_f_score = tf.placeholder(tf.float32)
         self.rand_f_score_merge = tf.placeholder(tf.float32)
@@ -94,12 +108,12 @@ class N4:
         self.vi_f_score_merge = tf.placeholder(tf.float32)
         self.vi_f_score_split = tf.placeholder(tf.float32)
 
-        self.rand_f_score_summary = tf.summary.scalar('rand f score', self.rand_f_score)
-        self.rand_f_score_merge_summary = tf.summary.scalar('rand f merge score', self.rand_f_score_merge)
-        self.rand_f_score_split_summary = tf.summary.scalar('rand f split score', self.rand_f_score_split)
-        self.vi_f_score_summary = tf.summary.scalar('vi f score', self.vi_f_score)
-        self.vi_f_score_merge_summary = tf.summary.scalar('vi f merge score', self.vi_f_score_merge)
-        self.vi_f_score_split_summary = tf.summary.scalar('vi f split score', self.vi_f_score_split)
+        self.rand_f_score_summary = tf.summary.scalar('rand_f_score', self.rand_f_score)
+        self.rand_f_score_merge_summary = tf.summary.scalar('rand_f_merge_score', self.rand_f_score_merge)
+        self.rand_f_score_split_summary = tf.summary.scalar('rand_f_split_score', self.rand_f_score_split)
+        self.vi_f_score_summary = tf.summary.scalar('vi_f_score', self.vi_f_score)
+        self.vi_f_score_merge_summary = tf.summary.scalar('vi_f_merge_score', self.vi_f_score_merge)
+        self.vi_f_score_split_summary = tf.summary.scalar('vi_f_split_score', self.vi_f_score_split)
 
         self.score_summary_op = tf.summary.merge([self.rand_f_score_summary,
                                                  self.rand_f_score_merge_summary,
@@ -204,7 +218,9 @@ class N4_BN:
         self.out = params['out']
         self.fov = 95
         self.inpt = self.fov + 2 * (self.out // 2)
-        epsilon = 1e-3 #batch normalization
+        self.momentum = .9 #TODO make this a parameter
+        self.running_mean = np.zeros([1,self.inpt,self.inpt,1])
+        epsilon = 1e-3
 
         # layer 0
         # Normally would have shape [1, inpt, inpt, 1], but None allows us to have a flexible validation set
@@ -270,7 +286,7 @@ class N4_BN:
         scale4 = tf.Variable(tf.ones([map_4]))
         beta4 = tf.Variable(tf.zeros([map_3]))
         BN4 = tf.nn.batch_normalization(h_conv4,batch_mean4,batch_var4,beta4,scale4,epsilon)
-        relu4 = tf.nn.relu(B4)
+        relu4 = tf.nn.relu(BN4)
 
         # layer 8 - original stride 2
         h_pool4 = max_pool(relu4, strides=[1, 1], dilation=8)
@@ -278,7 +294,7 @@ class N4_BN:
         # layer 9 - original stride 1
         W_fc1 = weight_variable([3, 3, map_4, fc])
         b_fc1 = bias_variable([fc])
-        h_fc1 conv2d(BN4, W_fc1, dilation=16) + b_fc1
+        h_fc1 = conv2d(h_pool4, W_fc1, dilation=16) + b_fc1
 
         batch_mean_fc1, batch_var_fc1 = tf.nn.moments(h_fc1,[0])
         scale_fc1 = tf.Variable(tf.ones([fc]))
@@ -293,7 +309,6 @@ class N4_BN:
 
 
         self.sigmoid_prediction = tf.nn.sigmoid(self.prediction)
-        # Replace with BN_fc2?
         self.cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(self.prediction, self.target))
         self.loss_summary = tf.scalar_summary('cross_entropy', self.cross_entropy)
         self.train_step = tf.train.AdamOptimizer(learning_rate).minimize(self.cross_entropy)
@@ -301,7 +316,7 @@ class N4_BN:
         self.binary_prediction = tf.round(self.sigmoid_prediction)
         self.pixel_error = tf.reduce_mean(tf.cast(tf.abs(self.binary_prediction - self.target), tf.float32))
         self.pixel_error_summary = tf.summary.scalar('pixel_error', self.pixel_error)
-        self.validation_pixel_error_summary = tf.summary.scalar('validation pixel_error', self.pixel_error)
+        self.validation_pixel_error_summary = tf.summary.scalar('validation_pixel_error', self.pixel_error)
 
         self.rand_f_score = tf.placeholder(tf.float32)
         self.rand_f_score_merge = tf.placeholder(tf.float32)
@@ -310,12 +325,12 @@ class N4_BN:
         self.vi_f_score_merge = tf.placeholder(tf.float32)
         self.vi_f_score_split = tf.placeholder(tf.float32)
 
-        self.rand_f_score_summary = tf.summary.scalar('rand f score', self.rand_f_score)
-        self.rand_f_score_merge_summary = tf.summary.scalar('rand f merge score', self.rand_f_score_merge)
-        self.rand_f_score_split_summary = tf.summary.scalar('rand f split score', self.rand_f_score_split)
-        self.vi_f_score_summary = tf.summary.scalar('vi f score', self.vi_f_score)
-        self.vi_f_score_merge_summary = tf.summary.scalar('vi f merge score', self.vi_f_score_merge)
-        self.vi_f_score_split_summary = tf.summary.scalar('vi f split score', self.vi_f_score_split)
+        self.rand_f_score_summary = tf.summary.scalar('rand_f_score', self.rand_f_score)
+        self.rand_f_score_merge_summary = tf.summary.scalar('rand_f_merge_score', self.rand_f_score_merge)
+        self.rand_f_score_split_summary = tf.summary.scalar('rand_f_split_score', self.rand_f_score_split)
+        self.vi_f_score_summary = tf.summary.scalar('vi_f_score', self.vi_f_score)
+        self.vi_f_score_merge_summary = tf.summary.scalar('vi_f_merge_score', self.vi_f_score_merge)
+        self.vi_f_score_split_summary = tf.summary.scalar('vi_f_split_score', self.vi_f_score_split)
 
         self.score_summary_op = tf.summary.merge([self.rand_f_score_summary,
                                                  self.rand_f_score_merge_summary,
@@ -335,6 +350,10 @@ class N4_BN:
         self.model_name = str.format('out-{}_lr-{}_m1-{}_m2-{}_m3-{}_m4-{}_fc-{}', self.out, learning_rate, map_1,
                                      map_2, map_3, map_4, fc)
 
+    def update_mean(self, batch):
+        m = self.momentum
+        mu = self.running_mean
+        self.running_mean = m*mu + (1-m)*np.mean(batch,axis=0)
 
 
 

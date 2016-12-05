@@ -193,6 +193,8 @@ def affinitize_isbi(folder, train_labels_h5, validation_labels_h5):
 
     # Run watershed to recreate affinities
     current_dir = os.path.dirname(os.path.abspath(__file__))
+    import IPython as ipy
+    ipy.embed()   
     subprocess.call(["julia",
                      current_dir + "/thirdparty/watershed/watershed.jl",
                      folder + train_aff,
