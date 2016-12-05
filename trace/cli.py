@@ -22,7 +22,8 @@ def config_dict(x):
 
 def model_dict(x):
     return {
-        'n4': models.default_N4()
+        'n4': models.default_N4(),
+        'n4old': models.N4_old()
     }[x]
 
 
@@ -154,7 +155,7 @@ def train(model_type, dataset):
 
 
 @cli.command()
-@click.argument('model_type', type=click.Choice(['n4']))
+@click.argument('model_type', type=click.Choice(['n4', 'n4old']))
 @click.argument('dataset', type=click.Choice(['snemi3d', 'isbi']))
 @click.argument('split', type=click.Choice(['train', 'validation', 'test']))
 def predict(model_type, dataset, split):

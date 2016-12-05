@@ -44,7 +44,7 @@ def maybe_create_affinities(dataset_prefix):
     }
 
     params = {
-        'augment': [],
+        'augment': ['warp', 'flip', {'type':'grey', 'mode':'2D'}],
         'drange': [0]
     }
 

@@ -205,6 +205,9 @@ def _evaluate_rand_error(config, model, sigmoid_prediction, num_layers, output_s
 
 def predict(model, config, split):
     ckpt_folder = config.folder + model.model_name + '/'
+    ckpt_folder = '/home/trace/trace/isbi/n4_conv_augment_min_96_loweriter/'
+    print (ckpt_folder)
+    print ("HELLO")
     prefix = config.folder + split
 
     with h5py.File(prefix + '-input.h5', 'r') as input_file:
@@ -227,7 +230,17 @@ def predict(model, config, split):
                     reshaped_pred = np.einsum('zyxd->dzyx', pred)
                     out[0:2, z] = reshaped_pred[:,0]
 
+            print("shape")
+            print(out[0].shape)
+            (a, b, c) = out[0].shape
+            print(a)
+            print("a")
             # Average x and y affinities to get a probabilistic boundary map
+#            with h5py.File(config.folder + split + '-map.tif', 'w') as map_output:
+#                map_output.create_dataset('main', shape = (a,b,c))
+#                for x in range(a):
+#                    for y in range(b):
+#                        for z in range(
             tifffile.imsave(config.folder + split + '-map.tif', (out[0] + out[1])/2)
 
 

@@ -1,14 +1,14 @@
 import tensorflow as tf
 
-from common import conv2d, conv2dsame, bias_variable, weight_variable, max_pool
+from common import conv2d, bias_variable, weight_variable, max_pool
 
 
 def default_N4():
     params = {
-        'm1': 96,
-        'm2': 96,
-        'm3': 96,
-        'm4': 96,
+        'm1': 48,
+        'm2': 48,
+        'm3': 48,
+        'm4': 48,
         'fc': 200,
         'lr': 0.001,
         'out': 101
@@ -36,85 +36,46 @@ class N4:
         self.target = tf.placeholder(tf.float32, shape=[None, None, None, 2])
 
         # layer 1 - original stride 1
-
-        W_conv1same = weight_variable('W_conv1same', [3,3,1, map_1])
-        b_conv1same = bias_variable([map_1])
-        h_conv1same = tf.nn.relu(conv2dsame(self.image, W_conv1same, dilation = 1) + b_conv1same) 
-
-        W_conv1 = weight_variable('W_conv1', [4, 4, map_1, map_1])
+        W_conv1 = weight_variable([4, 4, 1, map_1])
         b_conv1 = bias_variable([map_1])
-        h_conv1 = tf.nn.relu(conv2d(h_conv1same, W_conv1, dilation=1) + b_conv1)
-
-        conv1batch = tf.contrib.layers.batch_norm(inputs=h_conv1, center=True, scale=True)
-
-        W_conv15 = weight_variable('W_conv15', [5, 5, map_1, map_1])
-        b_conv15 = bias_variable([map_1])
-        h_conv15 = tf.nn.relu(conv2d(conv1batch, W_conv15, dilation=1) + b_conv15)
+        h_conv1 = tf.nn.relu(conv2d(self.image, W_conv1, dilation=1) + b_conv1)
 
         # layer 2 - original stride 2
-        h_pool1 = max_pool(h_conv15, strides=[1, 1], dilation=1)
-
-        W_conv2same = weight_variable('W_conv2same', [3,3,map_2, map_2])
-        b_conv2same = bias_variable([map_2])
-        h_conv2same = tf.nn.relu(conv2dsame(h_pool1, W_conv2same, dilation = 2) + b_conv2same)
+        h_pool1 = max_pool(h_conv1, strides=[1, 1], dilation=1)
 
         # layer 3 - original stride 1
-        W_conv2 = weight_variable('W_conv2', [4, 4, map_1, map_2])
+        W_conv2 = weight_variable([5, 5, map_1, map_2])
         b_conv2 = bias_variable([map_2])
-        h_conv2 = tf.nn.relu(conv2d(h_conv2same, W_conv2, dilation=2) + b_conv2)
-
-        conv2batch = tf.contrib.layers.batch_norm(inputs=h_conv2, center=True, scale=True)
-
-        W_conv25 = weight_variable('W_conv25', [4, 4, map_1, map_1])
-        b_conv25 = bias_variable([map_1])
-        h_conv25 = tf.nn.relu(conv2d(conv2batch, W_conv25, dilation=2) + b_conv25)
+        h_conv2 = tf.nn.relu(conv2d(h_pool1, W_conv2, dilation=2) + b_conv2)
 
         # layer 4 - original stride 2
-        h_pool2 = max_pool(h_conv25, strides=[1, 1], dilation=2)
-
-        W_conv3same = weight_variable('W_conv3same', [3,3, map_2, map_3])
-        b_conv3same = bias_variable([map_3])
-        h_conv3same = tf.nn.relu(conv2dsame(h_pool2, W_conv3same, dilation = 4) + b_conv3same)
+        h_pool2 = max_pool(h_conv2, strides=[1, 1], dilation=2)
 
         # layer 5 - original stride 1
-        W_conv3 = weight_variable('W_conv3', [4, 4, map_2, map_3])
+        W_conv3 = weight_variable([4, 4, map_2, map_3])
         b_conv3 = bias_variable([map_3])
-        h_conv3 = tf.nn.relu(conv2d(h_conv3same, W_conv3, dilation=4) + b_conv3)
-
-        conv3batch = tf.contrib.layers.batch_norm(inputs=h_conv3, center=True, scale=True)
-        
-        print ("HI THERE")
-
-        print (conv3batch.get_shape())
-
-        W_conv35 = weight_variable('W_conv35', [5, 5, map_1, map_1])
-        b_conv35 = bias_variable([map_1])
-        h_conv35 = tf.nn.relu(conv2d(conv3batch, W_conv35, dilation=4) + b_conv35)
+        h_conv3 = tf.nn.relu(conv2d(h_pool2, W_conv3, dilation=4) + b_conv3)
 
         # layer 6 - original stride 2
-        h_pool3 = max_pool(h_conv35, strides=[1, 1], dilation=4)
-
-        W_conv4same = weight_variable('W_conv4same', [3,3, map_3, map_4])
-        b_conv4same = bias_variable([map_4])
-        h_conv4same = tf.nn.relu(conv2dsame(h_pool3, W_conv4same, dilation = 8) + b_conv4same)
+        h_pool3 = max_pool(h_conv3, strides=[1, 1], dilation=4)
 
         # layer 7 - original stride 1
-        W_conv4 = weight_variable('W_conv4', [4, 4, map_3, map_4])
+        W_conv4 = weight_variable([4, 4, map_3, map_4])
         b_conv4 = bias_variable([map_4])
-        h_conv4 = tf.nn.relu(conv2d(h_conv4same, W_conv4, dilation=8) + b_conv4)
+        h_conv4 = tf.nn.relu(conv2d(h_pool3, W_conv4, dilation=8) + b_conv4)
 
-        conv4batch = tf.contrib.layers.batch_norm(inputs=h_conv4, center=True, scale=True)
+        # layer 8 - original stride 2
+        h_pool4 = max_pool(h_conv4, strides=[1, 1], dilation=8)
 
         # layer 9 - original stride 1
-        W_fc1 = weight_variable('W_fc1', [3, 3, map_4, fc])
+        W_fc1 = weight_variable([3, 3, map_4, fc])
         b_fc1 = bias_variable([fc])
-        h_fc1 = tf.nn.relu(conv2d(conv4batch, W_fc1, dilation=8) + b_fc1)
-
+        h_fc1 = tf.nn.relu(conv2d(h_pool4, W_fc1, dilation=16) + b_fc1)
 
         # layer 10 - original stride 2
-        W_fc2 = weight_variable('W_fc2', [1, 1, fc, 2])
+        W_fc2 = weight_variable([1, 1, fc, 2])
         b_fc2 = bias_variable([2])
-        self.prediction = conv2d(h_fc1, W_fc2, dilation=8) + b_fc2
+        self.prediction = conv2d(h_fc1, W_fc2, dilation=16) + b_fc2
 
         self.sigmoid_prediction = tf.nn.sigmoid(self.prediction)
         self.cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(self.prediction, self.target))
