@@ -108,8 +108,8 @@ class N4:
         s_fc1 = tf.nn.relu(conv2d(h_pool4, W_fc1, dilation=16) + b_fc1)
 
         mean_fc1, var_fc1 = tf.nn.moments(s_fc1, [0])
-        offset_fc1 = tf.Variable(tf.zeros([map_4]))
-        scale_fc1  = tf.Variable(tf.ones([map_4]))
+        offset_fc1 = tf.Variable(tf.zeros([fc]))
+        scale_fc1  = tf.Variable(tf.ones([fc]))
         bn_fc1 = tf.nn.batch_normalization(s_fc1, mean=mean_fc1, variance=var_fc1, 
             offset=offset_fc1, scale=scale_fc1, variance_epsilon=.0005)
         dh_fc1 = tf.nn.relu(bn_fc1)
