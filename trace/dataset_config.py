@@ -75,6 +75,7 @@ def maybe_download(base_url, folder, filename):
   full_url = base_url + filename
   full_path = folder + filename
   if not os.path.exists(full_path):
+    print(full_path + "Does not exist")
     print("downloading "+full_url)
     urllib.urlretrieve(full_url, full_path)
 
@@ -149,12 +150,13 @@ def maybe_create_dataset(config, train_frac):
         maybe_unzip(config.folder, config.test_input_zip)
     else:
         # Kinda funky that the datasets have different named files
-        maybe_download(config.base_url, config.folder, 'train-volume.tif')
-        maybe_download(config.base_url, config.folder, config.train_labels_tif)
-        maybe_download(config.base_url, config.folder, 'test-volume.tif')
+        if not os.path.exists(config.folder + config.train_input_tif):
+            maybe_download(config.base_url, config.folder, 'train-volume.tif')
+            maybe_download(config.base_url, config.folder, config.train_labels_tif)
+            maybe_download(config.base_url, config.folder, 'test-volume.tif')
 
-        os.rename(config.folder + 'train-volume.tif', config.folder + config.train_input_tif)
-        os.rename(config.folder + 'test-volume.tif', config.folder + config.test_input_tif)
+            os.rename(config.folder + 'train-volume.tif', config.folder + config.train_input_tif)
+            os.rename(config.folder + 'test-volume.tif', config.folder + config.test_input_tif)
 
     # Split the training dataset into train and validation
     maybe_split(config.folder, config.train_input_tif, config.validation_input_tif, config.train_labels_tif,
