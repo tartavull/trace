@@ -1,21 +1,15 @@
 import tensorflow as tf
 
 from common import conv2d, bias_variable, weight_variable, max_pool
-
+from N4_default import params
 
 def default_N4():
-    params = {
-        'm1': 48,
-        'm2': 48,
-        'm3': 48,
-        'm4': 48,
-        'fc': 200,
-        'lr': 0.001,
-        'out': 101,
-        'keep_prob': .70
-    }
+    required =['m1', 'm2', 'm3', 'm4', 'fc', 'lr']
+    for param in required:
+        if param not in params:
+            raise ValueError('Incorrect parameter map (Missing \
+                parameter: {})'.format(param))
     return N4(params)
-
 
 class N4:
     def __init__(self, params):
@@ -27,7 +21,6 @@ class N4:
         map_4 = params['m4']
         fc = params['fc']
         learning_rate = params['lr']
-        keep_prob = params['keep_prob']
 
         self.out = params['out']
         self.fov = 95
