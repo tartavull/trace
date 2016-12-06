@@ -33,7 +33,7 @@ class N4:
 
         # layer 1 - original stride 1
         W_conv1  = weight_variable([4, 4, 1, map_1])
-        s_conv1  = tf.nn.conv2d(self.image, W_conv)
+        s_conv1  = tf.nn.conv2d(self.image, W_conv1)
 
         mean_bn1, var_bn1 = tf.nn.moments(s_conv1, [0])
         offset_bn1 = tf.Variable(tf.zeros([map_1]))
