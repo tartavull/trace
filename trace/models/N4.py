@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from models.common import conv2d, bias_variable, weight_variable, max_pool
+from trace.models.common import conv2d, bias_variable, weight_variable, max_pool
 
 
 def default_N4():

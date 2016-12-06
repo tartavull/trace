@@ -13,8 +13,6 @@ import os
 
 from click.testing import CliRunner
 
-import trace
-
 import trace.train as train
 import trace.cli as cli
 import trace.dataset_config as dataset_config
@@ -51,7 +49,7 @@ class TestTrace(object):
         """
         Create affinities from train-labels and save them as
         test-affinities.h5
-        And then run wateshed on it using the cli
+        And then run watershed on it using the cli
         """
 
         snemi3d_config = dataset_config.snemi3d_config()
