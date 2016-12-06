@@ -1,7 +1,7 @@
 import tensorflow as tf
 
 from common import conv2d, bias_variable, weight_variable, max_pool
-from segnet_default import params
+from params import segnet_default
 
 SMALL_LAYER = 2
 LARGE_LAYER = 3

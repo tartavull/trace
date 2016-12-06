@@ -1,7 +1,7 @@
 import tensorflow as tf
 
 from common import conv2d, bias_variable, weight_variable, max_pool
-from N4_default import params
+from params import N4_params
 
 def default_N4():
     required =['m1', 'm2', 'm3', 'm4', 'fc', 'lr']
