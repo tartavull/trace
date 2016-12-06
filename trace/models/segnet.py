@@ -83,7 +83,7 @@ class SegNet:
         self.prediction = self._upsample_layer(inlayer=up_conv4, 
             shape=[4, 4, m1, 2], dilation=1, cbr_layers=2)
 
-        self.sigmoid_prediction = tf.nn.sigmoid(self.prediction)
+        self.sigmoid_prediction = tf.nn.softmax(self.prediction)
         self.cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(self.prediction, self.target))
         self.loss_summary = tf.scalar_summary('cross_entropy', self.cross_entropy)
         self.train_step = tf.train.AdamOptimizer(learning_rate).minimize(self.cross_entropy)
