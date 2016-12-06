@@ -8,17 +8,11 @@ LARGE_LAYER = 3
 # taken from https://arxiv.org/pdf/1511.00561.pdf
 def default_SegNet():
     params = {
-        'd1': 48,
-        'd2': 48,
-        'd3': 48,
-        'd4': 48,
-        'd5': 48,
-
-        'u1': 48,
-        'u2': 48,
-        'u3': 48,
-        'u4': 48,
-        'u5': 48,
+        'm1': 48,
+        'm2': 48,
+        'm3': 48,
+        'm4': 48,
+        'm5': 48,
 
         'fc': 200,
         'lr': 0.001,
@@ -31,17 +25,11 @@ class SegNet:
     def __init__(self, params):
 
         # Hyperparameters
-        down_1 = params['d1']
-        down_2 = params['d2']
-        down_3 = params['d3']
-        down_4 = params['d4']
-        down_5 = params['d5']
-
-        up_1 = params['u1']
-        up_2 = params['u2']
-        up_3 = params['u3']
-        up_4 = params['u4']
-        up_5 = params['u5']
+        m1 = params['m1']
+        m2 = params['m2']
+        m3 = params['m3']
+        m4 = params['m4']
+        m5 = params['m5']
 
         fc = params['fc']
         learning_rate = params['lr']
@@ -76,24 +64,24 @@ class SegNet:
             shape=[4, 4, m4, m5], dilation=16, cbr_layers=3)
 
         # layer set 6: 1 unpool (upsampling) and 3 Conv/Batch/ReLU
-        
+        up_conv1 = self._upsample_layer(inlayer=down_conv5, 
+            shape=[4, 4, m5, m4], dilation=16, cbr_layers=3)
 
         # layer set 7: 1 unpool (upsampling) and 3 Conv/Batch/ReLU
-        
+        up_conv2 = self._upsample_layer(inlayer=up_conv1, 
+            shape=[4, 4, m4, m3], dilation=8, cbr_layers=3)
 
         # layer set 8: 1 unpool (upsampling) and 3 Conv/Batch/ReLU
+        up_conv3 = self._upsample_layer(inlayer=up_conv2, 
+            shape=[4, 4, m3, m2], dilation=4, cbr_layers=3)
         
-        
-        # layer set 9: 1 unpool (upsampling) and 3 Conv/Batch/ReLU
-        
+        # layer set 9: 1 unpool (upsampling) and 2 Conv/Batch/ReLU
+        up_conv4 = self._upsample_layer(inlayer=up_conv3, 
+            shape=[4, 4, m2, m1], dilation=2, cbr_layers=2)
 
-        # layer set 10: 1 unpool (upsampling) and 3 Conv/Batch/ReLU
-        
-        
-        # layer 10 - original stride 2
-        W_fc2 = weight_variable([1, 1, fc, 2])
-        b_fc2 = bias_variable([2])
-        self.prediction = conv2d(h_fc1, W_fc2, dilation=16) + b_fc2
+        # layer set 10: 1 unpool (upsampling) and 2 Conv/Batch/ReLU
+        self.prediction = self._upsample_layer(inlayer=up_conv4, 
+            shape=[4, 4, m1, 2], dilation=1, cbr_layers=2)
 
         self.sigmoid_prediction = tf.nn.sigmoid(self.prediction)
         self.cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(self.prediction, self.target))
@@ -149,9 +137,20 @@ class SegNet:
             h_conv3 = conv_norm_relu(inlayer=h_conv2, shape=shape, dilation=dilation)
             return max_pool(h_conv3, strides=[1, 1], dilation=dilation)
         else:
-            raise ValueError('Incorrect number of Conv/Batch/ReLU layers')
+            raise ValueError('Illegal number of Conv/Batch/ReLU layers')
 
-    def _upsample_layer(self):
-        h_conv14  = conv_norm_relu(inlayer=h_unpool1, shape=[4, 4, 1, map_1], dilation=16)
-        h_conv15  = conv_norm_relu(inlayer=h_conv14, shape=[4, 4, 1, map_2], dilation=16)
-        h_conv16  = conv_norm_relu(inlayer=h_conv15, shape=[4, 4, 1, map_2], dilation=16)
+    def _upsample_layer(self, inlayer=self.image, 
+        shape=[4, 4, 1, 48], dilation=1, cbr_layers=2):
+
+        h_unpool = tf.image.resize_images(inlayer, shape, 
+            method=tf.image.ResizeMethod.NEAREST_NEIGHBOR, align_corners=False)
+        h_conv1 = conv_norm_relu(inlayer=h_unpool, shape=shape, dilation=dilation)
+        h_conv2 = conv_norm_relu(inlayer=h_conv1, shape=shape, dilation=dilation)
+
+        if cbr_layers == SMALL_LAYER:
+            return h_conv2
+        elif cbr_layers == LARGE_LAYER:
+            h_conv3 = conv_norm_relu(inlayer=h_conv2, shape=shape, dilation=dilation)
+            return h_conv3
+        else:
+            raise ValueError('Illegal number of Conv/Batch/ReLU layers')

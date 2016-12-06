@@ -22,7 +22,8 @@ def config_dict(x):
 
 def model_dict(x):
     return {
-        'n4': models.default_N4()
+        'n4': models.default_N4(),
+        'segnet': models.default_SegNet()
     }[x]
 
 
