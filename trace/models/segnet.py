@@ -80,43 +80,43 @@ class SegNet:
 
         # layer set 1: 2 Conv/Batch/ReLU and 1 pool
         down_conv1 = self._downsample_layer(inlayer=self.image, 
-            shape=s1, dilation=1, cbr_layers=2)
+            shapes=s1, dilation=1, cbr_layers=2)
 
         # layer set 2: 2 Conv/Batch/ReLU and 1 pool
         down_conv2 = self._downsample_layer(inlayer=down_conv1, 
-            shape=s2, dilation=2, cbr_layers=2)
+            shapes=s2, dilation=2, cbr_layers=2)
 
         # layer set 3: 3 Conv/Batch/ReLU and 1 pool
         down_conv3 = self._downsample_layer(inlayer=down_conv2, 
-            shape=s3, dilation=4, cbr_layers=3)
+            shapes=s3, dilation=4, cbr_layers=3)
 
         # layer set 4: 3 Conv/Batch/ReLU and 1 pool
         down_conv4 = self._downsample_layer(inlayer=down_conv3, 
-            shape=s4, dilation=8, cbr_layers=3)
+            shapes=s4, dilation=8, cbr_layers=3)
 
         # layer set 5: 3 Conv/Batch/ReLU and 1 pool
         down_conv5 = self._downsample_layer(inlayer=down_conv4, 
-            shape=s5, dilation=16, cbr_layers=3)
+            shapes=s5, dilation=16, cbr_layers=3)
 
         # layer set 6: 1 unpool (upsampling) and 3 Conv/Batch/ReLU
         up_conv1 = self._upsample_layer(inlayer=down_conv5, 
-            shape=s5, dilation=16, cbr_layers=3)
+            shapes=s5, dilation=16, cbr_layers=3)
 
         # layer set 7: 1 unpool (upsampling) and 3 Conv/Batch/ReLU
         up_conv2 = self._upsample_layer(inlayer=up_conv1, 
-            shape=s4, dilation=8, cbr_layers=3)
+            shapes=s4, dilation=8, cbr_layers=3)
 
         # layer set 8: 1 unpool (upsampling) and 3 Conv/Batch/ReLU
         up_conv3 = self._upsample_layer(inlayer=up_conv2, 
-            shape=s3, dilation=4, cbr_layers=3)
+            shapes=s3, dilation=4, cbr_layers=3)
         
         # layer set 9: 1 unpool (upsampling) and 2 Conv/Batch/ReLU
         up_conv4 = self._upsample_layer(inlayer=up_conv3, 
-            shape=s2, dilation=2, cbr_layers=2)
+            shapes=s2, dilation=2, cbr_layers=2)
 
         # layer set 10: 1 unpool (upsampling) and 2 Conv/Batch/ReLU
         self.prediction = self._upsample_layer(inlayer=up_conv4, 
-            shape=s1, dilation=1, cbr_layers=2)
+            shapes=s1, dilation=1, cbr_layers=2)
 
         self.softmax = tf.nn.softmax(self.prediction)
         self.cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(self.prediction, self.target))
