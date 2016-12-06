@@ -11,16 +11,15 @@ Tests for `trace` module.
 import os.path
 import os
 
-import pytest
-import models
-
-from contextlib import contextmanager
 from click.testing import CliRunner
 
-from trace import trace
-from trace import cli
-from trace import dataset_config
-from trace import augmentation
+import trace
+
+import trace.train as train
+import trace.cli as cli
+import trace.dataset_config as dataset_config
+import trace.augmentation as augmentation
+
 
 class TestTrace(object):
 
@@ -41,7 +40,7 @@ class TestTrace(object):
 
     def test_comand_line_downloads_dataset(self):
         runner = CliRunner()
-        runner.invoke(cli.cli,['download'])
+        runner.invoke(cli.cli, ['download'])
         snemi3d_config = dataset_config.snemi3d_config()
         isbi_config = dataset_config.isbi_config()
         assert os.path.exists(snemi3d_config.folder + snemi3d_config.test_input_h5)

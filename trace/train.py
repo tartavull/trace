@@ -5,20 +5,23 @@ from __future__ import division
 
 import h5py
 import tensorflow as tf
-import numpy as np
 import subprocess
 import tifffile
 
-from thirdparty.segascorus import io_utils
-from thirdparty.segascorus import utils
-from thirdparty.segascorus.metrics import *
+try:
+    from thirdparty.segascorus import io_utils
+    from thirdparty.segascorus import utils
+    from thirdparty.segascorus.metrics import *
+except Exception:
+    print("Segascorus is not installed. Please install by going to trace/trace/thirdparty/segascorus and run 'make'."
+          " If this fails, segascorus is likely not compatible with your computer (i.e. Macs).")
 
-import models
+import trace.models as models
 
 import os
 import sys
 
-from augmentation import batch_iterator
+from trace.augmentation import batch_iterator
 
 
 def train(model, config, n_iterations=10000, validation=True):
