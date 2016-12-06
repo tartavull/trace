@@ -70,7 +70,7 @@ class TestTrace(object):
         """
         model = N4.default_N4()
         config = dataset_config.snemi3d_config()
-        train.train(model, config)
+        train.train(model, config, n_iterations=10)
 
     @classmethod
     def teardown_class(cls):
