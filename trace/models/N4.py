@@ -6,10 +6,10 @@ from params import N4_params
 def default_N4():
     required =['m1', 'm2', 'm3', 'm4', 'fc', 'lr']
     for param in required:
-        if param not in params:
+        if param not in N4_params:
             raise ValueError('Incorrect parameter map (Missing \
                 parameter: {})'.format(param))
-    return N4(params)
+    return N4(N4_params)
 
 class N4:
     def __init__(self, params):

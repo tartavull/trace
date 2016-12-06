@@ -15,10 +15,10 @@ def default_SegNet():
         'fc', 'lr', 'out'
     ]
     for param in required:
-        if param not in params:
+        if param not in segnet_default:
             raise ValueError('Incorrect parameter map (Missing \
                 parameter: {})'.format(param))
-    return SegNet(params)
+    return SegNet(segnet_default)
 
 # convolution, batch normalization, and ReLU layer
 def conv_norm_relu(inlayer, shape, dilation):
