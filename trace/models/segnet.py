@@ -125,8 +125,8 @@ class SegNet:
         self.model_name = str.format('out-{}_lr-{}_m1-{}_m2-{}_m3-{}_m4-{}_fc-{}', self.out, learning_rate, map_1,
                                      map_2, map_3, map_4, fc)
 
-    def _downsample_layer(self, inlayer=self.image, 
-        shape=[4, 4, 1, 48], dilation=1, cbr_layers=2):
+    def _downsample_layer(self, inlayer, shape=[4, 4, 1, 48], 
+        dilation=1, cbr_layers=2):
 
         h_conv1 = conv_norm_relu(inlayer=inlayer, shape=shape, dilation=dilation)
         h_conv2 = conv_norm_relu(inlayer=h_conv1, shape=shape, dilation=dilation)
@@ -139,8 +139,8 @@ class SegNet:
         else:
             raise ValueError('Illegal number of Conv/Batch/ReLU layers')
 
-    def _upsample_layer(self, inlayer=self.image, 
-        shape=[4, 4, 1, 48], dilation=1, cbr_layers=2):
+    def _upsample_layer(self, inlayer, shape=[4, 4, 1, 48], 
+        dilation=1, cbr_layers=2):
 
         h_unpool = tf.image.resize_images(inlayer, shape, 
             method=tf.image.ResizeMethod.NEAREST_NEIGHBOR, align_corners=False)
