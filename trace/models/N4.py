@@ -61,9 +61,8 @@ class N4:
         scale_bn2  = tf.Variable(tf.ones([map_2]))
         bn_conv2 = tf.nn.batch_normalization(s_conv2, mean=mean_bn2, variance=var_bn2, 
             offset=offset_bn2, scale=scale_bn2, variance_epsilon=.0005)
-        dh_conv2 = tf.nn.relu(bn_conv2)
-        h_conv2  = tf.nn.dropout(dh_conv2, keep_prob)
-
+        h_conv2  = tf.nn.relu(bn_conv2)
+        
         # layer 4 - original stride 2
         h_pool2 = max_pool(h_conv2, strides=[1, 1], dilation=2)
 
@@ -90,8 +89,7 @@ class N4:
         scale_bn4  = tf.Variable(tf.ones([map_4]))
         bn_conv4 = tf.nn.batch_normalization(s_conv4, mean=mean_bn4, variance=var_bn4, 
             offset=offset_bn4, scale=scale_bn4, variance_epsilon=.0005)
-        dh_conv4 = tf.nn.relu(bn_conv4)
-        h_conv4  = tf.nn.dropout(dh_conv4, keep_prob)
+        h_conv4 = tf.nn.relu(bn_conv4)
 
         # layer 8 - original stride 2
         h_pool4 = max_pool(h_conv4, strides=[1, 1], dilation=8)

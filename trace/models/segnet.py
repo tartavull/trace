@@ -39,15 +39,7 @@ class SegNet:
         self.target = tf.placeholder(tf.float32, shape=[None, None, None, 2])
 
         # layer 1 - original stride 1
-        W_conv1  = weight_variable([4, 4, 1, map_1])
-        s_conv1  = conv2d(self.image, W_conv1, dilation=1)
-
-        mean_bn1, var_bn1 = tf.nn.moments(s_conv1, [0])
-        offset_bn1 = tf.Variable(tf.zeros([map_1]))
-        scale_bn1  = tf.Variable(tf.ones([map_1]))
-        bn_conv1 = tf.nn.batch_normalization(s_conv1, mean=mean_bn1, variance=var_bn1, 
-            offset=offset_bn1, scale=scale_bn1, variance_epsilon=.0005)
-        h_conv1 = tf.nn.relu(bn_conv1)
+        [4, 4, 1, map_1]
 
         # layer 2 - original stride 2
         h_pool1 = max_pool(h_conv1, strides=[1, 1], dilation=1)
@@ -147,3 +139,20 @@ class SegNet:
 
         self.model_name = str.format('out-{}_lr-{}_m1-{}_m2-{}_m3-{}_m4-{}_fc-{}', self.out, learning_rate, map_1,
                                      map_2, map_3, map_4, fc)
+
+    def conv_batch_relu_layer(self, size, dilation):
+        W_conv  = weight_variable(size)
+        s_conv  = conv2d(self.image, W_conv, dilation=dilation)
+
+        mean_bn, var_bn = tf.nn.moments(s_conv, [0])
+        offset_bn = tf.Variable(tf.zeros([size[-1]]))
+        scale_bn = tf.Variable(tf.ones([size[-1]]))
+        bn_conv = tf.nn.batch_normalization(s_conv, mean=mean_bn, variance=var_bn, 
+            offset=offset_bn, scale=scale_bn, variance_epsilon=.0005)
+        return tf.nn.relu(bn_conv)
+
+    def pooling_layer(self):
+
+    def unpooling_layer(self):
+
+    def softmax_layer(self):
