@@ -144,7 +144,7 @@ def watershed(dataset, split, high, low, dust):
 
 
 @cli.command()
-@click.argument('model_type', type=click.Choice(['n4']))
+@click.argument('model_type', type=click.Choice(['n4', 'n4old']))
 @click.argument('dataset', type=click.Choice(['snemi3d', 'isbi']))
 def train(model_type, dataset):
     """
@@ -165,6 +165,12 @@ def predict(model_type, dataset, split):
     import trace
     trace.predict(model_dict(model_type), config_dict(dataset), split)
 
+@cli.command()
+@click.argument('dataset', type=click.Choice(['snemi3d', 'isbi']))
+@click.argument('split', type=click.Choice(['train', 'validation', 'test']))
+def combine(dataset, split):
+    import trace
+    trace.combine(config_dict(dataset), split)
 
 @cli.command()
 @click.argument('dataset', type=click.Choice(['snemi3d', 'isbi']))

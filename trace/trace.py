@@ -202,10 +202,19 @@ def _evaluate_rand_error(config, model, sigmoid_prediction, num_layers, output_s
 
     return results
 
+def combine(config, split):
+    with h5py.File(config.folder+split+'3-affinities.h5', 'r') as input1:
+        inpt1 = input1['main']
+        with h5py.File(config.folder+split+'-affinities.h5', 'r') as input2:
+            inpt2 = input2['main']
+            with h5py.File(config.folder+split+'4-affinities.h5', 'r') as input3:
+                inpt3 = input3['main']
+                tifffile.imsave(config.folder + split + '-2combinedmap.tif', np.minimum(inpt3[1], np.minimum(inpt3[0], np.minimum(np.minimum(np.minimum(inpt1[0], inpt1[1]), inpt2[0]),inpt2[1]))))
+
 
 def predict(model, config, split):
     ckpt_folder = config.folder + model.model_name + '/'
-    ckpt_folder = '/home/trace/trace/isbi/n4_conv_augment_min_96_loweriter/'
+#    ckpt_folder = '/home/trace/trace/isbi/n4_conv_augment_min_96_loweriter/'
     print (ckpt_folder)
     print ("HELLO")
     prefix = config.folder + split
@@ -215,7 +224,7 @@ def predict(model, config, split):
         mirrored_inpt = _mirror_across_borders(inpt, model.fov)
         num_layers = mirrored_inpt.shape[0]
         input_shape = mirrored_inpt.shape[1]
-        with h5py.File(config.folder + split + '-affinities.h5', 'w') as output_file:
+        with h5py.File(config.folder + split + '4-affinities.h5', 'w') as output_file:
             output_file.create_dataset('main', shape=(3,) + input_file['main'].shape)
             out = output_file['main']
 
@@ -241,7 +250,7 @@ def predict(model, config, split):
 #                for x in range(a):
 #                    for y in range(b):
 #                        for z in range(
-            tifffile.imsave(config.folder + split + '-map.tif', (out[0] + out[1])/2)
+            tifffile.imsave(config.folder + split + '-map.tif', np.minimum(out[0],out[1]))
 
 
 def __grid_search(config, remaining_params, current_params, results_dict):
