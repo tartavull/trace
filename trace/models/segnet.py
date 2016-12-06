@@ -1,18 +1,28 @@
 import tensorflow as tf
 
-from common import conv2d, bias_variable, weight_variable, max_pool
+from common import conv2d, bias_variable, weight_variable, max_pool, conv_norm_relu
+
+SMALL_LAYER = 2
+LARGE_LAYER = 3
 
 # taken from https://arxiv.org/pdf/1511.00561.pdf
 def default_SegNet():
     params = {
-        'm1': 48,
-        'm2': 48,
-        'm3': 48,
-        'm4': 48,
+        'd1': 48,
+        'd2': 48,
+        'd3': 48,
+        'd4': 48,
+        'd5': 48,
+
+        'u1': 48,
+        'u2': 48,
+        'u3': 48,
+        'u4': 48,
+        'u5': 48,
+
         'fc': 200,
         'lr': 0.001,
-        'out': 101,
-        'keep_prob': .70
+        'out': 101
     }
     return SegNet(params)
 
@@ -21,13 +31,20 @@ class SegNet:
     def __init__(self, params):
 
         # Hyperparameters
-        map_1 = params['m1']
-        map_2 = params['m2']
-        map_3 = params['m3']
-        map_4 = params['m4']
+        down_1 = params['d1']
+        down_2 = params['d2']
+        down_3 = params['d3']
+        down_4 = params['d4']
+        down_5 = params['d5']
+
+        up_1 = params['u1']
+        up_2 = params['u2']
+        up_3 = params['u3']
+        up_4 = params['u4']
+        up_5 = params['u5']
+
         fc = params['fc']
         learning_rate = params['lr']
-        keep_prob = params['keep_prob']
 
         self.out = params['out']
         self.fov = 95
@@ -38,61 +55,41 @@ class SegNet:
         self.image = tf.placeholder(tf.float32, shape=[None, None, None, 1])
         self.target = tf.placeholder(tf.float32, shape=[None, None, None, 2])
 
-        # layer 1 - original stride 1
-        [4, 4, 1, map_1]
+        # layer set 1: 2 Conv/Batch/ReLU and 1 pool
+        down_conv1 = self._downsample_layer(inlayer=self.image, 
+            shape=[4, 4, 1, m1], dilation=1, cbr_layers=2)
 
-        # layer 2 - original stride 2
-        h_pool1 = max_pool(h_conv1, strides=[1, 1], dilation=1)
+        # layer set 2: 2 Conv/Batch/ReLU and 1 pool
+        down_conv2 = self._downsample_layer(inlayer=down_conv1, 
+            shape=[4, 4, m1, m2], dilation=2, cbr_layers=2)
 
-        # layer 3 - original stride 1
-        W_conv2 = weight_variable([5, 5, map_1, map_2])
-        s_conv2 = tf.nn.relu(conv2d(h_pool1, W_conv2, dilation=2))
+        # layer set 3: 3 Conv/Batch/ReLU and 1 pool
+        down_conv3 = self._downsample_layer(inlayer=down_conv2, 
+            shape=[4, 4, m2, m3], dilation=4, cbr_layers=3)
 
-        mean_bn2, var_bn2 = tf.nn.moments(s_conv2, [0])
-        offset_bn2 = tf.Variable(tf.zeros([map_2]))
-        scale_bn2  = tf.Variable(tf.ones([map_2]))
-        bn_conv2 = tf.nn.batch_normalization(s_conv2, mean=mean_bn2, variance=var_bn2, 
-            offset=offset_bn2, scale=scale_bn2, variance_epsilon=.0005)
-        dh_conv2 = tf.nn.relu(bn_conv2)
-        h_conv2  = tf.nn.dropout(dh_conv2, keep_prob)
+        # layer set 4: 3 Conv/Batch/ReLU and 1 pool
+        down_conv4 = self._downsample_layer(inlayer=down_conv3, 
+            shape=[4, 4, m3, m4], dilation=8, cbr_layers=3)
 
-        # layer 4 - original stride 2
-        h_pool2 = max_pool(h_conv2, strides=[1, 1], dilation=2)
+        # layer set 5: 3 Conv/Batch/ReLU and 1 pool
+        down_conv5 = self._downsample_layer(inlayer=down_conv4, 
+            shape=[4, 4, m4, m5], dilation=16, cbr_layers=3)
 
-        # layer 5 - original stride 1
-        W_conv3 = weight_variable([4, 4, map_2, map_3])
-        s_conv3 = tf.nn.relu(conv2d(h_pool2, W_conv3, dilation=4))
+        # layer set 6: 1 unpool (upsampling) and 3 Conv/Batch/ReLU
+        
 
-        mean_bn3, var_bn3 = tf.nn.moments(s_conv3, [0])
-        offset_bn3 = tf.Variable(tf.zeros([map_3]))
-        scale_bn3  = tf.Variable(tf.ones([map_3]))
-        bn_conv3 = tf.nn.batch_normalization(s_conv3, mean=mean_bn3, variance=var_bn3, 
-            offset=offset_bn3, scale=scale_bn3, variance_epsilon=.0005)
-        h_conv3 = tf.nn.relu(bn_conv3)
+        # layer set 7: 1 unpool (upsampling) and 3 Conv/Batch/ReLU
+        
 
-        # layer 6 - original stride 2
-        h_pool3 = max_pool(h_conv3, strides=[1, 1], dilation=4)
+        # layer set 8: 1 unpool (upsampling) and 3 Conv/Batch/ReLU
+        
+        
+        # layer set 9: 1 unpool (upsampling) and 3 Conv/Batch/ReLU
+        
 
-        # layer 7 - original stride 1
-        W_conv4 = weight_variable([4, 4, map_3, map_4])
-        s_conv4 = tf.nn.relu(conv2d(h_pool3, W_conv4, dilation=8))
-
-        mean_bn4, var_bn4 = tf.nn.moments(s_conv4, [0])
-        offset_bn4 = tf.Variable(tf.zeros([map_4]))
-        scale_bn4  = tf.Variable(tf.ones([map_4]))
-        bn_conv4 = tf.nn.batch_normalization(s_conv4, mean=mean_bn4, variance=var_bn4, 
-            offset=offset_bn4, scale=scale_bn4, variance_epsilon=.0005)
-        dh_conv4 = tf.nn.relu(bn_conv4)
-        h_conv4  = tf.nn.dropout(dh_conv4, keep_prob)
-
-        # layer 8 - original stride 2
-        h_pool4 = max_pool(h_conv4, strides=[1, 1], dilation=8)
-
-        # layer 9 - original stride 1
-        W_fc1 = weight_variable([3, 3, map_4, fc])
-        b_fc1 = bias_variable([fc])
-        h_fc1 = tf.nn.relu(conv2d(h_pool4, W_fc1, dilation=16) + b_fc1)
-
+        # layer set 10: 1 unpool (upsampling) and 3 Conv/Batch/ReLU
+        
+        
         # layer 10 - original stride 2
         W_fc2 = weight_variable([1, 1, fc, 2])
         b_fc2 = bias_variable([2])
@@ -140,19 +137,21 @@ class SegNet:
         self.model_name = str.format('out-{}_lr-{}_m1-{}_m2-{}_m3-{}_m4-{}_fc-{}', self.out, learning_rate, map_1,
                                      map_2, map_3, map_4, fc)
 
-    def conv_batch_relu_layer(self, size, dilation):
-        W_conv  = weight_variable(size)
-        s_conv  = conv2d(self.image, W_conv, dilation=dilation)
+    def _downsample_layer(self, inlayer=self.image, 
+        shape=[4, 4, 1, 48], dilation=1, cbr_layers=2):
 
-        mean_bn, var_bn = tf.nn.moments(s_conv, [0])
-        offset_bn = tf.Variable(tf.zeros([size[-1]]))
-        scale_bn = tf.Variable(tf.ones([size[-1]]))
-        bn_conv = tf.nn.batch_normalization(s_conv, mean=mean_bn, variance=var_bn, 
-            offset=offset_bn, scale=scale_bn, variance_epsilon=.0005)
-        return tf.nn.relu(bn_conv)
+        h_conv1 = conv_norm_relu(inlayer=inlayer, shape=shape, dilation=dilation)
+        h_conv2 = conv_norm_relu(inlayer=h_conv1, shape=shape, dilation=dilation)
+        
+        if cbr_layers == SMALL_LAYER:
+            return max_pool(h_conv2, strides=[1, 1], dilation=dilation)
+        elif cbr_layers == LARGE_LAYER:
+            h_conv3 = conv_norm_relu(inlayer=h_conv2, shape=shape, dilation=dilation)
+            return max_pool(h_conv3, strides=[1, 1], dilation=dilation)
+        else:
+            raise ValueError('Incorrect number of Conv/Batch/ReLU layers')
 
-    def pooling_layer(self):
-
-    def unpooling_layer(self):
-
-    def softmax_layer(self):
+    def _upsample_layer(self):
+        h_conv14  = conv_norm_relu(inlayer=h_unpool1, shape=[4, 4, 1, map_1], dilation=16)
+        h_conv15  = conv_norm_relu(inlayer=h_conv14, shape=[4, 4, 1, map_2], dilation=16)
+        h_conv16  = conv_norm_relu(inlayer=h_conv15, shape=[4, 4, 1, map_2], dilation=16)

@@ -47,7 +47,7 @@ class N4:
         scale_bn1  = tf.Variable(tf.ones([map_1]))
         bn_conv1 = tf.nn.batch_normalization(s_conv1, mean=mean_bn1, variance=var_bn1, 
             offset=offset_bn1, scale=scale_bn1, variance_epsilon=.0005)
-        h_conv1 = tf.nn.relu(bn_conv1)
+        h_conv1 = tf.nn.relu(s_conv1)
 
         # layer 2 - original stride 2
         h_pool1 = max_pool(h_conv1, strides=[1, 1], dilation=1)
@@ -61,7 +61,7 @@ class N4:
         scale_bn2  = tf.Variable(tf.ones([map_2]))
         bn_conv2 = tf.nn.batch_normalization(s_conv2, mean=mean_bn2, variance=var_bn2, 
             offset=offset_bn2, scale=scale_bn2, variance_epsilon=.0005)
-        h_conv2  = tf.nn.relu(bn_conv2)
+        h_conv2  = tf.nn.relu(s_conv2)
         
         # layer 4 - original stride 2
         h_pool2 = max_pool(h_conv2, strides=[1, 1], dilation=2)
@@ -75,7 +75,7 @@ class N4:
         scale_bn3  = tf.Variable(tf.ones([map_3]))
         bn_conv3 = tf.nn.batch_normalization(s_conv3, mean=mean_bn3, variance=var_bn3, 
             offset=offset_bn3, scale=scale_bn3, variance_epsilon=.0005)
-        h_conv3 = tf.nn.relu(bn_conv3)
+        h_conv3 = tf.nn.relu(s_conv3)
 
         # layer 6 - original stride 2
         h_pool3 = max_pool(h_conv3, strides=[1, 1], dilation=4)
@@ -89,7 +89,7 @@ class N4:
         scale_bn4  = tf.Variable(tf.ones([map_4]))
         bn_conv4 = tf.nn.batch_normalization(s_conv4, mean=mean_bn4, variance=var_bn4, 
             offset=offset_bn4, scale=scale_bn4, variance_epsilon=.0005)
-        h_conv4 = tf.nn.relu(bn_conv4)
+        h_conv4 = tf.nn.relu(s_conv4)
 
         # layer 8 - original stride 2
         h_pool4 = max_pool(h_conv4, strides=[1, 1], dilation=8)
