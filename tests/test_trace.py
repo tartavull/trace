@@ -19,6 +19,7 @@ import trace.train as train
 import trace.cli as cli
 import trace.dataset_config as dataset_config
 import trace.augmentation as augmentation
+import trace.models.N4 as N4
 
 
 class TestTrace(object):
@@ -56,10 +57,10 @@ class TestTrace(object):
         snemi3d_config = dataset_config.snemi3d_config()
 
         dataset_config.maybe_create_all_datasets(0.9)
-        augmentation.maybe_create_affinities(dataset_config.folder + 'train')
+        augmentation.maybe_create_affinities(snemi3d_config.folder + 'train')
         os.rename(snemi3d_config.folder + "train-affinities.h5", snemi3d_config.folder + "test-affinities.h5")
         runner = CliRunner()
-        result = runner.invoke(cli.cli,['watershed'])
+        result = runner.invoke(cli.cli, ['watershed'])
         assert result.exit_code == 0
         assert os.path.exists(snemi3d_config.folder+'test-labels.h5')
 
@@ -67,9 +68,9 @@ class TestTrace(object):
         """
         Train model for 10 steps and verify a model was created
         """
-        model = models.default_N4()
+        model = N4.default_N4()
         config = dataset_config.snemi3d_config()
-        trace.train(model, config)
+        train.train(model, config)
 
     @classmethod
     def teardown_class(cls):
