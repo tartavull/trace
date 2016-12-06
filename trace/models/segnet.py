@@ -9,6 +9,8 @@ LARGE_LAYER = 3
 # taken from https://arxiv.org/pdf/1511.00561.pdf
 def default_SegNet():
     # ensures an incorrect parameters map is not used for initialization
+    return None
+    """
     required = [ 
         'd1', 'd2', 'd3', 'd4', 'd5', 
         'u1', 'u2', 'u3', 'u4', 'u5',
@@ -19,6 +21,7 @@ def default_SegNet():
             raise ValueError('Incorrect parameter map (Missing \
                 parameter: {})'.format(param))
     return SegNet(segnet_params)
+    """
 
 # convolution, batch normalization, and ReLU layer
 def conv_norm_relu(inlayer, shape, dilation):
