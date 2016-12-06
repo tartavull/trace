@@ -32,14 +32,14 @@ class N4:
         self.target = tf.placeholder(tf.float32, shape=[None, None, None, 2])
 
         # layer 1 - original stride 1
-        W_conv1  = weight_variable([4, 4, 1, map_1])
-        s_conv1  = conv2d(self.image, W_conv1, dilation=1)
-
-        mean_bn1, var_bn1 = tf.nn.moments(s_conv1, [0])
-        offset_bn1 = tf.Variable(tf.zeros([map_1]))
-        scale_bn1  = tf.Variable(tf.ones([map_1]))
+        mean_bn1, var_bn1 = tf.nn.moments(self.image, [0])
+        offset_bn1 = tf.Variable(tf.zeros([1]))
+        scale_bn1  = tf.Variable(tf.ones([1]))
         bn_conv1 = tf.nn.batch_normalization(s_conv1, mean=mean_bn1, variance=var_bn1, 
             offset=offset_bn1, scale=scale_bn1, variance_epsilon=.0005)
+
+        W_conv1  = weight_variable([4, 4, 1, map_1])
+        s_conv1  = conv2d(bn_conv1, W_conv1, dilation=1)
         h_conv1 = tf.nn.relu(s_conv1)
 
         # layer 2 - original stride 2
@@ -54,7 +54,7 @@ class N4:
         scale_bn2  = tf.Variable(tf.ones([map_2]))
         bn_conv2 = tf.nn.batch_normalization(s_conv2, mean=mean_bn2, variance=var_bn2, 
             offset=offset_bn2, scale=scale_bn2, variance_epsilon=.0005)
-        h_conv2  = tf.nn.relu(bn_conv2)
+        h_conv2  = tf.nn.relu(s_conv2)
         
         # layer 4 - original stride 2
         h_pool2 = max_pool(h_conv2, strides=[1, 1], dilation=2)
@@ -68,7 +68,7 @@ class N4:
         scale_bn3  = tf.Variable(tf.ones([map_3]))
         bn_conv3 = tf.nn.batch_normalization(s_conv3, mean=mean_bn3, variance=var_bn3, 
             offset=offset_bn3, scale=scale_bn3, variance_epsilon=.0005)
-        h_conv3 = tf.nn.relu(bn_conv3)
+        h_conv3 = tf.nn.relu(s_conv3)
 
         # layer 6 - original stride 2
         h_pool3 = max_pool(h_conv3, strides=[1, 1], dilation=4)
