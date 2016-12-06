@@ -173,7 +173,7 @@ class SegNet:
             raise ValueError('Illegal number of Conv/Batch/ReLU layers')
 
     def _upsample_layer(self, inlayer, shapes, dilation=1, cbr_layers=2):
-        h_unpool = tf.image.resize_images(inlayer, shape, 
+        h_unpool = tf.image.resize_images(inlayer, shapes[0], 
             method=tf.image.ResizeMethod.NEAREST_NEIGHBOR, align_corners=False)
         h_conv1 = conv_norm_relu(inlayer=h_unpool, shape=shapes[0], dilation=dilation)
         h_conv2 = conv_norm_relu(inlayer=h_conv1, shape=shapes[1], dilation=dilation)
