@@ -4,6 +4,7 @@ MAINTAINER Ben Eisner <beisner@princeton.edu>
 
 # Pick up some Neuroglancer dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
+        curl \
         libtiff5-dev \
         libhdf5-dev \
         libjpeg8-dev \
@@ -16,6 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         tk8.6-dev \
         python-tk \
         screen \
+        wget \
         && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
