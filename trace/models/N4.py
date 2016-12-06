@@ -48,48 +48,55 @@ class N4:
         # Normally would have shape [1, inpt, inpt, 1], but None allows us to have a flexible validation set
         self.image = tf.placeholder(tf.float32, shape=[None, None, None, 1])
         self.target = tf.placeholder(tf.float32, shape=[None, None, None, 2])
+        keep_prob = tf.placeholder(tf.float32)
 
         # layer 1 - original stride 1
         W_conv1 = weight_variable([4, 4, 1, map_1])
         b_conv1 = bias_variable([map_1])
         h_conv1 = tf.nn.relu(conv2d(self.image, W_conv1, dilation=1) + b_conv1)
+        h_conv1_drop = h_conv1 #tf.nn.dropout(h_conv1, keep_prob)
 
         # layer 2 - original stride 2
-        h_pool1 = max_pool(h_conv1, strides=[1, 1], dilation=1)
+        h_pool1 = max_pool(h_conv1_drop, strides=[1, 1], dilation=1)
 
         # layer 3 - original stride 1
         W_conv2 = weight_variable([5, 5, map_1, map_2])
         b_conv2 = bias_variable([map_2])
         h_conv2 = tf.nn.relu(conv2d(h_pool1, W_conv2, dilation=2) + b_conv2)
+        h_conv2_drop = h_conv2 #tf.nn.dropout(h_conv2, keep_prob)
 
         # layer 4 - original stride 2
-        h_pool2 = max_pool(h_conv2, strides=[1, 1], dilation=2)
+        h_pool2 = max_pool(h_conv2_drop, strides=[1, 1], dilation=2)
 
         # layer 5 - original stride 1
         W_conv3 = weight_variable([4, 4, map_2, map_3])
         b_conv3 = bias_variable([map_3])
         h_conv3 = tf.nn.relu(conv2d(h_pool2, W_conv3, dilation=4) + b_conv3)
+        h_conv3_drop = h_conv3 #tf.nn.dropout(h_conv3, keep_prob)
 
         # layer 6 - original stride 2
-        h_pool3 = max_pool(h_conv3, strides=[1, 1], dilation=4)
+        h_pool3 = max_pool(h_conv3_drop, strides=[1, 1], dilation=4)
 
         # layer 7 - original stride 1
         W_conv4 = weight_variable([4, 4, map_3, map_4])
         b_conv4 = bias_variable([map_4])
         h_conv4 = tf.nn.relu(conv2d(h_pool3, W_conv4, dilation=8) + b_conv4)
+        h_conv4_drop = h_conv4 #tf.nn.dropout(h_conv4, keep_prob)
 
         # layer 8 - original stride 2
-        h_pool4 = max_pool(h_conv4, strides=[1, 1], dilation=8)
+        h_pool4 = max_pool(h_conv4_drop, strides=[1, 1], dilation=8)
 
         # layer 9 - original stride 1
         W_fc1 = weight_variable([3, 3, map_4, fc])
         b_fc1 = bias_variable([fc])
         h_fc1 = tf.nn.relu(conv2d(h_pool4, W_fc1, dilation=16) + b_fc1)
+        h_fc1_drop = h_fc1 #tf.nn.dropout(h_fc1, keep_prob)
+
 
         # layer 10 - original stride 2
         W_fc2 = weight_variable([1, 1, fc, 2])
         b_fc2 = bias_variable([2])
-        self.prediction = conv2d(h_fc1, W_fc2, dilation=16) + b_fc2
+        self.prediction = conv2d(h_fc1_drop, W_fc2, dilation=16) + b_fc2
 
         self.sigmoid_prediction = tf.nn.sigmoid(self.prediction)
         self.cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(self.prediction, self.target))

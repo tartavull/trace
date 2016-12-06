@@ -9,9 +9,9 @@ import numpy as np
 import subprocess
 import tifffile
 
-#from thirdparty.segascorus import io_utils
-#from thirdparty.segascorus import utils
-#from thirdparty.segascorus.metrics import *
+from thirdparty.segascorus import io_utils
+from thirdparty.segascorus import utils
+from thirdparty.segascorus.metrics import *
 
 import models
 
