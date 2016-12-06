@@ -18,7 +18,7 @@ def bias_variable(shape):
 
 
 def conv2d(x, W, dilation=None):
-  return tf.nn.convolution(x, W, strides=[1, 1], padding='VALID', dilation_rate= [dilation, dilation])
+  return tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding='VALID')#, dilation_rate= [dilation, dilation])
 
 
 def max_pool(x, dilation=None, strides=[2, 2], window_shape=[2, 2]):
