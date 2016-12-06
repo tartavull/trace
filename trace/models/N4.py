@@ -35,7 +35,7 @@ class N4:
         mean_bn1, var_bn1 = tf.nn.moments(self.image, [0])
         offset_bn1 = tf.Variable(tf.zeros([1]))
         scale_bn1  = tf.Variable(tf.ones([1]))
-        bn_conv1 = tf.nn.batch_normalization(s_conv1, mean=mean_bn1, variance=var_bn1, 
+        bn_conv1 = tf.nn.batch_normalization(self.image, mean=mean_bn1, variance=var_bn1, 
             offset=offset_bn1, scale=scale_bn1, variance_epsilon=.0005)
 
         W_conv1  = weight_variable([4, 4, 1, map_1])
