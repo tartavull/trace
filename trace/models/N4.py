@@ -4,7 +4,7 @@ from common import conv2d, bias_variable, weight_variable, max_pool
 from params import N4_params
 
 def default_N4():
-    required =['m1', 'm2', 'm3', 'm4', 'fc', 'lr']
+    required =['m1', 'm2', 'm3', 'm4', 'm5', 'fc', 'lr']
     for param in required:
         if param not in N4_params:
             raise ValueError('Incorrect parameter map (Missing \
@@ -19,6 +19,7 @@ class N4:
         map_2 = params['m2']
         map_3 = params['m3']
         map_4 = params['m4']
+        map_5 = params['m5']
         fc = params['fc']
         learning_rate = params['lr']
 
@@ -88,14 +89,22 @@ class N4:
         h_pool4 = max_pool(h_conv4, strides=[1, 1], dilation=8)
 
         # layer 9 - original stride 1
-        W_fc1 = weight_variable([3, 3, map_4, fc])
-        b_fc1 = bias_variable([fc])
-        h_fc1 = tf.nn.relu(conv2d(h_pool4, W_fc1, dilation=16) + b_fc1)
+        W_conv5 = weight_variable([4, 4, map_4, map_5])
+        s_conv5 = tf.nn.relu(conv2d(h_pool4, W_conv5, dilation=16))
+        h_conv5 = tf.nn.relu(s_conv5)
 
         # layer 10 - original stride 2
+        h_pool5 = max_pool(h_conv5, strides=[1, 1], dilation=16)
+
+        # layer 11 - original stride 1
+        W_fc1 = weight_variable([3, 3, map_5, fc])
+        b_fc1 = bias_variable([fc])
+        h_fc1 = tf.nn.relu(conv2d(h_pool5, W_fc1, dilation=32) + b_fc1)
+
+        # layer 12 - original stride 2
         W_fc2 = weight_variable([1, 1, fc, 2])
         b_fc2 = bias_variable([2])
-        self.prediction = conv2d(h_fc1, W_fc2, dilation=16) + b_fc2
+        self.prediction = conv2d(h_fc1, W_fc2, dilation=32) + b_fc2
 
         self.sigmoid_prediction = tf.nn.sigmoid(self.prediction)
         self.cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(self.prediction, self.target))
