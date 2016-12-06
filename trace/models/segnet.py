@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from common import conv2d, bias_variable, weight_variable, max_pool, conv_norm_relu
+from common import conv2d, bias_variable, weight_variable, max_pool
 
 SMALL_LAYER = 2
 LARGE_LAYER = 3
