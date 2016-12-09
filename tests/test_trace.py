@@ -15,7 +15,7 @@ from click.testing import CliRunner
 
 import trace.train as train
 import trace.cli as cli
-import trace.download_data as dataset_config
+import trace.download_data as download
 import trace.augmentation as augmentation
 import trace.models.N4 as N4
 
@@ -37,13 +37,13 @@ class TestTrace(object):
         assert help_result.exit_code == 0
         assert '--help  Show this message and exit.' in help_result.output
 
-    def test_comand_line_downloads_dataset(self):
+    def test_comand_line_download_data(self):
         runner = CliRunner()
         runner.invoke(cli.cli, ['download'])
-        snemi3d_config = dataset_config.snemi3d_config()
-        isbi_config = dataset_config.isbi_affinity_config()
-        assert os.path.exists(snemi3d_config.folder + snemi3d_config.test_input_h5)
-        assert os.path.exists(isbi_config.folder + isbi_config.test_input_h5)
+        current_folder = os.path.dirname(os.path.abspath(__file__)) + '/../trace/'
+
+        assert os.path.exists(current_folder + download.ISBI + '/' + download.TEST_INPUT + download.H5)
+        assert os.path.exists(current_folder + download.SNEMI3D + '/' + download.TEST_INPUT + download.H5)
 
     def test_watershed(self):
         """
@@ -51,16 +51,16 @@ class TestTrace(object):
         test-affinities.h5
         And then run watershed on it using the cli
         """
-
-        snemi3d_config = dataset_config.snemi3d_config()
-
-        dataset_config.maybe_create_all_datasets(0.9)
-        augmentation.maybe_create_affinities(snemi3d_config.folder + 'train')
-        os.rename(snemi3d_config.folder + "train-affinities.h5", snemi3d_config.folder + "test-affinities.h5")
         runner = CliRunner()
+        runner.invoke(cli.cli, ['download'])
+        current_folder = os.path.dirname(os.path.abspath(__file__)) + '/../trace/'
+        augmentation.maybe_create_affinities(current_folder + download.SNEMI3D + '/train')
+        os.rename(current_folder + download.TRAIN_AFFINITIES + download.H5,
+                  current_folder + download.TEST_AFFINITIES + download.H5)
+
         result = runner.invoke(cli.cli, ['watershed'])
         assert result.exit_code == 0
-        assert os.path.exists(snemi3d_config.folder+'test-labels.h5')
+        assert os.path.exists(current_folder + download.TEST_LABELS + download.H5)
 
     def test_train(self):
         """
