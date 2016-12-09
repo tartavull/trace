@@ -16,12 +16,12 @@ except Exception:
     print("Segascorus is not installed. Please install by going to trace/trace/thirdparty/segascorus and run 'make'."
           " If this fails, segascorus is likely not compatible with your computer (i.e. Macs).")
 
-import trace.models as models
+import models
 
 import os
 import sys
 
-from trace.augmentation import batch_iterator
+from augmentation import batch_iterator_affinities
 
 
 def train(model, config, n_iterations=10000, validation=True):
@@ -48,7 +48,7 @@ def train(model, config, n_iterations=10000, validation=True):
         summary_writer = tf.train.SummaryWriter(ckpt_folder, graph=sess.graph)
 
         sess.run(tf.global_variables_initializer())
-        for step, (inputs, affinities) in enumerate(batch_iterator(config, model.fov, model.out, model.inpt)):
+        for step, (inputs, affinities) in enumerate(batch_iterator_affinities(config, model.fov, model.out, model.inpt)):
 
             sess.run(model.train_step, feed_dict={
                 model.image: inputs,

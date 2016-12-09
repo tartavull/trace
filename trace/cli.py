@@ -8,21 +8,23 @@ import h5py
 
 import click
 
-import dataset_config
-import trace
-import models
+import download_data
+import train
+from models import N4, N4_bn
 
 
 def config_dict(x):
     return {
-        'snemi3d': dataset_config.snemi3d_config(),
-        'isbi': dataset_config.isbi_config()
+        'snemi3d': download.snemi3d_config(),
+        'isbi': download.isbi_affinity_config(),
+        'isbi-boundaries': download.isbi_boundary_config()
     }[x]
 
 
 def model_dict(x):
     return {
-        'n4': models.default_N4()
+        'n4': N4.default_N4(),
+        'n4-bn': N4_bn.default_N4_bn()
     }[x]
 
 
@@ -33,13 +35,13 @@ def cli():
 
 @cli.command()
 def download():
-    import dataset_config
-    dataset_config.maybe_create_all_datasets(0.9)
+    current_folder = os.path.dirname(os.path.abspath(__file__)) + '/'
+    download_data.maybe_create_all_datasets(current_folder, 0.9)
 
 
 @cli.command()
 @click.argument('split', type=click.Choice(['train', 'validation', 'test']))
-@click.argument('dataset', type=click.Choice(['snemi3d', 'isbi']))
+@click.argument('dataset', type=click.Choice(['snemi3d', 'isbi', 'isbi-boundaries']))
 @click.option('--aff/--no-aff', default=False, help="Display only the affinities.")
 @click.option('--ip', default='172.17.0.2', help="IP address for serving")
 @click.option('--port', default=4125, help="Port for serving")
@@ -122,7 +124,7 @@ def add_affinities(folder, filename, viewer):
 
 @cli.command()
 @click.argument('split', type=click.Choice(['train', 'validation', 'test']))
-@click.argument('dataset', type=click.Choice(['snemi3d', 'isbi']))
+@click.argument('dataset', type=click.Choice(['snemi3d', 'isbi', 'isbi-boundaries']))
 @click.option('--high', type=float, default=0.9)
 @click.option('--low', type=float, default=0.3)
 @click.option('--dust', type=int, default=250)
@@ -149,24 +151,22 @@ def train(model_type, dataset):
     """
     Train an N4 models to predict affinities
     """
-
     trace.train(model_dict(model_type), config_dict(dataset))
 
 
 @cli.command()
 @click.argument('model_type', type=click.Choice(['n4']))
-@click.argument('dataset', type=click.Choice(['snemi3d', 'isbi']))
+@click.argument('dataset', type=click.Choice(['snemi3d', 'isbi', 'isbi-boundaries']))
 @click.argument('split', type=click.Choice(['train', 'validation', 'test']))
 def predict(model_type, dataset, split):
     """
     Realods a model previously trained
     """
-    import trace
     trace.predict(model_dict(model_type), config_dict(dataset), split)
 
 
 @cli.command()
-@click.argument('dataset', type=click.Choice(['snemi3d', 'isbi']))
+@click.argument('dataset', type=click.Choice(['snemi3d', 'isbi', 'isbi-boundaries']))
 def grid(dataset):
     # Grid search on N4, that's it right now
 

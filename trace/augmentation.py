@@ -56,9 +56,9 @@ def maybe_create_affinities(dataset_prefix):
         f.create_dataset('main', data=affinities)
 
 
-def batch_iterator(config, fov, output_patch, input_patch):
+def batch_iterator_affinities(config, fov, output_patch, input_patch):
     split = 'train'
-    dataset_prefix = config.folder + split
+    dataset_prefix = config.folder + config.spec_base + split
     set_path_to_config(dataset_prefix)
 
     spec = dataset_prefix + '.spec'
@@ -89,5 +89,38 @@ def batch_iterator(config, fov, output_patch, input_patch):
         reshapedLabel[0,:,:,1] = label[1]
         yield inpt, reshapedLabel
 
+
+def batch_iterator_boundaries(config, fov, output_patch, input_patch):
+    split = 'train'
+    dataset_prefix = config.folder + config.spec_base + split
+    set_path_to_config(dataset_prefix)
+
+    spec = dataset_prefix + '.spec'
+
+    print(spec)
+
+    net_spec = {
+        'label': (1, input_patch, input_patch),
+        'input': (1, input_patch, input_patch)
+    }
+
+    params = {
+        'augment': [],
+        'drange': [0]
+    }
+
+    dp = VolumeDataProvider(spec, net_spec, params)
+
+    while True:
+        sample = dp.random_sample()
+        inpt, label = sample['input'], sample['label']
+        inpt = inpt.reshape(1,input_patch,input_patch,1)
+        label = label[0:1, 0, fov//2:fov//2+output_patch, fov//2:fov//2+output_patch]
+        reshapedLabel = np.zeros(shape=(1, output_patch, output_patch, 1))
+
+        # output a boundary, 1 or 0 (not affinity)
+        reshapedLabel[0,:,:,0] = label[0]
+        yield inpt, reshapedLabel
+
 if __name__ == '__main__':
-    batch_iterator(1).next()
+    batch_iterator_affinities(1).next()

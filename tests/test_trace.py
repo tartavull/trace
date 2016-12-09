@@ -15,7 +15,7 @@ from click.testing import CliRunner
 
 import trace.train as train
 import trace.cli as cli
-import trace.dataset_config as dataset_config
+import trace.download_data as dataset_config
 import trace.augmentation as augmentation
 import trace.models.N4 as N4
 
@@ -41,7 +41,7 @@ class TestTrace(object):
         runner = CliRunner()
         runner.invoke(cli.cli, ['download'])
         snemi3d_config = dataset_config.snemi3d_config()
-        isbi_config = dataset_config.isbi_config()
+        isbi_config = dataset_config.isbi_affinity_config()
         assert os.path.exists(snemi3d_config.folder + snemi3d_config.test_input_h5)
         assert os.path.exists(isbi_config.folder + isbi_config.test_input_h5)
 

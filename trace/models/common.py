@@ -24,3 +24,5 @@ def conv2d(x, W, dilation=None):
 def max_pool(x, dilation=None, strides=[2, 2], window_shape=[2, 2]):
   return tf.nn.pool(x, window_shape=window_shape, dilation_rate= [dilation, dilation],
                        strides=strides, padding='VALID', pooling_type='MAX')
+
+

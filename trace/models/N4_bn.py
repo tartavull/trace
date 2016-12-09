@@ -1,10 +1,10 @@
 import tensorflow as tf
 
-
 from common import conv2d, bias_variable, weight_variable, max_pool
+import tensorflow.contrib.layers.python.layers.layers as layers
 
 
-def default_N4():
+def default_N4_bn():
     params = {
         'm1': 48,
         'm2': 48,
@@ -17,24 +17,27 @@ def default_N4():
     return N4(params)
 
 
-class N4:
+class N4Bn:
     def __init__(self, params):
 
         # Hyperparameters
-        map_1 = params['m1']
-        map_2 = params['m2']
-        map_3 = params['m3']
-        map_4 = params['m4']
-        fc = params['fc']
-        learning_rate = params['lr']
+        # map_1 = params['m1']
+        # map_2 = params['m2']
+        # map_3 = params['m3']
+        # map_4 = params['m4']
+        # fc = params['fc']
+        # learning_rate = params['lr']
         self.out = params['out']
         self.fov = 95
         self.inpt = self.fov + 2 * (self.out // 2)
 
         # layer 0
         # Normally would have shape [1, inpt, inpt, 1], but None allows us to have a flexible validation set
+
+        # Shape: [# layers per batch, patch size, patch size, number of values per pixel]
         self.image = tf.placeholder(tf.float32, shape=[None, None, None, 1])
-        self.target = tf.placeholder(tf.float32, shape=[None, None, None, 2])
+        # Shape: [# layers per batch, patch size, patch size, labels per pixel]
+        self.target = tf.placeholder(tf.float32, shape=[None, None, None, 1])
 
         # layer 1 - original stride 1
         W_conv1 = weight_variable([4, 4, 1, map_1])
@@ -74,8 +77,8 @@ class N4:
         h_fc1 = tf.nn.relu(conv2d(h_pool4, W_fc1, dilation=16) + b_fc1)
 
         # layer 10 - original stride 2
-        W_fc2 = weight_variable([1, 1, fc, 2])
-        b_fc2 = bias_variable([2])
+        W_fc2 = weight_variable([1, 1, fc, 1])
+        b_fc2 = bias_variable([1])
         self.prediction = conv2d(h_fc1, W_fc2, dilation=16) + b_fc2
 
         self.sigmoid_prediction = tf.nn.sigmoid(self.prediction)
