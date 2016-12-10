@@ -47,7 +47,7 @@ def train(model, data_provider, data_folder, n_iterations=10000):
 
     with tf.Session() as sess:
         # We will write our summaries here
-        summary_writer = tf.train.SummaryWriter(ckpt_folder + '/events', graph=sess.graph)
+        summary_writer = tf.summary.FileWriter(ckpt_folder + '/events', graph=sess.graph)
 
         # Initialize the variables
         sess.run(tf.global_variables_initializer())
