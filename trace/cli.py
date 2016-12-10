@@ -9,22 +9,17 @@ import h5py
 import click
 
 import download_data
-import train
+import learner
+from dp_transformer import DPTransformer
 from models import N4, N4_bn
-
-
-def config_dict(x):
-    return {
-        'snemi3d': download.snemi3d_config(),
-        'isbi': download.isbi_affinity_config(),
-        'isbi-boundaries': download.isbi_boundary_config()
-    }[x]
+from models.N4 import default_N4
+# from models.N4_bn import default_N4_bn
 
 
 def model_dict(x):
     return {
-        'n4': N4.default_N4(),
-        'n4-bn': N4_bn.default_N4_bn()
+        'n4': default_N4(),
+        # 'n4-bn': default_N4_bn()
     }[x]
 
 
@@ -133,13 +128,11 @@ def watershed(dataset, split, high, low, dust):
     TODO Explain what each argument is, dust is currently ignored
     """
 
-    config = config_dict(dataset)
-
-    curent_dir = os.path.dirname(os.path.abspath(__file__))
+    current_dir = os.path.dirname(os.path.abspath(__file__))
     subprocess.call(["julia",
-                     curent_dir +"/thirdparty/watershed/watershed.jl",
-                     config.folder + split + "-affinities.h5",
-                     config.folder + split + "-labels.h5",
+                     current_dir +"/thirdparty/watershed/watershed.jl",
+                     current_dir + '/' + dataset + '/' + split + "-affinities.h5",
+                     current_dir + '/' + dataset + '/' + split + "-labels.h5",
                      str(high),
                      str(low)])
 
@@ -151,7 +144,10 @@ def train(model_type, dataset):
     """
     Train an N4 models to predict affinities
     """
-    trace.train(model_dict(model_type), config_dict(dataset))
+    data_folder = os.path.dirname(os.path.abspath(__file__)) + '/' + dataset + '/'
+    data_provider = DPTransformer(data_folder, 'train.spec')
+
+    learner.train(model_dict(model_type), data_provider, data_folder, n_iterations=10)
 
 
 @cli.command()
@@ -162,7 +158,9 @@ def predict(model_type, dataset, split):
     """
     Realods a model previously trained
     """
-    trace.predict(model_dict(model_type), config_dict(dataset), split)
+    data_folder = os.path.dirname(os.path.abspath(__file__)) + '/' + dataset + '/'
+
+    learner.predict(model_dict(model_type), data_folder, split)
 
 
 @cli.command()

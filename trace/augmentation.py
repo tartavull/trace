@@ -1,26 +1,20 @@
 from __future__ import print_function
 from __future__ import division
-from ConfigParser import RawConfigParser
 import os.path
+import configparser as cp
+import numpy as np
 
 import h5py
-import numpy as np
 
 from dataprovider.data_provider import VolumeDataProvider
 
 
-def set_path_to_config(dataset_prefix):
-    config = RawConfigParser()
-    configpath = dataset_prefix + '.spec'
-    config.read(configpath)
-    config.set('files','img', dataset_prefix + '-input.h5')
-    config.set('files','lbl', dataset_prefix + '-labels.h5')
-    # Writing our modified configuration file
-    with open(configpath, 'wb') as f:
-        config.write(f)
+def mirror_across_borders(data, fov):
+    mirrored_data = np.pad(data, [(0, 0), (fov//2, fov//2), (fov//2, fov//2)], mode='reflect')
+    return mirrored_data
 
 
-def maybe_create_affinities(dataset_prefix):
+def maybe_create_affinities(dataset_prefix, num_examples):
     """
     Args:
         dataset_prefix (str): either train or test
@@ -37,7 +31,7 @@ def maybe_create_affinities(dataset_prefix):
 
     # there is a little bug in DataProvider that doesn't let us do it
     # for the actual size of the dataset 100,1024,1024
-    patch_size = (99, 1023, 1023)
+    patch_size = (num_examples, 1023, 1023)
 
     net_spec = {
         'label': patch_size
@@ -48,79 +42,20 @@ def maybe_create_affinities(dataset_prefix):
         'drange': [0]
     }
 
-    set_path_to_config(dataset_prefix)
     spec = dataset_prefix + '.spec'
+
+    config = cp.RawConfigParser()
+    config.read(spec)
+
+    config.set('files', 'img', dataset_prefix + '-input.h5')
+    config.set('files', 'lbl', dataset_prefix + '-labels.h5')
+
+    # Writing our modified configuration file
+    with open(spec, 'wb') as f:
+        config.write(f)
+
     dp = VolumeDataProvider(spec, net_spec, params)
     affinities = dp.random_sample()['label']
     with h5py.File(dataset_prefix + '-affinities.h5','w') as f:
         f.create_dataset('main', data=affinities)
 
-
-def batch_iterator_affinities(config, fov, output_patch, input_patch):
-    split = 'train'
-    dataset_prefix = config.folder + config.spec_base + split
-    set_path_to_config(dataset_prefix)
-
-    spec = dataset_prefix + '.spec'
-
-    print(spec)
-
-    net_spec = {
-        'label': (1, input_patch, input_patch),
-        'input': (1, input_patch, input_patch)
-    }
-
-    params = {
-        'augment': [],
-        'drange': [0]
-    }
-
-    dp = VolumeDataProvider(spec, net_spec, params)
-
-    while True:
-        sample = dp.random_sample()
-        inpt, label = sample['input'], sample['label']
-        inpt = inpt.reshape(1,input_patch,input_patch,1)
-        label = label[0:2,0,fov//2:fov//2+output_patch,fov//2:fov//2+output_patch]
-        reshapedLabel = np.zeros(shape=(1, output_patch, output_patch, 2))
-
-        #central output patch, only x,y affinities
-        reshapedLabel[0,:,:,0] = label[0]
-        reshapedLabel[0,:,:,1] = label[1]
-        yield inpt, reshapedLabel
-
-
-def batch_iterator_boundaries(config, fov, output_patch, input_patch):
-    split = 'train'
-    dataset_prefix = config.folder + config.spec_base + split
-    set_path_to_config(dataset_prefix)
-
-    spec = dataset_prefix + '.spec'
-
-    print(spec)
-
-    net_spec = {
-        'label': (1, input_patch, input_patch),
-        'input': (1, input_patch, input_patch)
-    }
-
-    params = {
-        'augment': [],
-        'drange': [0]
-    }
-
-    dp = VolumeDataProvider(spec, net_spec, params)
-
-    while True:
-        sample = dp.random_sample()
-        inpt, label = sample['input'], sample['label']
-        inpt = inpt.reshape(1,input_patch,input_patch,1)
-        label = label[0:1, 0, fov//2:fov//2+output_patch, fov//2:fov//2+output_patch]
-        reshapedLabel = np.zeros(shape=(1, output_patch, output_patch, 1))
-
-        # output a boundary, 1 or 0 (not affinity)
-        reshapedLabel[0,:,:,0] = label[0]
-        yield inpt, reshapedLabel
-
-if __name__ == '__main__':
-    batch_iterator_affinities(1).next()

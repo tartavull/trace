@@ -13,11 +13,13 @@ import os
 
 from click.testing import CliRunner
 
-import trace.train as train
 import trace.cli as cli
 import trace.download_data as download
 import trace.augmentation as augmentation
-import trace.models.N4 as N4
+import trace.learner as learner
+
+from trace.dp_transformer import DPTransformer
+from trace.models.N4 import default_N4
 
 
 class TestTrace(object):
@@ -53,12 +55,13 @@ class TestTrace(object):
         """
         runner = CliRunner()
         runner.invoke(cli.cli, ['download'])
-        current_folder = os.path.dirname(os.path.abspath(__file__)) + '/../trace/'
-        augmentation.maybe_create_affinities(current_folder + download.SNEMI3D + '/train')
+        current_folder = os.path.dirname(os.path.abspath(__file__)) + '/../trace/' + download.SNEMI3D + '/'
+        augmentation.maybe_create_affinities(current_folder + 'train', 89)
+
         os.rename(current_folder + download.TRAIN_AFFINITIES + download.H5,
                   current_folder + download.TEST_AFFINITIES + download.H5)
 
-        result = runner.invoke(cli.cli, ['watershed'])
+        result = runner.invoke(cli.cli, ['watershed', 'test', 'snemi3d'])
         assert result.exit_code == 0
         assert os.path.exists(current_folder + download.TEST_LABELS + download.H5)
 
@@ -66,9 +69,11 @@ class TestTrace(object):
         """
         Train model for 10 steps and verify a model was created
         """
-        model = N4.default_N4()
-        config = dataset_config.snemi3d_config()
-        train.train(model, config, n_iterations=10)
+        model = default_N4()
+        data_folder = os.path.dirname(os.path.abspath(__file__)) + '/../trace/isbi/'
+        data_provider = DPTransformer(data_folder, 'train.spec')
+
+        learner.train(model, data_provider, data_folder, n_iterations=10)
 
     @classmethod
     def teardown_class(cls):

@@ -1,6 +1,6 @@
 [files]
-img = /home/it2/code/trace/trace/isbi/train-volume.h5
-lbl = /home/it2/code/trace/trace/isbi/train-labels.h5
+img = /home/seunglab/trace/tests/../trace/isbi/train-input.h5
+lbl = /home/seunglab/trace/tests/../trace/isbi/train-labels.h5
 
 [params]
 max_trans = [23.0]*20
