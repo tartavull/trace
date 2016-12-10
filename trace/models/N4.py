@@ -80,7 +80,7 @@ class N4:
 
         self.sigmoid_prediction = tf.nn.sigmoid(self.prediction)
         self.cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(self.prediction, self.target))
-        self.loss_summary = tf.scalar_summary('cross_entropy', self.cross_entropy)
+        self.loss_summary = tf.summary.scalar('cross_entropy', self.cross_entropy)
         self.train_step = tf.train.AdamOptimizer(learning_rate).minimize(self.cross_entropy)
 
         self.binary_prediction = tf.round(self.sigmoid_prediction)
