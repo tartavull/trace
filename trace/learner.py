@@ -143,7 +143,7 @@ def predict(model, data_folder, subset):
                     out[0:2, z] = reshaped_pred[:, 0]
 
             # Our border is the max of the output
-            tifffile.imsave(results_folder + '-map.tif', max(out))
+            tifffile.imsave(results_folder + model.model_name + '/' + subset + '-map.tif', np.minimum(out[0], out[1]))
 
 
 def __grid_search(data_provider, data_folder, remaining_params, current_params, results_dict):
