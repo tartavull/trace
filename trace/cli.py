@@ -147,7 +147,7 @@ def train(model_type, dataset):
     data_folder = os.path.dirname(os.path.abspath(__file__)) + '/' + dataset + '/'
     data_provider = DPTransformer(data_folder, 'train.spec')
 
-    learner.train(model_dict(model_type), data_provider, data_folder, n_iterations=10)
+    learner.train(model_dict(model_type), data_provider, data_folder, n_iterations=10000)
 
 
 @cli.command()
