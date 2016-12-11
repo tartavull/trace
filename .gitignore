@@ -57,9 +57,11 @@ target/
 
 #dataset folders
 trace/snemi3d/*
+trace/isbi/*
 trace/thirdparty/neuroglancer
 trace/thirdparty/watershed
 trace/thirdparty/DataProvider
 
 .idea/
 
+/trace/.ipynb_checkpoints/

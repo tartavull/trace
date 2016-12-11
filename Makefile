@@ -51,15 +51,15 @@ lint: ## check style with flake8
 	flake8 trace tests
 
 test: ## run tests quickly with the default Python
-	py.test
-	
+	python -m pytest
+
 
 test-all: ## run tests on every Python version with tox
 	tox
 
 coverage: ## check code coverage quickly with the default Python
 	coverage run --source trace py.test
-	
+
 		coverage report -m
 		coverage html
 		$(BROWSER) htmlcov/index.html
@@ -88,6 +88,7 @@ install: clean ## install the package to the active Python's site-packages
 	python setup.py install
 
 submodules:
+	cd $(PWD)/trace/thirdparty/segascorus && make && touch __init__.py
 	cd $(PWD)/trace/thirdparty/neuroglancer/python &&	python setup.py install
 	julia -e 'Pkg.add("HDF5")'
 	julia -e 'Pkg.add("DataStructures")'
