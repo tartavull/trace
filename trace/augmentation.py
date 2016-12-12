@@ -56,7 +56,7 @@ def maybe_create_affinities(dataset_prefix):
         f.create_dataset('main', data=affinities)
 
 
-def batch_iterator(config, fov, output_patch, input_patch):
+def batch_iterator(config,fov, output_patch, input_patch):
     split = 'train'
     dataset_prefix = config.folder + split
     set_path_to_config(dataset_prefix)

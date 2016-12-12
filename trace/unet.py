@@ -206,7 +206,7 @@ def create_unet(image, target, keep_prob, layers=5, features_root=64, kernel_siz
 
         histogram_dict['prediction'] = prediction
         histogram_dict['sigmoid prediction'] = sigmoid_prediction
-	
+
         cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(prediction,target))
 
         loss_summary = tf.summary.scalar('cross_entropy', cross_entropy)
@@ -324,7 +324,7 @@ def import_image(path, sess, isInput, fov):
         sess.run(image_t.initializer,
             feed_dict={image_ph: image_data})
         del image_data
-	
+
         return image_t
 
 
@@ -342,10 +342,10 @@ def train(config,n_iterations=200000):
 
         print ('Run tensorboard to visualize training progress')
         with tf.Session() as sess:
-            training_input = import_image('/home/trace/trace/isbi/train-input.h5', sess, isInput=True, fov=FULL_FOV)
-	    training_labels = import_image('/home/trace/trace/isbi/train-labels.h5', sess, isInput=False, fov=FULL_FOV)
-            validation_input = import_image('/home/trace/trace/isbi/validation-input.h5', sess, isInput=True, fov=FULL_FOV)
-            validation_labels = import_image('/home/trace/trace/isbi/validation-labels.h5', sess, isInput=False, fov=FULL_FOV)
+            training_input = import_image('\home\trace\trace\isbi\train-input.h5', sess, isInput=True, fov=FULL_FOV)
+            training_labels = import_image('\home\trace\trace\isbi\train-labels.h5', sess, isInput=False, fov=FULL_FOV)
+            validation_input = import_image('\home\trace\trace\isbi\validation-input.h5', sess, isInput=True, fov=FULL_FOV)
+            validation_labels = import_image('\home\trace\trace\isbi\validation-labels.h5', sess, isInput=False, fov=FULL_FOV)
 
             num_layers = training_input.get_shape()[0]
             input_size = training_input.get_shape()[1]
@@ -365,8 +365,7 @@ def train(config,n_iterations=200000):
 
 
             with tf.variable_scope('foo', reuse=True):
-		ipy.embed()
-		training_net = create_unet(training_input_slice, training_label_slice, keep_prob=1.0)
+                training_net = create_unet(training_input_slice, training_label_slice, keep_prob=1.0)
                 validation_net = create_unet(validation_input, validation_labels, keep_prob=1.0)
 
             summary_writer = tf.train.SummaryWriter(
@@ -374,7 +373,7 @@ def train(config,n_iterations=200000):
 
             sess.run(tf.global_variables_initializer())
             for step, (inputs, boundaries) in enumerate(batch_iterator(config,FOV,OUTPT,INPT)):
-		sess.run(assign_input,
+                sess.run(assign_input,
                         feed_dict={inpt_placeholder: inputs})
                 sess.run(assign_target,
                         feed_dict={target_placeholder: boundaries / 255.0})

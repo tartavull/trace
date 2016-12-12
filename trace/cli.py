@@ -9,7 +9,7 @@ import h5py
 import click
 
 import dataset_config
-import trace
+import trace, unet
 import models
 from models import N4
 
@@ -145,11 +145,11 @@ def watershed(dataset, split, high, low, dust):
 
 
 @cli.command()
-@click.argument('model_type', type=click.Choice(['n4', 'bn_n4']))
+@click.argument('model_type', type=click.Choice(['n4', 'bn_n4','unet']))
 @click.argument('dataset', type=click.Choice(['snemi3d', 'isbi']))
 @click.option('--bs', default=1, help="Batch size")
-@click.option('--iter', default=10000, help="Iterations")
-def train(model_type, dataset, bs, iter):
+@click.option('--it', default=10000, help="Iterations")
+def train(model_type, dataset, bs, it):
     """
     Train an N4 models to predict affinities
     """
@@ -158,8 +158,9 @@ def train(model_type, dataset, bs, iter):
         trace.train(model_dict(model_type), config_dict(dataset))
     elif model_type == 'bn_n4':
         trace.train_bn(model_dict(model_type), config_dict(dataset),validation=True, 
-            n_iterations=iter, batch_size = bs)
-
+            n_iterations=it, batch_size = bs)
+    elif model_type == 'unet':
+	unet.train(config_dict(dataset),n_iterations = it)
 
 @cli.command()
 @click.argument('model_type', type=click.Choice(['n4']))
