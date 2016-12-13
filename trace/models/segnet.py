@@ -78,19 +78,19 @@ class SegNet:
 
         # layer set 4: 3 Conv/Batch/ReLU and 1 pool
         down_conv4 = self._downsample_layer(inlayer=down_conv3, 
-            shapes=d4, dilation=8, cbr_layers=3)
+            shapes=d4, dilation=8, cbr_layers=2)
 
         # layer set 5: 3 Conv/Batch/ReLU and 1 pool
         down_conv5 = self._downsample_layer(inlayer=down_conv4, 
-            shapes=d5, dilation=16, cbr_layers=3)
+            shapes=d5, dilation=16, cbr_layers=2)
 
         # layer set 6: 1 unpool (upsampling) and 3 Conv/Batch/ReLU
         up_conv1 = self._upsample_layer(inlayer=down_conv5, 
-            shapes=u1, dilation=16, cbr_layers=3)
+            shapes=u1, dilation=16, cbr_layers=2)
 
         # layer set 7: 1 unpool (upsampling) and 3 Conv/Batch/ReLU
         up_conv2 = self._upsample_layer(inlayer=up_conv1, 
-            shapes=u2, dilation=8, cbr_layers=3)
+            shapes=u2, dilation=8, cbr_layers=2)
 
         # layer set 8: 1 unpool (upsampling) and 3 Conv/Batch/ReLU
         up_conv3 = self._upsample_layer(inlayer=up_conv2, 
