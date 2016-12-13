@@ -86,23 +86,23 @@ class SegNet:
 
         # layer set 6: 1 unpool (upsampling) and 3 Conv/Batch/ReLU
         up_conv1 = self._upsample_layer(inlayer=down_conv5, 
-            dilation=16, cbr_layers=3)
+            shapes=u1, dilation=16, cbr_layers=3)
 
         # layer set 7: 1 unpool (upsampling) and 3 Conv/Batch/ReLU
         up_conv2 = self._upsample_layer(inlayer=up_conv1, 
-            dilation=8, cbr_layers=3)
+            shapes=u2, dilation=8, cbr_layers=3)
 
         # layer set 8: 1 unpool (upsampling) and 3 Conv/Batch/ReLU
         up_conv3 = self._upsample_layer(inlayer=up_conv2, 
-            dilation=4, cbr_layers=3)
+            shapes=u3, dilation=4, cbr_layers=3)
         
         # layer set 9: 1 unpool (upsampling) and 2 Conv/Batch/ReLU
         up_conv4 = self._upsample_layer(inlayer=up_conv3, 
-            dilation=2, cbr_layers=2)
+            shapes=u4, dilation=2, cbr_layers=2)
 
         # layer set 10: 1 unpool (upsampling) and 2 Conv/Batch/ReLU
         self.prediction = self._upsample_layer(inlayer=up_conv4, 
-            dilation=1, cbr_layers=2)
+            shapes=u5, dilation=1, cbr_layers=2)
 
         self.softmax = tf.nn.softmax(self.prediction)
         self.cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(self.prediction, self.target))
@@ -158,17 +158,17 @@ class SegNet:
         else:
             raise ValueError('Illegal number of Conv/Batch/ReLU layers')
 
-    def _upsample_layer(self, inlayer, dilation=1, cbr_layers=2):
-        W_deconv  = weight_variable(inlayer.shape)
+    def _upsample_layer(self, inlayer, shapes, dilation=1, cbr_layers=2):
+        W_deconv  = weight_variable(shapes[0])
         h_unpool = deconv2d(inlayer, W_deconv, stride=[1])
 
-        h_conv1 = conv_norm_relu(inlayer=h_unpool, shape=h_unpool.shape, dilation=dilation)
-        h_conv2 = conv_norm_relu(inlayer=h_conv1,  shape=h_conv1.shape, dilation=dilation)
+        h_conv1 = conv_norm_relu(inlayer=h_unpool, shape=shapes[1], dilation=dilation)
+        h_conv2 = conv_norm_relu(inlayer=h_conv1,  shape=shapes[2], dilation=dilation)
 
         if cbr_layers == SMALL_LAYER:
             return h_conv2
         elif cbr_layers == LARGE_LAYER:
-            h_conv3 = conv_norm_relu(inlayer=h_conv2, shape=h_conv2.shape, dilation=dilation)
+            h_conv3 = conv_norm_relu(inlayer=h_conv2, shape=shapes[3], dilation=dilation)
             return h_conv3
         else:
             raise ValueError('Illegal number of Conv/Batch/ReLU layers')
