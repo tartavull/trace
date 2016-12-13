@@ -74,7 +74,7 @@ class SegNet:
 
         # layer set 3: 3 Conv/Batch/ReLU and 1 pool
         down_conv3 = self._downsample_layer(inlayer=down_conv2, 
-            shapes=d3, dilation=4, cbr_layers=3)
+            shapes=d3, dilation=4, cbr_layers=2)
 
         # layer set 4: 3 Conv/Batch/ReLU and 1 pool
         down_conv4 = self._downsample_layer(inlayer=down_conv3, 
@@ -94,7 +94,7 @@ class SegNet:
 
         # layer set 8: 1 unpool (upsampling) and 3 Conv/Batch/ReLU
         up_conv3 = self._upsample_layer(inlayer=up_conv2, 
-            shapes=u3, dilation=4, cbr_layers=3)
+            shapes=u3, dilation=4, cbr_layers=2)
         
         # layer set 9: 1 unpool (upsampling) and 2 Conv/Batch/ReLU
         up_conv4 = self._upsample_layer(inlayer=up_conv3, 
