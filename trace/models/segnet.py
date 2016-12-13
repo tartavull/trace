@@ -143,8 +143,8 @@ class SegNet:
         # Add ops to save and restore all the variables.
         self.saver = tf.train.Saver()
 
-        self.model_name = str.format('out-{}_lr-{}_m1-{}_m2-{}_m3-{}_m4-{}_fc-{}', self.out, learning_rate, map_1,
-                                     map_2, map_3, map_4, fc)
+        self.model_name = str.format('out-{}_lr-{}_d1-{}_d2-{}_d3-{}_d4-{}_d5-{}', self.out, learning_rate, d1,
+                                     d2, d3, d4, d5)
 
     def _downsample_layer(self, inlayer, shapes, dilation=1, cbr_layers=2):
         h_conv1 = conv_norm_relu(inlayer=inlayer, shape=shapes[0], dilation=dilation)
