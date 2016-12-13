@@ -158,7 +158,7 @@ class SegNet:
         else:
             raise ValueError('Illegal number of Conv/Batch/ReLU layers')
 
-    def _upsample_layer(self, inlayer, shape, dilation=1, cbr_layers=2):
+    def _upsample_layer(self, inlayer, dilation=1, cbr_layers=2):
         W_deconv  = weight_variable(inlayer.shape)
         h_unpool = deconv2d(inlayer, W_deconv, stride=[1])
 
