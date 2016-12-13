@@ -160,7 +160,7 @@ class SegNet:
 
     def _upsample_layer(self, inlayer, shapes, dilation=1, cbr_layers=2):
         W_deconv  = weight_variable(shapes[0])
-        h_unpool = deconv2d(inlayer, W_deconv, stride=[1])
+        h_unpool = deconv2d(inlayer, W_deconv, stride=1)
 
         h_conv1 = conv_norm_relu(inlayer=h_unpool, shape=shapes[1], dilation=dilation)
         h_conv2 = conv_norm_relu(inlayer=h_conv1,  shape=shapes[2], dilation=dilation)
