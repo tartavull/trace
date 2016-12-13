@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from common import conv2d, bias_variable, weight_variable, max_pool
+from common import conv2d, bias_variable, weight_variable, max_pool, deconv2d
 from params import segnet_params
 
 SMALL_LAYER = 2
@@ -9,8 +9,6 @@ LARGE_LAYER = 3
 # taken from https://arxiv.org/pdf/1511.00561.pdf
 def default_SegNet():
     # ensures an incorrect parameters map is not used for initialization
-    return None
-    """
     required = [ 
         'd1', 'd2', 'd3', 'd4', 'd5', 
         'u1', 'u2', 'u3', 'u4', 'u5',
@@ -21,7 +19,6 @@ def default_SegNet():
             raise ValueError('Incorrect parameter map (Missing \
                 parameter: {})'.format(param))
     return SegNet(segnet_params)
-    """
 
 # convolution, batch normalization, and ReLU layer
 def conv_norm_relu(inlayer, shape, dilation):
@@ -89,23 +86,23 @@ class SegNet:
 
         # layer set 6: 1 unpool (upsampling) and 3 Conv/Batch/ReLU
         up_conv1 = self._upsample_layer(inlayer=down_conv5, 
-            shapes=d5[::-1], dilation=16, cbr_layers=3)
+            dilation=16, cbr_layers=3)
 
         # layer set 7: 1 unpool (upsampling) and 3 Conv/Batch/ReLU
         up_conv2 = self._upsample_layer(inlayer=up_conv1, 
-            shapes=d4[::-1], dilation=8, cbr_layers=3)
+            dilation=8, cbr_layers=3)
 
         # layer set 8: 1 unpool (upsampling) and 3 Conv/Batch/ReLU
         up_conv3 = self._upsample_layer(inlayer=up_conv2, 
-            shapes=d3[::-1], dilation=4, cbr_layers=3)
+            dilation=4, cbr_layers=3)
         
         # layer set 9: 1 unpool (upsampling) and 2 Conv/Batch/ReLU
         up_conv4 = self._upsample_layer(inlayer=up_conv3, 
-            shapes=d2[::-1], dilation=2, cbr_layers=2)
+            dilation=2, cbr_layers=2)
 
         # layer set 10: 1 unpool (upsampling) and 2 Conv/Batch/ReLU
         self.prediction = self._upsample_layer(inlayer=up_conv4, 
-            shapes=d1[::-1], dilation=1, cbr_layers=2)
+            dilation=1, cbr_layers=2)
 
         self.softmax = tf.nn.softmax(self.prediction)
         self.cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(self.prediction, self.target))
@@ -161,16 +158,17 @@ class SegNet:
         else:
             raise ValueError('Illegal number of Conv/Batch/ReLU layers')
 
-    def _upsample_layer(self, inlayer, shapes, dilation=1, cbr_layers=2):
-        h_unpool = tf.image.resize_images(inlayer, shapes[0][-2:], 
-            method=tf.image.ResizeMethod.NEAREST_NEIGHBOR, align_corners=False)
-        h_conv1 = conv_norm_relu(inlayer=h_unpool, shape=shapes[0], dilation=dilation)
-        h_conv2 = conv_norm_relu(inlayer=h_conv1, shape=shapes[1], dilation=dilation)
+    def _upsample_layer(self, inlayer, shape, dilation=1, cbr_layers=2):
+        W_deconv  = weight_variable(inlayer.shape)
+        h_unpool = deconv2d(inlayer, W_deconv, stride=[1])
+
+        h_conv1 = conv_norm_relu(inlayer=h_unpool, shape=h_unpool.shape, dilation=dilation)
+        h_conv2 = conv_norm_relu(inlayer=h_conv1,  shape=h_conv1.shape, dilation=dilation)
 
         if cbr_layers == SMALL_LAYER:
             return h_conv2
         elif cbr_layers == LARGE_LAYER:
-            h_conv3 = conv_norm_relu(inlayer=h_conv2, shape=shapes[2], dilation=dilation)
+            h_conv3 = conv_norm_relu(inlayer=h_conv2, shape=h_conv2.shape, dilation=dilation)
             return h_conv3
         else:
             raise ValueError('Illegal number of Conv/Batch/ReLU layers')

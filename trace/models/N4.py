@@ -99,12 +99,12 @@ class N4:
         # layer 11 - original stride 1
         W_fc1 = weight_variable([3, 3, map_5, fc])
         b_fc1 = bias_variable([fc])
-        h_fc1 = tf.nn.relu(conv2d(h_pool5, W_fc1, dilation=32) + b_fc1)
+        h_fc1 = tf.nn.relu(conv2d(h_pool5, W_fc1, dilation=16) + b_fc1)
 
         # layer 12 - original stride 2
         W_fc2 = weight_variable([1, 1, fc, 2])
         b_fc2 = bias_variable([2])
-        self.prediction = conv2d(h_fc1, W_fc2, dilation=32) + b_fc2
+        self.prediction = conv2d(h_fc1, W_fc2, dilation=16) + b_fc2
 
         self.sigmoid_prediction = tf.nn.sigmoid(self.prediction)
         self.cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(self.prediction, self.target))
