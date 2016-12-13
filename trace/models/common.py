@@ -24,7 +24,7 @@ def conv2d(x, W, dilation=None):
 def deconv2d(x, W, stride):
     x_shape = tf.shape(x)
     output_shape = tf.pack([x_shape[0], x_shape[1]*2, x_shape[2]*2, x_shape[3]//2])
-    return tf.nn.conv2d_transpose(x, W, output_shape, strides=[1, stride, stride, 1], padding='VALID')
+    return tf.nn.conv2d_transpose(x, W, output_shape, strides=[1, stride, stride, 1], padding='SAME')
 
 
 def max_pool(x, dilation=None, strides=[2, 2], window_shape=[2, 2]):
