@@ -69,7 +69,7 @@ def train(model, data_provider, data_folder, n_iterations=10000):
 
                 summary_writer.add_summary(summary, step)
 
-            if step % 10 == 0:
+            if step % 500 == 0:
                 # Make predictions on the validation set
                 validation_prediction, validation_training_summary = \
                     sess.run([model.prediction, model.training_summaries],
