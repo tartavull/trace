@@ -11,7 +11,7 @@ import click
 import download_data
 import learner
 from dp_transformer import DPTransformer
-from models import N4, N4_bn
+from models import N4, N4_bn, conv_net
 from models.N4 import default_N4
 # from models.N4_bn import default_N4_bn
 
@@ -19,6 +19,7 @@ from models.N4 import default_N4
 def model_dict(x):
     return {
         'n4': default_N4(),
+        'conv': conv_net.ConvNet(conv_net.DEFAULT_PARAMS)
         # 'n4-bn': default_N4_bn()
     }[x]
 
@@ -138,7 +139,7 @@ def watershed(dataset, split, high, low, dust):
 
 
 @cli.command()
-@click.argument('model_type', type=click.Choice(['n4']))
+@click.argument('model_type', type=click.Choice(['n4', 'conv']))
 @click.argument('dataset', type=click.Choice(['snemi3d', 'isbi']))
 def train(model_type, dataset):
     """

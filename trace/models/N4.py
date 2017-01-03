@@ -4,6 +4,8 @@ import tensorflow as tf
 from common import conv2d, bias_variable, weight_variable, max_pool
 
 
+
+
 def default_N4():
     params = {
         'm1': 48,

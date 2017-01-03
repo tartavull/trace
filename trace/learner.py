@@ -40,7 +40,7 @@ def train(model, data_provider, data_folder, n_iterations=10000):
 
     validation_label_file = h5py.File(data_folder + down.VALIDATION_AFFINITIES + down.H5, 'r')
     validation_labels = validation_label_file['main']
-    reshaped_labels = np.einsum('dzyx->zyxd', validation_labels[0:2])
+    reshaped_validation_labels = np.einsum('dzyx->zyxd', validation_labels[0:2])
     validation_label_file.close()
 
     print('Run tensorboard to visualize training progress')
@@ -53,38 +53,35 @@ def train(model, data_provider, data_folder, n_iterations=10000):
         sess.run(tf.global_variables_initializer())
 
         # Iterate through the dataset
-        for step, (inputs, labels) in enumerate(data_provider.batch_iterator(model.fov, model.out, model.inpt)):
+        for step, (inputs, labels) in enumerate(data_provider.batch_iterator(model.fov, model.output, model.input)):
 
-            sess.run(model.train_step, feed_dict={
+            sess.run(model.optimizer, feed_dict={
                 model.image: inputs,
                 model.target: labels
             })
 
             if step % 10 == 0:
                 print('step :'+str(step))
-                summary = sess.run(model.loss_summary, feed_dict={
+                summary = sess.run(model.training_summaries, feed_dict={
                     model.image: inputs,
                     model.target: labels
                 })
 
                 summary_writer.add_summary(summary, step)
 
-            if step % 500 == 0:
-                # Measure validation error
-
-                # Compute pixel error
-
-                validation_sigmoid_prediction, validation_pixel_error_summary = \
-                    sess.run([model.sigmoid_prediction, model.validation_pixel_error_summary],
+            if step % 10 == 0:
+                # Make predictions on the validation set
+                validation_prediction, validation_training_summary = \
+                    sess.run([model.prediction, model.training_summaries],
                              feed_dict={model.image: reshaped_validation_input,
-                                        model.target: reshaped_labels})
+                                        model.target: reshaped_validation_labels})
 
-                summary_writer.add_summary(validation_pixel_error_summary, step)
+                summary_writer.add_summary(validation_training_summary, step)
 
                 # Calculate rand and VI scores
-                scores = evaluation.rand_error(model, data_folder, validation_sigmoid_prediction, num_validation_layers,
+                scores = evaluation.rand_error(model, data_folder, validation_prediction, num_validation_layers,
                                                validation_output_shape, watershed_high=0.95)
-                score_summary = sess.run(model.score_summary_op,
+                score_summary = sess.run(model.validation_summaries,
                                          feed_dict={model.rand_f_score: scores['Rand F-Score Full'],
                                                     model.rand_f_score_merge: scores['Rand F-Score Merge'],
                                                     model.rand_f_score_split: scores['Rand F-Score Split'],
@@ -136,7 +133,7 @@ def predict(model, data_folder, subset):
                 model.saver.restore(sess, ckpt_folder + 'model.ckpt')
                 print("Model restored.")
                 for z in range(num_layers):
-                    pred = sess.run(model.sigmoid_prediction,
+                    pred = sess.run(model.prediction,
                                     feed_dict={
                                         model.image: mirrored_inpt[z].reshape(1, input_shape, input_shape, 1)})
                     reshaped_pred = np.einsum('zyxd->dzyx', pred)

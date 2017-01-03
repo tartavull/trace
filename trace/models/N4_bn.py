@@ -24,20 +24,57 @@ class N4Bn:
         # map_1 = params['m1']
         # map_2 = params['m2']
         # map_3 = params['m3']
-        # map_4 = params['m4']
+        # map_4 = params['m4']8
         # fc = params['fc']
         # learning_rate = params['lr']
         self.out = params['out']
         self.fov = 95
         self.inpt = self.fov + 2 * (self.out // 2)
 
+
+
+        # Number of data channels per pixel
+        n_chan = 1
+
+
+
         # layer 0
         # Normally would have shape [1, inpt, inpt, 1], but None allows us to have a flexible validation set
 
         # Shape: [# layers per batch, patch size, patch size, number of values per pixel]
-        self.image = tf.placeholder(tf.float32, shape=[None, None, None, 1])
+        self.image = tf.placeholder(tf.float32, shape=[None, None, None, n_chan])
         # Shape: [# layers per batch, patch size, patch size, labels per pixel]
-        self.target = tf.placeholder(tf.float32, shape=[None, None, None, 1])
+        self.target = tf.placeholder(tf.float32, shape=[None, None, None, n_chan])
+
+
+
+        # Dimensions
+
+        map_0 = 1
+
+        # Layer 1: Diluted Convolution
+        field_1 = 4
+        stride_1 = 1
+        dilation_1 = 1
+        map_1 = 48
+
+        W_conv1 = tf.Variable(tf.truncated_normal([field_1, field_1, map_0, map_1], stddev=0.1))
+        b_conv1 = tf.Variable(tf.constant(0.1, shape=[map_1]))
+        conv1 = tf.nn.convolution(self.image, W_conv1, strides=[stride_1, stride_1], padding='VALID',
+                                  dilation_rate=[dilation_1, dilation_1])
+        h_conv1 = tf.nn.relu(conv1 + b_conv1)
+
+        # Layer 2: Max pooling
+        field_2 = 2
+        stride_2 = 1
+        dilation_2 = 1
+        h_pool1 = tf.nn.pool(h_conv1, window_shape=[field_2, field_2], dilation_rate=[dilation_2, dilation_2],
+                             strides=[stride_2, stride_2], padding='VALID', pooling_type='MAX')
+
+
+
+
+
 
         # layer 1 - original stride 1
         W_conv1 = weight_variable([4, 4, 1, map_1])
