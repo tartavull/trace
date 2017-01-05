@@ -19,7 +19,7 @@ import trace.augmentation as augmentation
 import trace.learner as learner
 
 from trace.dp_transformer import DPTransformer
-from trace.models.N4 import default_N4
+from trace.models.conv_net import *
 
 
 class TestTrace(object):
@@ -69,7 +69,7 @@ class TestTrace(object):
         """
         Train model for 10 steps and verify a model was created
         """
-        model = default_N4()
+        model = ConvNet(DEFAULT_PARAMS)
         data_folder = os.path.dirname(os.path.abspath(__file__)) + '/../trace/isbi/'
         data_provider = DPTransformer(data_folder, 'train.spec')
 

@@ -1,6 +1,6 @@
 [files]
-img = /home/local/trace/isbi/train-input.h5
-lbl = /home/local/trace/isbi/train-labels.h5
+img = /home/trace-local/tests/../trace/isbi/train-input.h5
+lbl = /home/trace-local/tests/../trace/isbi/train-labels.h5
 
 [params]
 max_trans = [23.0]*20

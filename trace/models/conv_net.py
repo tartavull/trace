@@ -20,6 +20,30 @@ DEFAULT_PARAMS = {
     ]
 }
 
+DEEPER_PARAMS = {
+    'model_name': 'N4_widened',
+    'fov': 95,  # Sanity check
+    'input': 195,
+    'output': 101,
+    'learning_rate': 0.0001,
+    'layers': [
+        {'type': 'conv2d', 'filter_size': 4, 'n_feature_maps': 48, 'activation_fn': tf.nn.relu},
+        {'type': 'pool', 'filter_size': 2},
+        {'type': 'conv2d', 'filter_size': 5, 'n_feature_maps': 68, 'activation_fn': tf.nn.relu},
+        {'type': 'pool', 'filter_size': 2},
+        {'type': 'conv2d', 'filter_size': 4, 'n_feature_maps': 100, 'activation_fn': tf.nn.relu},
+        {'type': 'pool', 'filter_size': 2},
+        {'type': 'conv2d', 'filter_size': 4, 'n_feature_maps': 200, 'activation_fn': tf.nn.relu},
+        {'type': 'pool', 'filter_size': 2},
+        {'type': 'conv2d', 'filter_size': 4, 'n_feature_maps': 250, 'activation_fn': tf.nn.relu},
+        {'type': 'pool', 'filter_size': 2},
+        {'type': 'conv2d', 'filter_size': 4, 'n_feature_maps': 300, 'activation_fn': tf.nn.relu},
+        {'type': 'pool', 'filter_size': 2},
+        {'type': 'conv2d', 'filter_size': 3, 'n_feature_maps': 400, 'activation_fn': tf.nn.relu},
+        {'type': 'conv2d', 'filter_size': 1, 'n_feature_maps': 2, 'activation_fn': lambda x: x},
+    ]
+}
+
 
 class ConvNet:
     def __init__(self, params):
@@ -118,12 +142,12 @@ class ConvNet:
              ])
 
         self.validation_summaries = tf.summary.merge(
-            [tf.summary.scalar('Rand Score', self.rand_f_score),
-             tf.summary.scalar('Rand Merge Score', self.rand_f_score_merge),
-             tf.summary.scalar('Rand Split Score', self.rand_f_score_split),
-             tf.summary.scalar('Vi Score', self.vi_f_score),
-             tf.summary.scalar('Vi Merge Score', self.vi_f_score_merge),
-             tf.summary.scalar('Vi Split Score', self.vi_f_score_split),
+            [tf.summary.scalar('rand_score', self.rand_f_score),
+             tf.summary.scalar('rand_merge_score', self.rand_f_score_merge),
+             tf.summary.scalar('rand_split_score', self.rand_f_score_split),
+             tf.summary.scalar('vi_score', self.vi_f_score),
+             tf.summary.scalar('vi_merge_score', self.vi_f_score_merge),
+             tf.summary.scalar('vi_split_score', self.vi_f_score_split),
              ])
 
         self.saver = tf.train.Saver()
