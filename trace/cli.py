@@ -19,8 +19,14 @@ from models.N4 import default_N4
 def model_dict(x):
     return {
         'n4': default_N4(),
-        'conv': conv_net.ConvNet(conv_net.DEFAULT_PARAMS)
-        # 'n4-bn': default_N4_bn()
+        'conv': conv_net.ConvNet,
+    }[x]
+
+
+def params_dict(x):
+    return {
+        'n4': conv_net.DEFAULT_PARAMS,
+        'vd2d': conv_net.VD2D
     }[x]
 
 
@@ -139,29 +145,40 @@ def watershed(dataset, split, high, low, dust):
 
 
 @cli.command()
-@click.argument('model_type', type=click.Choice(['n4', 'conv']))
+@click.argument('model_type', type=click.Choice(['conv']))
+@click.argument('params_type', type=click.Choice(['n4', 'vd2d']))
 @click.argument('dataset', type=click.Choice(['snemi3d', 'isbi']))
-def train(model_type, dataset):
+@click.argument('n_iter', type=int, default=10000)
+def train(model_type, params_type, dataset, n_iter):
     """
     Train an N4 models to predict affinities
     """
     data_folder = os.path.dirname(os.path.abspath(__file__)) + '/' + dataset + '/'
     data_provider = DPTransformer(data_folder, 'train.spec')
 
-    learner.train(model_dict(model_type), data_provider, data_folder, n_iterations=10000)
+    print('Training for %d iterations' % n_iter)
+
+    model = model_dict(model_type)
+    params = params_dict(params_type)
+
+    learner.train(model(params), data_provider, data_folder, n_iterations=n_iter)
 
 
 @cli.command()
-@click.argument('model_type', type=click.Choice(['n4']))
+@click.argument('model_type', type=click.Choice(['conv']))
+@click.argument('params_type', type=click.Choice(['n4', 'vd2d']))
 @click.argument('dataset', type=click.Choice(['snemi3d', 'isbi', 'isbi-boundaries']))
 @click.argument('split', type=click.Choice(['train', 'validation', 'test']))
-def predict(model_type, dataset, split):
+def predict(model_type, params_type, dataset, split):
     """
     Realods a model previously trained
     """
     data_folder = os.path.dirname(os.path.abspath(__file__)) + '/' + dataset + '/'
 
-    learner.predict(model_dict(model_type), data_folder, split)
+    model = model_dict(model_type)
+    params = params_dict(params_type)
+
+    learner.predict(model(params), data_folder, split)
 
 
 @cli.command()

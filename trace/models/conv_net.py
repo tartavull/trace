@@ -33,8 +33,7 @@ DEEPER_PARAMS = {
         {'type': 'pool', 'filter_size': 2},
         {'type': 'conv2d', 'filter_size': 4, 'n_feature_maps': 100, 'activation_fn': tf.nn.relu},
         {'type': 'pool', 'filter_size': 2},
-        {'type': 'conv2d', 'filter_size': 4, 'n_feature_maps': 200, 'activation_fn': tf.nn.relu},
-        {'type': 'pool', 'filter_size': 2},
+        {'type': 'conv2d', 'filter_size': 3, 'n_feature_maps': 200, 'activation_fn': tf.nn.relu},
         {'type': 'conv2d', 'filter_size': 4, 'n_feature_maps': 250, 'activation_fn': tf.nn.relu},
         {'type': 'pool', 'filter_size': 2},
         {'type': 'conv2d', 'filter_size': 4, 'n_feature_maps': 300, 'activation_fn': tf.nn.relu},
@@ -44,9 +43,37 @@ DEEPER_PARAMS = {
     ]
 }
 
+VD2D = {
+    'model_name': 'VD2D',
+    'fov': 109,  # Sanity check
+    'input': 209,
+    'output': 101,
+    'learning_rate': 0.001,
+    'layers': [
+        {'type': 'conv2d', 'filter_size': 3, 'n_feature_maps': 24, 'activation_fn': tf.nn.relu},
+        {'type': 'conv2d', 'filter_size': 3, 'n_feature_maps': 24, 'activation_fn': tf.nn.relu},
+        {'type': 'conv2d', 'filter_size': 2, 'n_feature_maps': 24, 'activation_fn': tf.nn.tanh},
+        {'type': 'pool', 'filter_size': 2},
+        {'type': 'conv2d', 'filter_size': 3, 'n_feature_maps': 36, 'activation_fn': tf.nn.relu},
+        {'type': 'conv2d', 'filter_size': 3, 'n_feature_maps': 36, 'activation_fn': tf.nn.tanh},
+        {'type': 'pool', 'filter_size': 2},
+        {'type': 'conv2d', 'filter_size': 3, 'n_feature_maps': 48, 'activation_fn': tf.nn.relu},
+        {'type': 'conv2d', 'filter_size': 3, 'n_feature_maps': 48, 'activation_fn': tf.nn.tanh},
+        {'type': 'pool', 'filter_size': 2},
+        {'type': 'conv2d', 'filter_size': 3, 'n_feature_maps': 60, 'activation_fn': tf.nn.relu},
+        {'type': 'conv2d', 'filter_size': 3, 'n_feature_maps': 60, 'activation_fn': tf.nn.tanh},
+        {'type': 'pool', 'filter_size': 2},
+        {'type': 'conv2d', 'filter_size': 3, 'n_feature_maps': 200, 'activation_fn': tf.nn.relu},
+        {'type': 'conv2d', 'filter_size': 1, 'n_feature_maps': 2, 'activation_fn': lambda x: x},
+    ]
+
+}
+
 
 class ConvNet:
     def __init__(self, params):
+
+        print(params['model_name'])
 
         learning_rate = params['learning_rate']
 
