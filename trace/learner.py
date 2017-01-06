@@ -94,7 +94,7 @@ def train(model, data_provider, data_folder, n_iterations=10000):
 
             if step % 1000 == 0:
                 # Save the variables to disk.
-                save_path = model.saver.save(sess, ckpt_folder + 'model.ckpt')
+                save_path = model.saver.save(sess, ckpt_folder + 'model-' + str(step) + '.ckpt')
                 print("Model saved in file: %s" % save_path)
 
             if step == n_iterations:
