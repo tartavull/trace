@@ -171,7 +171,8 @@ def train(model_type, params_type, dataset, n_iter):
 @click.argument('params_type', type=click.Choice(['n4', 'vd2d', 'bn_vd2d', 'bn_vd2d_v2']))
 @click.argument('dataset', type=click.Choice(['snemi3d', 'isbi', 'isbi-boundaries']))
 @click.argument('split', type=click.Choice(['train', 'validation', 'test']))
-def predict(model_type, params_type, dataset, split):
+@click.argument('ckpt_num', type=int, default=10000)
+def predict(model_type, params_type, dataset, split, ckpt_num):
     """
     Realods a model previously trained
     """
@@ -180,7 +181,7 @@ def predict(model_type, params_type, dataset, split):
     model = model_dict(model_type)
     params = params_dict(params_type)
 
-    learner.predict(model(params), data_folder, split)
+    learner.predict(model(params), ckpt_num, data_folder, split)
 
 
 @cli.command()

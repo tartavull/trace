@@ -103,7 +103,7 @@ def train(model, data_provider, data_folder, n_iterations=10000):
     return scores
 
 
-def predict(model, data_folder, subset):
+def predict(model, ckpt_num, data_folder, subset):
     # TODO(beisner): refactor such that predictions aren't necessarily made from affinities, i.e. get from DataProvider
     # Where we store the output affinities and map
     results_folder = data_folder + 'results/'
@@ -130,7 +130,7 @@ def predict(model, data_folder, subset):
             # Make a prediction
             with tf.Session() as sess:
                 # Restore variables from disk.
-                model.saver.restore(sess, ckpt_folder + 'model.ckpt')
+                model.saver.restore(sess, ckpt_folder + 'model-' + str(ckpt_num) + '.ckpt')
                 print("Model restored.")
                 for z in range(num_layers):
                     pred = sess.run(model.prediction,
