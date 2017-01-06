@@ -95,6 +95,32 @@ BN_VD2D = {
 
 }
 
+BN_VD2D_V2 = {
+    'model_name': 'bn_VD2D_v2',
+    'fov': 109,  # Sanity check
+    'input': 209,
+    'output': 101,
+    'learning_rate': 0.0001,
+    'layers': [
+        {'type': 'bn_conv2d', 'filter_size': 3, 'n_feature_maps': 24, 'activation_fn': tf.nn.relu},
+        {'type': 'bn_conv2d', 'filter_size': 3, 'n_feature_maps': 24, 'activation_fn': tf.nn.relu},
+        {'type': 'bn_conv2d', 'filter_size': 2, 'n_feature_maps': 24, 'activation_fn': tf.nn.relu},
+        {'type': 'pool', 'filter_size': 2},
+        {'type': 'bn_conv2d', 'filter_size': 3, 'n_feature_maps': 36, 'activation_fn': tf.nn.relu},
+        {'type': 'bn_conv2d', 'filter_size': 3, 'n_feature_maps': 36, 'activation_fn': tf.nn.relu},
+        {'type': 'pool', 'filter_size': 2},
+        {'type': 'bn_conv2d', 'filter_size': 3, 'n_feature_maps': 48, 'activation_fn': tf.nn.relu},
+        {'type': 'bn_conv2d', 'filter_size': 3, 'n_feature_maps': 48, 'activation_fn': tf.nn.relu},
+        {'type': 'pool', 'filter_size': 2},
+        {'type': 'bn_conv2d', 'filter_size': 3, 'n_feature_maps': 60, 'activation_fn': tf.nn.relu},
+        {'type': 'bn_conv2d', 'filter_size': 3, 'n_feature_maps': 60, 'activation_fn': tf.nn.relu},
+        {'type': 'pool', 'filter_size': 2},
+        {'type': 'bn_conv2d', 'filter_size': 3, 'n_feature_maps': 200, 'activation_fn': tf.nn.relu},
+        {'type': 'bn_conv2d', 'filter_size': 1, 'n_feature_maps': 2, 'activation_fn': lambda x: x},
+    ]
+
+}
+
 
 class ConvNet:
     def __init__(self, params, is_training=False):
