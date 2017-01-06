@@ -21,7 +21,7 @@ DEFAULT_PARAMS = {
 }
 
 DEEPER_PARAMS = {
-    'model_name': 'N4_widened',
+    'model_name': 'N4_deeper',
     'fov': 95,  # Sanity check
     'input': 195,
     'output': 101,
@@ -48,7 +48,7 @@ VD2D = {
     'fov': 109,  # Sanity check
     'input': 209,
     'output': 101,
-    'learning_rate': 0.001,
+    'learning_rate': 0.0001,
     'layers': [
         {'type': 'conv2d', 'filter_size': 3, 'n_feature_maps': 24, 'activation_fn': tf.nn.relu},
         {'type': 'conv2d', 'filter_size': 3, 'n_feature_maps': 24, 'activation_fn': tf.nn.relu},
@@ -69,9 +69,35 @@ VD2D = {
 
 }
 
+BN_VD2D = {
+    'model_name': 'bn_VD2D',
+    'fov': 109,  # Sanity check
+    'input': 209,
+    'output': 101,
+    'learning_rate': 0.0001,
+    'layers': [
+        {'type': 'bn_conv2d', 'filter_size': 3, 'n_feature_maps': 24, 'activation_fn': tf.nn.relu},
+        {'type': 'bn_conv2d', 'filter_size': 3, 'n_feature_maps': 24, 'activation_fn': tf.nn.relu},
+        {'type': 'bn_conv2d', 'filter_size': 2, 'n_feature_maps': 24, 'activation_fn': tf.nn.tanh},
+        {'type': 'pool', 'filter_size': 2},
+        {'type': 'bn_conv2d', 'filter_size': 3, 'n_feature_maps': 36, 'activation_fn': tf.nn.relu},
+        {'type': 'bn_conv2d', 'filter_size': 3, 'n_feature_maps': 36, 'activation_fn': tf.nn.tanh},
+        {'type': 'pool', 'filter_size': 2},
+        {'type': 'bn_conv2d', 'filter_size': 3, 'n_feature_maps': 48, 'activation_fn': tf.nn.relu},
+        {'type': 'bn_conv2d', 'filter_size': 3, 'n_feature_maps': 48, 'activation_fn': tf.nn.tanh},
+        {'type': 'pool', 'filter_size': 2},
+        {'type': 'bn_conv2d', 'filter_size': 3, 'n_feature_maps': 60, 'activation_fn': tf.nn.relu},
+        {'type': 'bn_conv2d', 'filter_size': 3, 'n_feature_maps': 60, 'activation_fn': tf.nn.tanh},
+        {'type': 'pool', 'filter_size': 2},
+        {'type': 'bn_conv2d', 'filter_size': 3, 'n_feature_maps': 200, 'activation_fn': tf.nn.relu},
+        {'type': 'bn_conv2d', 'filter_size': 1, 'n_feature_maps': 2, 'activation_fn': lambda x: x},
+    ]
+
+}
+
 
 class ConvNet:
-    def __init__(self, params):
+    def __init__(self, params, is_training=False):
 
         print(params['model_name'])
 
@@ -94,43 +120,72 @@ class ConvNet:
             # Double the dilation rate for a given layer every time we pool.
             dilation_rate = 2 ** n_poolings
 
-            # Convolutional layer
-            if layer['type'] == 'conv2d':
-                # Extract parameters
-                filter_size = layer['filter_size']
-                n_feature_maps = layer['n_feature_maps']
-                activation_fn = layer['activation_fn']
+            with tf.variable_scope('layer' + str(layer_num)):
 
-                # Create the tensorflow variables
-                filters_shape = [filter_size, filter_size, prev_n_feature_maps, n_feature_maps]
-                filters = tf.Variable(tf.truncated_normal(filters_shape, stddev=0.1))
-                bias = tf.Variable(tf.constant(0.1, shape=[n_feature_maps]))
+                # Convolutional layer without batch normalization
+                if layer['type'] == 'conv2d':
+                    # Extract parameters
+                    filter_size = layer['filter_size']
+                    n_feature_maps = layer['n_feature_maps']
+                    activation_fn = layer['activation_fn']
 
-                # Perform a dilated convolution on the previous layer, where the dilation rate is dependent on the
-                # number of poolings so far.
-                convolution = tf.nn.convolution(prev_layer, filters, strides=[1, 1], padding='VALID',
-                                                dilation_rate=[dilation_rate, dilation_rate])
+                    # Create the tensorflow variables
+                    filters_shape = [filter_size, filter_size, prev_n_feature_maps, n_feature_maps]
+                    filters = tf.Variable(tf.truncated_normal(filters_shape, stddev=0.1))
+                    bias = tf.Variable(tf.constant(0.1, shape=[n_feature_maps]))
 
-                # Apply the activation function
-                output_layer = activation_fn(convolution + bias)
+                    # Perform a dilated convolution on the previous layer, where the dilation rate is dependent on the
+                    # number of poolings so far.
+                    convolution = tf.nn.convolution(prev_layer, filters, strides=[1, 1], padding='VALID',
+                                                    dilation_rate=[dilation_rate, dilation_rate])
 
-                # Prepare the next values in the loop
-                prev_layer = output_layer
-                prev_n_feature_maps = n_feature_maps
-                receptive_field = (filter_size * receptive_field) - (receptive_field - dilation_rate) * (
-                    filter_size - 1)
+                    # Apply the activation function
+                    output_layer = activation_fn(convolution + bias)
 
-            elif layer['type'] == 'pool':
-                filter_size = layer['filter_size']
-                # Max pool
-                output_layer = tf.nn.pool(prev_layer, window_shape=[filter_size, filter_size],
-                                          dilation_rate=[dilation_rate, dilation_rate], strides=[1, 1], padding='VALID',
-                                          pooling_type='MAX')
+                    # Prepare the next values in the loop
+                    prev_layer = output_layer
+                    prev_n_feature_maps = n_feature_maps
+                    receptive_field = (filter_size * receptive_field) - (receptive_field - dilation_rate) * (
+                        filter_size - 1)
 
-                prev_layer = output_layer
-                n_poolings += 1
-                receptive_field = (filter_size * receptive_field) - (receptive_field - dilation_rate) * (
-                    filter_size - 1)
+                elif layer['type'] == 'pool':
+                    filter_size = layer['filter_size']
+                    # Max pool
+                    output_layer = tf.nn.pool(prev_layer, window_shape=[filter_size, filter_size],
+                                              dilation_rate=[dilation_rate, dilation_rate], strides=[1, 1], padding='VALID',
+                                              pooling_type='MAX')
+
+                    prev_layer = output_layer
+                    n_poolings += 1
+                    receptive_field = (filter_size * receptive_field) - (receptive_field - dilation_rate) * (
+                        filter_size - 1)
+
+                elif layer['type'] == 'bn_conv2d':
+                    # Extract parameters
+                    filter_size = layer['filter_size']
+                    n_feature_maps = layer['n_feature_maps']
+                    activation_fn = layer['activation_fn']
+
+                    # Create the tensorflow variables
+                    filters_shape = [filter_size, filter_size, prev_n_feature_maps, n_feature_maps]
+                    filters = tf.Variable(tf.truncated_normal(filters_shape, stddev=0.1))
+
+                    # Perform a dilated convolution on the previous layer, where the dilation rate is dependent on the
+                    # number of poolings so far.
+                    convolution = tf.nn.convolution(prev_layer, filters, strides=[1, 1], padding='VALID',
+                                                    dilation_rate=[dilation_rate, dilation_rate])
+                    # Apply batch normalization
+                    bn_conv = tf.contrib.layers.batch_norm(convolution, center=True, scale=True, is_training=is_training,
+                                                           scope='bn')
+
+                    # Apply the activation function
+                    output_layer = activation_fn(bn_conv)
+
+                    # Prepare the next values in the loop
+                    prev_layer = output_layer
+                    prev_n_feature_maps = n_feature_maps
+                    receptive_field = (filter_size * receptive_field) - (receptive_field - dilation_rate) * (
+                        filter_size - 1)
 
             # Debugging
             layer_num += 1

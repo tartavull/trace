@@ -26,7 +26,8 @@ def model_dict(x):
 def params_dict(x):
     return {
         'n4': conv_net.DEFAULT_PARAMS,
-        'vd2d': conv_net.VD2D
+        'vd2d': conv_net.VD2D,
+        'bn_vd2d': conv_net.BN_VD2D,
     }[x]
 
 
@@ -146,7 +147,7 @@ def watershed(dataset, split, high, low, dust):
 
 @cli.command()
 @click.argument('model_type', type=click.Choice(['conv']))
-@click.argument('params_type', type=click.Choice(['n4', 'vd2d']))
+@click.argument('params_type', type=click.Choice(['n4', 'vd2d', 'bn_vd2d']))
 @click.argument('dataset', type=click.Choice(['snemi3d', 'isbi']))
 @click.argument('n_iter', type=int, default=10000)
 def train(model_type, params_type, dataset, n_iter):
@@ -161,12 +162,12 @@ def train(model_type, params_type, dataset, n_iter):
     model = model_dict(model_type)
     params = params_dict(params_type)
 
-    learner.train(model(params), data_provider, data_folder, n_iterations=n_iter)
+    learner.train(model(params, is_training=True), data_provider, data_folder, n_iterations=n_iter)
 
 
 @cli.command()
 @click.argument('model_type', type=click.Choice(['conv']))
-@click.argument('params_type', type=click.Choice(['n4', 'vd2d']))
+@click.argument('params_type', type=click.Choice(['n4', 'vd2d', 'bn_vd2d']))
 @click.argument('dataset', type=click.Choice(['snemi3d', 'isbi', 'isbi-boundaries']))
 @click.argument('split', type=click.Choice(['train', 'validation', 'test']))
 def predict(model_type, params_type, dataset, split):
