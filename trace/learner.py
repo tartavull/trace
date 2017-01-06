@@ -94,7 +94,7 @@ def train(model, data_provider, data_folder, n_iterations=10000):
 
             if step % 1000 == 0:
                 # Save the variables to disk.
-                save_path = model.saver.save(sess, ckpt_folder + 'model-' + str(step) + '.ckpt')
+                save_path = model.saver.save(sess, ckpt_folder + 'model.ckpt')
                 print("Model saved in file: %s" % save_path)
 
             if step == n_iterations:
@@ -130,7 +130,7 @@ def predict(model, ckpt_num, data_folder, subset):
             # Make a prediction
             with tf.Session() as sess:
                 # Restore variables from disk.
-                model.saver.restore(sess, ckpt_folder + 'model-' + str(ckpt_num) + '.ckpt')
+                model.saver.restore(sess, ckpt_folder + 'model.ckpt')
                 print("Model restored.")
                 for z in range(num_layers):
                     pred = sess.run(model.prediction,
