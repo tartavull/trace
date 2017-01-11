@@ -68,7 +68,7 @@ class ModelAverager:
             sess.run(tf.global_variables_initializer())
 
             # num models, num slices, dim, dim, channels
-            outputs = tf.placeholder(tf.float32, shape=[None, None, None, None, 1])
+            outputs = tf.placeholder(tf.float32, shape=[None, None, None, None, None])
 
             # Take the average of the outputs along the first dimension
             averaged = tf.reduce_mean(outputs, axis=0)
