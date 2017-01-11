@@ -2,6 +2,7 @@ import configparser as cp
 import os
 import dataprovider.data_provider as dp
 import numpy as np
+import h5py
 
 BOUND = 'boundaries'
 XY_AFF = 'xy-aff'
@@ -20,14 +21,15 @@ class DPTransformer:
             raise Exception('Invalid target_type provided: must be %s, %s, or %s.' % (BOUND, XY_AFF, XYZ_AFF))
 
         self.spec_path = data_folder + spec_fn
+        self.data_folder = data_folder
 
         config = cp.RawConfigParser()
         config.read(self.spec_path)
 
         # Make sure our specfile is appropriately configured
         spec_fn_base = os.path.splitext(spec_fn)[0]
-        config.set('files', 'img', data_folder + spec_fn_base + '-input.h5')
-        config.set('files', 'lbl', data_folder + spec_fn_base + '-labels.h5')
+        config.set('files', 'img', self.data_folder + spec_fn_base + '-input.h5')
+        config.set('files', 'lbl', self.data_folder + spec_fn_base + '-labels.h5')
 
         # Writing our modified configuration file
         with open(self.spec_path, 'wb') as f:
@@ -71,5 +73,34 @@ class DPTransformer:
                 reshaped_label[0, :, :, i] = label[i]
 
             yield inpt, reshaped_label
+
+    def dataset_from_h5py(self, data_prefix):
+        assert(data_prefix == 'train' or data_prefix == 'validation' or data_prefix == 'test')
+
+        input_fn = self.data_folder + data_prefix + '-input.h5'
+        with h5py.File(input_fn, 'r') as input_file:
+            inpt = input_file['main'][:].astype(np.float32) / 255.0
+            reshaped_input = inpt.reshape(inpt.shape + (1,))
+
+        reshaped_labels = None
+
+        # TODO(beisner): instead of loading the affinities here, we should load the dataset and then affinitize
+
+        if data_prefix is not 'test':
+            label_fn = self.data_folder + data_prefix + '-affinities.h5'
+            print('opening at ' + label_fn)
+            with h5py.File(label_fn, 'r') as label_affinities_file:
+                labels = label_affinities_file['main']
+                reshaped_label_affinities = np.einsum('dzyx->zyxd', labels[0:2])
+
+        return reshaped_input, reshaped_label_affinities
+
+
+
+
+
+
+
+
 
 

@@ -10,7 +10,7 @@ from dataprovider.data_provider import VolumeDataProvider
 
 
 def mirror_across_borders(data, fov):
-    mirrored_data = np.pad(data, [(0, 0), (fov//2, fov//2), (fov//2, fov//2)], mode='reflect')
+    mirrored_data = np.pad(data, [(0, 0), (fov//2, fov//2), (fov//2, fov//2), (0, 0)], mode='reflect')
     return mirrored_data
 
 

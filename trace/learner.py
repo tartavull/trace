@@ -3,11 +3,8 @@
 from __future__ import print_function
 from __future__ import division
 
-import sys
-
-import h5py
 import tensorflow as tf
-import tifffile
+import augmentation as aug
 
 try:
     from thirdparty.segascorus import io_utils
@@ -17,37 +14,90 @@ except Exception:
     print("Segascorus is not installed. Please install by going to trace/trace/thirdparty/segascorus and run 'make'."
           " If this fails, segascorus is likely not compatible with your computer (i.e. Macs).")
 
-import models.N4 as n4
-import download_data as down
-import augmentation as aug
 import evaluation
 
 
-def train(model, data_provider, data_folder, n_iterations=10000):
-    results_folder = data_folder + 'results/'
-    ckpt_folder = results_folder + model.model_name + '/'
+class LossHook:
+    def __init__(self, frequency):
+        self.frequency = frequency
 
-    # Configure validation
-    validation_input_file = h5py.File(data_folder + down.VALIDATION_INPUT + down.H5, 'r')
-    validation_input = validation_input_file['main'][:5,:,:].astype(np.float32) / 255.0
-    num_validation_layers = validation_input.shape[0]
-    mirrored_validation_input = aug.mirror_across_borders(validation_input, model.fov)
-    validation_input_shape = mirrored_validation_input.shape[1]
-    validation_output_shape = mirrored_validation_input.shape[1] - model.fov + 1
-    reshaped_validation_input = mirrored_validation_input.reshape(num_validation_layers, validation_input_shape,
-                                                                  validation_input_shape, 1)
-    validation_input_file.close()
+    def eval(self, step, model, session, summary_writer, inputs, labels):
+        if step % self.frequency == 0:
+            print('step :' + str(step))
+            summary = session.run(model.training_summaries, feed_dict={
+                model.image: inputs,
+                model.target: labels
+            })
 
-    validation_label_file = h5py.File(data_folder + down.VALIDATION_AFFINITIES + down.H5, 'r')
-    validation_labels = validation_label_file['main']
-    reshaped_validation_labels = np.einsum('dzyx->zyxd', validation_labels[0:2])
-    validation_label_file.close()
+            summary_writer.add_summary(summary, step)
 
-    print('Run tensorboard to visualize training progress')
 
-    with tf.Session() as sess:
+class ValidationHook:
+    def __init__(self, frequency, data_provider, model, data_folder):
+        self.frequency = frequency
+        self.data_folder = data_folder
+
+        # Get the inputs and mirror them
+        self.reshaped_val_inputs, self.reshaped_val_labels = data_provider.dataset_from_h5py('validation')
+        self.reshaped_val_inputs = aug.mirror_across_borders(self.reshaped_val_inputs, model.fov)
+
+    def eval(self, step, model, session, summary_writer, inputs, labels):
+        if step % self.frequency == 0:
+            # Make predictions on the validation set
+            validation_prediction, validation_training_summary = session.run(
+                [model.prediction, model.training_summaries],
+                feed_dict={
+                    model.image: self.reshaped_val_inputs,
+                    model.target: self.reshaped_val_labels
+                })
+
+            summary_writer.add_summary(validation_training_summary, step)
+
+            val_n_layers = self.reshaped_val_inputs.shape[0]
+            val_output_dim = self.reshaped_val_inputs.shape[1] - model.fov + 1
+
+            # Calculate rand and VI scores
+            scores = evaluation.rand_error(model, self.data_folder, validation_prediction, val_n_layers,
+                                           val_output_dim, watershed_high=0.95)
+
+            score_summary = session.run(model.validation_summaries,
+                                        feed_dict={model.rand_f_score: scores['Rand F-Score Full'],
+                                                   model.rand_f_score_merge: scores['Rand F-Score Merge'],
+                                                   model.rand_f_score_split: scores['Rand F-Score Split'],
+                                                   model.vi_f_score: scores['VI F-Score Full'],
+                                                   model.vi_f_score_merge: scores['VI F-Score Merge'],
+                                                   model.vi_f_score_split: scores['VI F-Score Split'],
+                                                   })
+
+            summary_writer.add_summary(score_summary, step)
+
+
+class ModelSaverHook:
+    def __init__(self, frequency, ckpt_folder):
+        self.frequency = frequency
+        self.ckpt_folder = ckpt_folder
+
+    def eval(self, step, model, session, summary_writer, inputs, labels):
+        save_path = model.saver.save(session, self.ckpt_folder + 'model.ckpt')
+        print("Model saved in file: %s" % save_path)
+
+
+class Learner:
+    def __init__(self, model, ckpt_folder):
+        self.model = model
+        self.sess = tf.Session()
+        self.ckpt_folder = ckpt_folder
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.sess.close()
+
+    def train(self, data_provider, hooks, n_iterations):
+
+        sess = self.sess
+        model = self.model
+
         # We will write our summaries here
-        summary_writer = tf.summary.FileWriter(ckpt_folder + '/events', graph=sess.graph)
+        summary_writer = tf.summary.FileWriter(self.ckpt_folder + '/events', graph=sess.graph)
 
         # Initialize the variables
         sess.run(tf.global_variables_initializer())
@@ -55,124 +105,24 @@ def train(model, data_provider, data_folder, n_iterations=10000):
         # Iterate through the dataset
         for step, (inputs, labels) in enumerate(data_provider.batch_iterator(model.fov, model.output, model.input)):
 
+            # Run the optimizer
             sess.run(model.optimizer, feed_dict={
                 model.image: inputs,
                 model.target: labels
             })
 
-            if step % 10 == 0:
-                print('step :'+str(step))
-                summary = sess.run(model.training_summaries, feed_dict={
-                    model.image: inputs,
-                    model.target: labels
-                })
+            for hook in hooks:
+                hook.eval(step, model, sess, summary_writer, inputs, labels)
 
-                summary_writer.add_summary(summary, step)
-
-            if step % 500 == 0:
-                # Make predictions on the validation set
-                validation_prediction, validation_training_summary = \
-                    sess.run([model.prediction, model.training_summaries],
-                             feed_dict={model.image: reshaped_validation_input,
-                                        model.target: reshaped_validation_labels})
-
-                summary_writer.add_summary(validation_training_summary, step)
-
-                # Calculate rand and VI scores
-                scores = evaluation.rand_error(model, data_folder, validation_prediction, num_validation_layers,
-                                               validation_output_shape, watershed_high=0.95)
-                score_summary = sess.run(model.validation_summaries,
-                                         feed_dict={model.rand_f_score: scores['Rand F-Score Full'],
-                                                    model.rand_f_score_merge: scores['Rand F-Score Merge'],
-                                                    model.rand_f_score_split: scores['Rand F-Score Split'],
-                                                    model.vi_f_score: scores['VI F-Score Full'],
-                                                    model.vi_f_score_merge: scores['VI F-Score Merge'],
-                                                    model.vi_f_score_split: scores['VI F-Score Split'],
-                                                    })
-
-                summary_writer.add_summary(score_summary, step)
-
-            if step % 1000 == 0:
-                # Save the variables to disk.
-                save_path = model.saver.save(sess, ckpt_folder + 'model.ckpt')
-                print("Model saved in file: %s" % save_path)
-
+            # Stop when we've trained enough
             if step == n_iterations:
                 break
 
-    return scores
+    def restore(self):
+        self.model.saver.restore(self.sess, self.ckpt_folder + 'model.ckpt')
+        print("Model restored.")
 
-
-def predict(model, ckpt_num, data_folder, subset):
-    # TODO(beisner): refactor such that predictions aren't necessarily made from affinities, i.e. get from DataProvider
-    # Where we store the output affinities and map
-    results_folder = data_folder + 'results/'
-
-    # Where we store model
-    ckpt_folder = results_folder + model.model_name + '/'
-
-    # Where the data is stored
-    data_prefix = data_folder + subset
-
-    # Get the h5 input
-    with h5py.File(data_prefix + '-input.h5', 'r') as input_file:
-        # Scale appropriately, and mirror
-        inpt = input_file['main'][:].astype(np.float32) / 255.0
-        mirrored_inpt = aug.mirror_across_borders(inpt, model.fov)
-        num_layers = mirrored_inpt.shape[0]
-        input_shape = mirrored_inpt.shape[1]
-
-        # Create an affinities file
-        with h5py.File(ckpt_folder + subset + '-affinities.h5', 'w') as output_file:
-            output_file.create_dataset('main', shape=(3,) + input_file['main'].shape)
-            out = output_file['main']
-
-            # Make a prediction
-            with tf.Session() as sess:
-                # Restore variables from disk.
-                model.saver.restore(sess, ckpt_folder + 'model.ckpt')
-                print("Model restored.")
-                for z in range(num_layers):
-                    pred = sess.run(model.prediction,
-                                    feed_dict={
-                                        model.image: mirrored_inpt[z].reshape(1, input_shape, input_shape, 1)})
-                    reshaped_pred = np.einsum('zyxd->dzyx', pred)
-                    out[0:2, z] = reshaped_pred[:, 0]
-
-            # Our border is the max of the output
-            tifffile.imsave(results_folder + model.model_name + '/' + subset + '-map.tif', np.minimum(out[0], out[1]))
-
-
-def __grid_search(data_provider, data_folder, remaining_params, current_params, results_dict):
-    if len(remaining_params) > 0:
-        # Get a parameter
-        param, values = remaining_params.popitem()
-
-        # For each potential parameter, copy current_params and add the potential parameter to next_params
-        for value in values:
-            next_params = current_params.copy()
-            next_params[param] = value
-
-            # Perform grid search on the remaining params
-            __grid_search(data_provider, data_folder, remaining_params=remaining_params.copy(),
-                          current_params=next_params, results_dict=results_dict)
-    else:
-        try:
-            print('Training this model:')
-            print(current_params)
-            model = n4.N4(current_params)
-            results_dict[model.model_name] = train(model, data_provider, data_folder, n_iterations=500)  # temp
-        except:
-            print("Failed to train this model, ", sys.exc_info()[0])
-
-
-def grid_search(data_provider, data_folder, params_lists):
-    tf.Graph().as_default()
-
-    # Mapping between parameter set and metrics.
-    results_dict = dict()
-
-    # perform the recursive grid search
-    __grid_search(data_provider, data_folder, params_lists, dict(), results_dict)
-
-    return results_dict
+    def predict(self, inputs):
+        # Mirror the inputs
+        mirrored_inputs = aug.mirror_across_borders(inputs, self.model.fov)
+        return self.sess.run(self.model.prediction, feed_dict={self.model.image: mirrored_inputs})

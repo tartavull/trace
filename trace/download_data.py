@@ -26,9 +26,11 @@ ZIP = '.zip'
 TIF = '.tif'
 H5 = '.h5'
 
+
 SNEMI3D = 'snemi3d'
 ISBI = 'isbi'
 
+DATASET_NAMES = [SNEMI3D, ISBI]
 
 def __maybe_download(base_url, remote_filename, dest_folder, dest_filename):
     full_url = base_url + remote_filename

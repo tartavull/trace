@@ -26,12 +26,4 @@ def max_pool(x, dilation=None, strides=[2, 2], window_shape=[2, 2]):
                        strides=strides, padding='VALID', pooling_type='MAX')
 
 
-class AbstractModel:
-    def __init__(self, params):
-        raise NotImplementedError('Constructor has not been implemented.')
-
-    def loss_function(self):
-        raise NotImplementedError('Not implemented')
-
-
 
