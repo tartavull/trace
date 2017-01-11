@@ -126,4 +126,14 @@ class Learner:
     def predict(self, inputs):
         # Mirror the inputs
         mirrored_inputs = aug.mirror_across_borders(inputs, self.model.fov)
-        return self.sess.run(self.model.prediction, feed_dict={self.model.image: mirrored_inputs})
+
+        preds = []
+
+        # Break into slices because otherwise tensorflow runs out of memory
+        num_slices = mirrored_inputs.shape[0]
+        for l in range(num_slices):
+            reshaped_slice = np.expand_dims(mirrored_inputs[0], axis=0)
+            pred = self.sess.run(self.model.prediction, feed_dict={self.model.image: reshaped_slice})
+            preds.append(pred)
+
+        return np.squeeze(np.asarray(preds), axis=1)

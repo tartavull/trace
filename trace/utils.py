@@ -8,14 +8,18 @@ def generate_files_from_predictions(ckpt_folder, data_prefix, predictions):
 
     sha = predictions.shape
     # Create an affinities file
-    with h5py.File(ckpt_folder + subset + '-affinities.h5', 'w') as output_file:
+    with h5py.File(ckpt_folder + data_prefix + '-affinities.h5', 'w') as output_file:
         # Create the dataset in the file
-        output_file.create_dataset('main', shape=(3, sha[0], sha[1], sha[2]))
+        new_shape = (3, sha[0], sha[1], sha[2])
+
+        output_file.create_dataset('main', shape=new_shape)
 
         # Reformat our predictions
         out = output_file['main']
-        reshaped_pred = np.einsum('zyxd->dzyx', predictions)
-        out[0:2] = reshaped_pred[:, 0]
+
+        for i in range(predictions.shape[0]):
+            reshaped_pred = np.einsum('zyxd->dzyx', np.expand_dims(predictions[i], axis=0))
+            out[0:2, i] = reshaped_pred[:, 0]
 
         # Our border is the max of the output
         tifffile.imsave(ckpt_folder + data_prefix + '-map.tif', np.minimum(out[0], out[1]))

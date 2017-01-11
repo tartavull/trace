@@ -183,7 +183,7 @@ def predict(model_type, params_type, dataset, split, run_name):
     model = model_constructor(params, is_training=False)
 
     # Inputs we will use
-    inputs = data_provider.dataset_from_h5py(split)
+    inputs, _ = data_provider.dataset_from_h5py(split)
 
     # Define results folder
     ckpt_folder = data_folder + 'results/' + model.model_name + '/run-' + run_name + '/'
@@ -232,7 +232,7 @@ def ens_predict(ensemble_method, ensemble_params, dataset, split, run_name):
     ensemble_params = ENSEMBLE_PARAMS_DICT[ensemble_params]
 
     # Inputs we will use
-    inputs = data_provider.dataset_from_h5py(split)
+    inputs, _ = data_provider.dataset_from_h5py(split)
 
     # Create the classifier
     classifier = ens.EnsembleLearner(ensemble_params, ensemble_method, data_folder, run_name)
