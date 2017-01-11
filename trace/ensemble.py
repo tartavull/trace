@@ -3,6 +3,27 @@ import tensorflow as tf
 import learner
 import numpy as np
 
+N4_3_TEST = [
+    {
+        'id': 'n4_1',
+        'model': conv_net.ConvNet,
+        'params': conv_net.DEFAULT_PARAMS,
+        'epochs': 500,
+    },
+    {
+        'id': 'n4_2',
+        'model': conv_net.ConvNet,
+        'params': conv_net.DEFAULT_PARAMS,
+        'epochs': 500,
+    },
+    {
+        'id': 'n4_3',
+        'model': conv_net.ConvNet,
+        'params': conv_net.DEFAULT_PARAMS,
+        'epochs': 500,
+    }
+]
+
 N4_3 = [
     {
         'id': 'n4_1',
@@ -26,6 +47,7 @@ N4_3 = [
 
 ENSEMBLE_PARAMS_DICT = {
     'n4_3': N4_3,
+    'n4_3_test': N4_3_TEST,
 }
 
 
@@ -63,13 +85,14 @@ ENSEMBLE_METHOD_DICT = {
 
 
 class EnsembleLearner:
-    def __init__(self, model_configs, ensemble_method, data_folder, run_name):
+    def __init__(self, model_configs, ensemble_method_constructor, data_folder, run_name):
         self.model_configs = model_configs
-        self.ensemble_method = ensemble_method
         self.data_folder = data_folder
 
-        self.results_folder = data_folder + 'results/ensemble/' + ensemble_method.name + '/' + run_name + '/'
+        self.results_folder = data_folder + 'results/ensemble/' + ensemble_method.name + '/run-' + run_name + '/'
         self.ensembler_folder = self.results_folder + 'ensembler/'
+
+        self.ensemble_method = ensemble_method_constructor(self.ensembler_folder)
 
     def train(self, data_provider):
 

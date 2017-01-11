@@ -203,7 +203,6 @@ def predict(model_type, params_type, dataset, split, run_name):
 @click.argument('ensemble_method', type=click.Choice(ENSEMBLE_METHOD_DICT.keys()))
 @click.argument('ensemble_params', type=click.Choice(ENSEMBLE_PARAMS_DICT.keys()))
 @click.argument('dataset', type=click.Choice(download_data.DATASET_NAMES))
-@click.argument('n_iter', type=int, default=10000)
 @click.argument('run_name', type=str, default='1')
 def ens_train(ensemble_method, ensemble_params, dataset, run_name):
     data_folder = os.path.dirname(os.path.abspath(__file__)) + '/' + dataset + '/'
