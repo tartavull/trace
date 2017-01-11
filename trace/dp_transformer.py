@@ -82,7 +82,7 @@ class DPTransformer:
             inpt = input_file['main'][:].astype(np.float32) / 255.0
             reshaped_input = inpt.reshape(inpt.shape + (1,))
 
-        reshaped_labels = None
+        reshaped_label_affinities = None
 
         # TODO(beisner): instead of loading the affinities here, we should load the dataset and then affinitize
 
