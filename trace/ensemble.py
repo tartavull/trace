@@ -89,7 +89,7 @@ class EnsembleLearner:
         self.model_configs = model_configs
         self.data_folder = data_folder
 
-        self.results_folder = data_folder + 'results/ensemble/' + ensemble_method.name + '/run-' + run_name + '/'
+        self.results_folder = data_folder + 'results/ensemble/' + ensemble_method_constructor.name + '/run-' + run_name + '/'
         self.ensembler_folder = self.results_folder + 'ensembler/'
 
         self.ensemble_method = ensemble_method_constructor(self.ensembler_folder)
