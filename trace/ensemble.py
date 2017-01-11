@@ -110,6 +110,10 @@ class EnsembleLearner:
             params = config['params']
             epochs = config['epochs']
 
+            # Reset the default graph so that we emit the same variables
+            # DON'T DO THIS IN PREDICTION TIME, AS IT WILL DESTROY ALL OTHER GRAPHS
+            tf.reset_default_graph()
+
             # Create the classifier and persist it
             model = model_type(params)
             classifier = learner.Learner(model, ckpt_folder)

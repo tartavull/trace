@@ -129,8 +129,6 @@ class ConvNet:
 
         learning_rate = params['learning_rate']
 
-        tf.reset_default_graph()
-
         # Define the inputs
         self.image = tf.placeholder(tf.float32, shape=[None, None, None, 1])
         self.target = tf.placeholder(tf.float32, shape=[None, None, None, 2])
