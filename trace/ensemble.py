@@ -46,9 +46,43 @@ N4_3 = [
     }
 ]
 
+VD2D_5 = [
+    {
+        'id': 'vd2d_1',
+        'model': conv_net.ConvNet,
+        'params': conv_net.VD2D,
+        'epochs': 50000,
+    },
+    {
+        'id': 'vd2d_2',
+        'model': conv_net.ConvNet,
+        'params': conv_net.VD2D,
+        'epochs': 50000,
+    },
+    {
+        'id': 'vd2d_3',
+        'model': conv_net.ConvNet,
+        'params': conv_net.VD2D,
+        'epochs': 50000,
+    },
+    {
+        'id': 'vd2d_4',
+        'model': conv_net.ConvNet,
+        'params': conv_net.VD2D,
+        'epochs': 50000,
+    },
+    {
+        'id': 'vd2d_5',
+        'model': conv_net.ConvNet,
+        'params': conv_net.VD2D,
+        'epochs': 50000,
+    },
+]
+
 ENSEMBLE_PARAMS_DICT = {
     'n4_3': N4_3,
     'n4_3_test': N4_3_TEST,
+    'vd2d_5': VD2D_5,
 }
 
 
