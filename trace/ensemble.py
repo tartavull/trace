@@ -124,7 +124,7 @@ class EnsembleLearner:
             classifier.train(data_provider, hooks, epochs)
 
         # Train the ensembler
-        self.ensemble_method.train(classifiers, ensembler_folder=self.ensembler_folder)
+        self.ensemble_method.train(classifiers)
 
     def predict(self, images):
 
@@ -149,7 +149,7 @@ class EnsembleLearner:
             predictions.append(pred)
 
         # Return the ensembled predictions
-        return self.ensemble_method.predict(predictions, self.ensembler_folder)
+        return self.ensemble_method.predict(predictions)
 
 
 
