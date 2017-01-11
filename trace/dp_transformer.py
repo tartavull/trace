@@ -86,7 +86,7 @@ class DPTransformer:
 
         # TODO(beisner): instead of loading the affinities here, we should load the dataset and then affinitize
 
-        if data_prefix is not 'test':
+        if data_prefix != 'test':
             label_fn = self.data_folder + data_prefix + '-affinities.h5'
             print('opening at ' + label_fn)
             with h5py.File(label_fn, 'r') as label_affinities_file:
