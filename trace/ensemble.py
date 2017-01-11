@@ -2,6 +2,7 @@ from models import conv_net
 import tensorflow as tf
 import learner
 import numpy as np
+import utils
 
 N4_3_TEST = [
     {
@@ -130,7 +131,7 @@ class EnsembleLearner:
         # Train the ensembler
         self.ensemble_method.train(classifiers)
 
-    def predict(self, images):
+    def predict(self, images, split='test'):
 
         predictions = []
 
@@ -149,7 +150,13 @@ class EnsembleLearner:
             classifier = learner.Learner(model, ckpt_folder)
             classifier.restore()
 
+            print("Predicting for this model")
             pred = classifier.predict(images)
+
+            print("Saving this model's predictions")
+            # Save their prediction for posterity
+            utils.generate_files_from_predictions(ckpt_folder, split, pred)
+
             predictions.append(pred)
 
         # Return the ensembled predictions
