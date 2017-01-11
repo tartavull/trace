@@ -78,8 +78,9 @@ class ModelSaverHook:
         self.ckpt_folder = ckpt_folder
 
     def eval(self, step, model, session, summary_writer, inputs, labels):
-        save_path = model.saver.save(session, self.ckpt_folder + 'model.ckpt')
-        print("Model saved in file: %s" % save_path)
+        if step % self.frequency == 0:
+            save_path = model.saver.save(session, self.ckpt_folder + 'model.ckpt')
+            print("Model saved in file: %s" % save_path)
 
 
 class Learner:
