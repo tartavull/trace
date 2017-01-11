@@ -132,7 +132,7 @@ class Learner:
         # Break into slices because otherwise tensorflow runs out of memory
         num_slices = mirrored_inputs.shape[0]
         for l in range(num_slices):
-            reshaped_slice = np.expand_dims(mirrored_inputs[0], axis=0)
+            reshaped_slice = np.expand_dims(mirrored_inputs[l], axis=0)
             pred = self.sess.run(self.model.prediction, feed_dict={self.model.image: reshaped_slice})
             preds.append(pred)
 

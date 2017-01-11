@@ -145,6 +145,9 @@ class EnsembleLearner:
             model_type = config['model']
             params = config['params']
 
+            # Reset the graph, for now....
+            tf.reset_default_graph()
+
             # Restore the classifier
             model = model_type(params)
             classifier = learner.Learner(model, ckpt_folder)
