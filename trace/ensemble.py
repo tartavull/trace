@@ -53,7 +53,6 @@ ENSEMBLE_PARAMS_DICT = {
 
 
 class ModelAverager:
-
     name = 'model_averaging'
 
     def __init__(self, ensembler_folder):
@@ -86,11 +85,12 @@ ENSEMBLE_METHOD_DICT = {
 
 
 class EnsembleLearner:
-    def __init__(self, model_configs, ensemble_method_constructor, data_folder, run_name):
+    def __init__(self, model_configs, model_configs_name, ensemble_method_constructor, data_folder, run_name):
         self.model_configs = model_configs
         self.data_folder = data_folder
 
-        self.results_folder = data_folder + 'results/ensemble/' + ensemble_method_constructor.name + '/run-' + run_name + '/'
+        self.results_folder = data_folder + 'results/ensemble/' + ensemble_method_constructor.name + '/' \
+                              + model_configs_name + '/run-' + run_name + '/'
         self.ensembler_folder = self.results_folder + 'ensembler/'
 
         self.ensemble_method = ensemble_method_constructor(self.ensembler_folder)
@@ -102,7 +102,6 @@ class EnsembleLearner:
 
         # Train every model
         for config in self.model_configs:
-
             # Store each model copy in its own folder
             ckpt_folder = self.results_folder + config['id'] + '/'
 
@@ -137,7 +136,6 @@ class EnsembleLearner:
 
         # Make all the predictions
         for config in self.model_configs:
-
             # Read model from respective checkpoint folder
             ckpt_folder = self.results_folder + config['id'] + '/'
 
@@ -164,8 +162,3 @@ class EnsembleLearner:
 
         # Return the ensembled predictions
         return self.ensemble_method.predict(predictions)
-
-
-
-
-

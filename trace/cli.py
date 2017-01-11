@@ -209,9 +209,10 @@ def ens_train(ensemble_method, ensemble_params, dataset, run_name):
     data_provider = DPTransformer(data_folder, 'train.spec')
 
     ensemble_method = ENSEMBLE_METHOD_DICT[ensemble_method]
+    p_name = ensemble_params
     ensemble_params = ENSEMBLE_PARAMS_DICT[ensemble_params]
 
-    classifier = ens.EnsembleLearner(ensemble_params, ensemble_method, data_folder, run_name)
+    classifier = ens.EnsembleLearner(ensemble_params, p_name, ensemble_method, data_folder, run_name)
 
     print('Training the ensemble...')
     classifier.train(data_provider)
@@ -228,13 +229,15 @@ def ens_predict(ensemble_method, ensemble_params, dataset, split, run_name):
     data_provider = DPTransformer(data_folder, 'train.spec')
 
     ensemble_method = ENSEMBLE_METHOD_DICT[ensemble_method]
+
+    p_name = ensemble_params
     ensemble_params = ENSEMBLE_PARAMS_DICT[ensemble_params]
 
     # Inputs we will use
     inputs, _ = data_provider.dataset_from_h5py(split)
 
     # Create the classifier
-    classifier = ens.EnsembleLearner(ensemble_params, ensemble_method, data_folder, run_name)
+    classifier = ens.EnsembleLearner(ensemble_params, p_name, ensemble_method, data_folder, run_name)
 
     # Make the predictions
     predictions = classifier.predict(inputs)
