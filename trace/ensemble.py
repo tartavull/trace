@@ -4,79 +4,143 @@ import learner
 import numpy as np
 import utils
 
+
+class ComponentParams:
+    def __init__(self, id, model, architecture, training_params):
+        self.id = id
+        self.model = model
+        self.architecture = architecture
+        self.training_params = training_params
+
+
 N4_3_TEST = [
-    {
-        'id': 'n4_1',
-        'model': conv_net.ConvNet,
-        'params': conv_net.DEFAULT_PARAMS,
-        'epochs': 500,
-    },
-    {
-        'id': 'n4_2',
-        'model': conv_net.ConvNet,
-        'params': conv_net.DEFAULT_PARAMS,
-        'epochs': 500,
-    },
-    {
-        'id': 'n4_3',
-        'model': conv_net.ConvNet,
-        'params': conv_net.DEFAULT_PARAMS,
-        'epochs': 500,
-    }
+    ComponentParams(
+        id='n4_1',
+        model=conv_net.ConvNet,
+        architecture=conv_net.N4,
+        training_params=learner.TrainingParams(
+            optimizer=tf.train.AdamOptimizer,
+            learning_rate=0.0001,
+            n_iter=500,
+            output_size=101,
+        )
+    ),
+    ComponentParams(
+        id='n4_2',
+        model=conv_net.ConvNet,
+        architecture=conv_net.N4,
+        training_params=learner.TrainingParams(
+            optimizer=tf.train.AdamOptimizer,
+            learning_rate=0.0001,
+            n_iter=500,
+            output_size=101,
+        )
+    ),
+    ComponentParams(
+        id='n4_3',
+        model=conv_net.ConvNet,
+        architecture=conv_net.N4,
+        training_params=learner.TrainingParams(
+            optimizer=tf.train.AdamOptimizer,
+            learning_rate=0.0001,
+            n_iter=500,
+            output_size=101,
+        )
+    )
 ]
 
 N4_3 = [
-    {
-        'id': 'n4_1',
-        'model': conv_net.ConvNet,
-        'params': conv_net.DEFAULT_PARAMS,
-        'epochs': 30000,
-    },
-    {
-        'id': 'n4_2',
-        'model': conv_net.ConvNet,
-        'params': conv_net.DEFAULT_PARAMS,
-        'epochs': 30000,
-    },
-    {
-        'id': 'n4_3',
-        'model': conv_net.ConvNet,
-        'params': conv_net.DEFAULT_PARAMS,
-        'epochs': 30000,
-    }
+    ComponentParams(
+        id='n4_1',
+        model=conv_net.ConvNet,
+        architecture=conv_net.N4,
+        training_params=learner.TrainingParams(
+            optimizer=tf.train.AdamOptimizer,
+            learning_rate=0.0001,
+            n_iter=30000,
+            output_size=101,
+        )
+    ),
+    ComponentParams(
+        id='n4_2',
+        model=conv_net.ConvNet,
+        architecture=conv_net.N4,
+        training_params=learner.TrainingParams(
+            optimizer=tf.train.AdamOptimizer,
+            learning_rate=0.0001,
+            n_iter=30000,
+            output_size=101,
+        )
+    ),
+    ComponentParams(
+        id='n4_3',
+        model=conv_net.ConvNet,
+        architecture=conv_net.N4,
+        training_params=learner.TrainingParams(
+            optimizer=tf.train.AdamOptimizer,
+            learning_rate=0.0001,
+            n_iter=30000,
+            output_size=101,
+        )
+    )
 ]
 
 VD2D_5 = [
-    {
-        'id': 'vd2d_1',
-        'model': conv_net.ConvNet,
-        'params': conv_net.VD2D,
-        'epochs': 50000,
-    },
-    {
-        'id': 'vd2d_2',
-        'model': conv_net.ConvNet,
-        'params': conv_net.VD2D,
-        'epochs': 50000,
-    },
-    {
-        'id': 'vd2d_3',
-        'model': conv_net.ConvNet,
-        'params': conv_net.VD2D,
-        'epochs': 50000,
-    },
-    {
-        'id': 'vd2d_4',
-        'model': conv_net.ConvNet,
-        'params': conv_net.VD2D,
-        'epochs': 50000,
-    },
-    {
-        'id': 'vd2d_5',
-        'model': conv_net.ConvNet,
-        'params': conv_net.VD2D,
-        'epochs': 50000,
-    },
+    ComponentParams(
+        id='vd2d_1',
+        model=conv_net.ConvNet,
+        architecture=conv_net.VD2D,
+        training_params=learner.TrainingParams(
+            optimizer=tf.train.AdamOptimizer,
+            learning_rate=0.0001,
+            n_iter=50000,
+            output_size=101,
+        )
+    ),
+    ComponentParams(
+        id='vd2d_2',
+        model=conv_net.ConvNet,
+        architecture=conv_net.VD2D,
+        training_params=learner.TrainingParams(
+            optimizer=tf.train.AdamOptimizer,
+            learning_rate=0.0001,
+            n_iter=50000,
+            output_size=101,
+        )
+    ),
+    ComponentParams(
+        id='vd2d_3',
+        model=conv_net.ConvNet,
+        architecture=conv_net.VD2D,
+        training_params=learner.TrainingParams(
+            optimizer=tf.train.AdamOptimizer,
+            learning_rate=0.0001,
+            n_iter=50000,
+            output_size=101,
+        )
+    ),
+    ComponentParams(
+        id='vd2d_4',
+        model=conv_net.ConvNet,
+        architecture=conv_net.VD2D,
+        training_params=learner.TrainingParams(
+            optimizer=tf.train.AdamOptimizer,
+            learning_rate=0.0001,
+            n_iter=50000,
+            output_size=101,
+        )
+    ),
+    ComponentParams(
+        id='vd2d_5',
+        model=conv_net.ConvNet,
+        architecture=conv_net.VD2D,
+        training_params=learner.TrainingParams(
+            optimizer=tf.train.AdamOptimizer,
+            learning_rate=0.0001,
+            n_iter=50000,
+            output_size=101,
+        )
+    ),
 ]
 
 ENSEMBLE_PARAMS_DICT = {
@@ -137,29 +201,24 @@ class EnsembleLearner:
         # Train every model
         for config in self.model_configs:
             # Store each model copy in its own folder
-            ckpt_folder = self.results_folder + config['id'] + '/'
-
-            # Extract parameters
-            model_type = config['model']
-            params = config['params']
-            epochs = config['epochs']
+            ckpt_folder = self.results_folder + config.id + '/'
 
             # Reset the default graph so that we emit the same variables
             # DON'T DO THIS IN PREDICTION TIME, AS IT WILL DESTROY ALL OTHER GRAPHS
             tf.reset_default_graph()
 
             # Create the classifier and persist it
-            model = model_type(params)
+            model = config.model(config.architecture)
             classifier = learner.Learner(model, ckpt_folder)
             classifiers.append(classifier)
 
             hooks = [
-                learner.LossHook(10),
+                learner.LossHook(10, model),
                 learner.ModelSaverHook(1000, ckpt_folder),
                 learner.ValidationHook(500, data_provider, model, self.data_folder),
             ]
 
-            classifier.train(data_provider, hooks, epochs)
+            classifier.train(config.training_params, data_provider, hooks)
 
         # Train the ensembler
         self.ensemble_method.train(classifiers)
@@ -173,15 +232,11 @@ class EnsembleLearner:
             # Read model from respective checkpoint folder
             ckpt_folder = self.results_folder + config['id'] + '/'
 
-            # Extract parameters
-            model_type = config['model']
-            params = config['params']
-
             # Reset the graph, for now....
             tf.reset_default_graph()
 
             # Restore the classifier
-            model = model_type(params)
+            model = config.model(config.architecture)
             classifier = learner.Learner(model, ckpt_folder)
             classifier.restore()
 

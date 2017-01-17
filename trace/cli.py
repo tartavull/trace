@@ -8,6 +8,8 @@ import h5py
 import click
 import utils
 
+import tensorflow as tf
+
 import download_data
 import ensemble as ens
 import learner
@@ -154,14 +156,21 @@ def train(model_type, params_type, dataset, n_iter, run_name):
     classifier = learner.Learner(model, ckpt_folder)
 
     hooks = [
-        learner.LossHook(10),
+        learner.LossHook(10, model),
         learner.ModelSaverHook(1000, ckpt_folder),
         learner.ValidationHook(500, data_provider, model, data_folder),
     ]
 
+    training_params = learner.TrainingParams(
+        optimizer=tf.train.AdamOptimizer,
+        learning_rate=0.0001,
+        n_iter=n_iter,
+        output_size=101,
+    )
+
     # Train the model
     print('Training for %d iterations' % n_iter)
-    classifier.train(data_provider, hooks, n_iter)
+    classifier.train(training_params, data_provider, hooks)
 
 
 @cli.command()

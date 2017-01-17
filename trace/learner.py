@@ -17,14 +17,35 @@ except Exception:
 import evaluation
 
 
+class TrainingParams:
+    def __init__(self, optimizer, learning_rate, n_iter, output_size):
+        self.output_size = output_size
+        self.optimizer = optimizer
+        self.learning_rate = learning_rate
+        self.n_iter = n_iter
+
+
+DEFAULT_TRAINING_PARAMS = TrainingParams(
+    optimizer=tf.train.AdamOptimizer,
+    learning_rate=0.0001,
+    n_iter=50000,
+    output_size=101,
+)
+
+
 class LossHook:
-    def __init__(self, frequency):
+    def __init__(self, frequency, model):
         self.frequency = frequency
+        self.training_summaries = tf.summary.merge([
+            tf.summary.scalar('cross_entropy', model.cross_entropy),
+            tf.summary.scalar('pixel_error', model.pixel_error),
+        ])
 
     def eval(self, step, model, session, summary_writer, inputs, labels):
         if step % self.frequency == 0:
             print('step :' + str(step))
-            summary = session.run(model.training_summaries, feed_dict={
+
+            summary = session.run(self.training_summaries, feed_dict={
                 model.image: inputs,
                 model.target: labels
             })
@@ -41,11 +62,32 @@ class ValidationHook:
         self.reshaped_val_inputs, self.reshaped_val_labels = data_provider.dataset_from_h5py('validation')
         self.reshaped_val_inputs = aug.mirror_across_borders(self.reshaped_val_inputs, model.fov)
 
+        self.rand_f_score = tf.placeholder(tf.float32)
+        self.rand_f_score_merge = tf.placeholder(tf.float32)
+        self.rand_f_score_split = tf.placeholder(tf.float32)
+        self.vi_f_score = tf.placeholder(tf.float32)
+        self.vi_f_score_merge = tf.placeholder(tf.float32)
+        self.vi_f_score_split = tf.placeholder(tf.float32)
+
+        self.training_summaries = tf.summary.merge([
+            tf.summary.scalar('cross_entropy', model.cross_entropy),
+            tf.summary.scalar('pixel_error', model.pixel_error),
+        ])
+
+        self.validation_summaries = tf.summary.merge([
+            tf.summary.scalar('rand_score', self.rand_f_score),
+            tf.summary.scalar('rand_merge_score', self.rand_f_score_merge),
+            tf.summary.scalar('rand_split_score', self.rand_f_score_split),
+            tf.summary.scalar('vi_score', self.vi_f_score),
+            tf.summary.scalar('vi_merge_score', self.vi_f_score_merge),
+            tf.summary.scalar('vi_split_score', self.vi_f_score_split),
+        ])
+
     def eval(self, step, model, session, summary_writer, inputs, labels):
         if step % self.frequency == 0:
             # Make predictions on the validation set
             validation_prediction, validation_training_summary = session.run(
-                [model.prediction, model.training_summaries],
+                [model.prediction, self.training_summaries],
                 feed_dict={
                     model.image: self.reshaped_val_inputs,
                     model.target: self.reshaped_val_labels
@@ -60,13 +102,13 @@ class ValidationHook:
             scores = evaluation.rand_error(model, self.data_folder, validation_prediction, val_n_layers,
                                            val_output_dim, watershed_high=0.95)
 
-            score_summary = session.run(model.validation_summaries,
-                                        feed_dict={model.rand_f_score: scores['Rand F-Score Full'],
-                                                   model.rand_f_score_merge: scores['Rand F-Score Merge'],
-                                                   model.rand_f_score_split: scores['Rand F-Score Split'],
-                                                   model.vi_f_score: scores['VI F-Score Full'],
-                                                   model.vi_f_score_merge: scores['VI F-Score Merge'],
-                                                   model.vi_f_score_split: scores['VI F-Score Split'],
+            score_summary = session.run(self.validation_summaries,
+                                        feed_dict={self.rand_f_score: scores['Rand F-Score Full'],
+                                                   self.rand_f_score_merge: scores['Rand F-Score Merge'],
+                                                   self.rand_f_score_split: scores['Rand F-Score Split'],
+                                                   self.vi_f_score: scores['VI F-Score Full'],
+                                                   self.vi_f_score_merge: scores['VI F-Score Merge'],
+                                                   self.vi_f_score_split: scores['VI F-Score Split'],
                                                    })
 
             summary_writer.add_summary(score_summary, step)
@@ -92,7 +134,7 @@ class Learner:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.sess.close()
 
-    def train(self, data_provider, hooks, n_iterations):
+    def train(self, training_params, data_provider, hooks):
 
         sess = self.sess
         model = self.model
@@ -100,14 +142,21 @@ class Learner:
         # We will write our summaries here
         summary_writer = tf.summary.FileWriter(self.ckpt_folder + '/events', graph=sess.graph)
 
+        # Definte an optimizer
+        optimize_step = training_params.optimizer(training_params.learning_rate).minimize(model.cross_entropy)
+
         # Initialize the variables
         sess.run(tf.global_variables_initializer())
 
+        fov = model.fov
+        output_size = training_params.output_size
+        input_size = fov + 2 * (output_size // 2)
+
         # Iterate through the dataset
-        for step, (inputs, labels) in enumerate(data_provider.batch_iterator(model.fov, model.output, model.input)):
+        for step, (inputs, labels) in enumerate(data_provider.batch_iterator(fov, output_size, input_size)):
 
             # Run the optimizer
-            sess.run(model.optimizer, feed_dict={
+            sess.run(optimize_step, feed_dict={
                 model.image: inputs,
                 model.target: labels
             })
@@ -116,7 +165,7 @@ class Learner:
                 hook.eval(step, model, sess, summary_writer, inputs, labels)
 
             # Stop when we've trained enough
-            if step == n_iterations:
+            if step == training_params.n_iter:
                 break
 
     def restore(self):
