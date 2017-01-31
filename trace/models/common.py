@@ -1,14 +1,14 @@
 import tensorflow as tf
 
 
-def weight_variable(shape):
+def weight_variable(shape,stddev=0.1):
   """
   One should generally initialize weights with a small amount of noise
   for symmetry breaking, and to prevent 0 gradients.
   Since we're using ReLU neurons, it is also good practice to initialize
   them with a slightly positive initial bias to avoid "dead neurons".
   """
-  initial = tf.truncated_normal(shape, stddev=0.1)
+  initial = tf.truncated_normal(shape, stddev=stddev)
   return tf.Variable(initial)
 
 
