@@ -5,7 +5,7 @@ U-Net implementation adapted from https://github.com/jakeret/tf_unet
 import tensorflow as tf
 import numpy as np
 
-from common1 import conv2d, conv2d_u, deconv2d_u, bias_variable, weight_variable, max_pool, max_pool_u, crop_and_concat, pixel_wise_softmax_2
+from common import conv2d, conv2d_u, deconv2d_u, bias_variable, weight_variable, max_pool, max_pool_u, crop_and_concat
 
 from collections import OrderedDict
 
