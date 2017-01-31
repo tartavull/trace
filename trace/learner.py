@@ -187,22 +187,14 @@ class LayerVisualizationHook(Hook):
         self.frequency = frequency
         summaries = []
         for layer in model.architecture.layers:
-            layer_str = 'layer ' + str(layer.depth) + ': ' + layer.layer_type
+            layer_str = 'layer ' + str(layer.depth) + ': ' + layer.layer_type + \
+                                                            'activations'
             activations = self.computeVisualizationGrid(layer.activations,
                                 layer.n_feature_maps, layer.filter_size)
-            summaries.append(tf.summary.image(layer_str + ' activations', activations))
-            if type(layer) is Conv2DLayer:
-                # How many weights are there? Seems like a lot
-                weights = self.computeVisualizationGrid(layer.weights, layer.n_featuremaps)
-                biases = self.computeVisualizationGrid(layer.biases)
-                summaries.append(tf.summary.image(layer_str + ' weights', weights))
-                summaries.append(tf.summary.image(layer_str + ' biases', biases))
+            summaries.append(tf.summary.image(layer_str, activations))
 
 
-        self.training_summaries = tf.summary.merge([
-            tf.summary.scalar('cross_entropy', model.cross_entropy),
-            tf.summary.scalar('pixel_error', model.pixel_error),
-        ])
+        self.training_summaries = tf.summary.merge(summaries)
 
     def eval(self, step, model, session, summary_writer, inputs, labels):
         if step % self.frequency == 0:
