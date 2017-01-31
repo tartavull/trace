@@ -11,4 +11,5 @@ PARAMS_DICT = {
     'vd2d': VD2D,
     'bn_vd2d': BN_VD2D,
     'bn_vd2d_relu': BN_VD2D_RELU,
+    'vd2d_bound': VD2D_BOUNDARIES,
 }

@@ -26,18 +26,18 @@ ZIP = '.zip'
 TIF = '.tif'
 H5 = '.h5'
 
-
 SNEMI3D = 'snemi3d'
 ISBI = 'isbi'
 
 DATASET_NAMES = [SNEMI3D, ISBI]
+
 
 def __maybe_download(base_url, remote_filename, dest_folder, dest_filename):
     full_url = base_url + remote_filename
     full_path = dest_folder + dest_filename
     if not os.path.exists(full_path):
         print(full_path + " Does not exist")
-        print("downloading "+full_url)
+        print("downloading " + full_url)
         urllib.urlretrieve(full_url, full_path)
 
 
@@ -68,8 +68,8 @@ def __maybe_split(folder, train_fraction):
     val_labels_tif = VALIDATION_LABELS + TIF
 
     if not os.path.exists(folder + val_input_tif):
-        print(str.format('splitting {} into {}% training,  {}% into validation', train_input_tif, 100*train_fraction,
-                         100*(1-train_fraction)))
+        print(str.format('splitting {} into {}% training,  {}% into validation', train_input_tif, 100 * train_fraction,
+                         100 * (1 - train_fraction)))
 
         # For Input and Labels
         for train_fn, val_fn in [(train_input_tif, val_input_tif), (train_labels_tif, val_labels_tif)]:

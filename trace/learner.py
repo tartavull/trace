@@ -54,12 +54,12 @@ class LossHook:
 
 
 class ValidationHook:
-    def __init__(self, frequency, data_provider, model, data_folder):
+    def __init__(self, frequency, dset, model, data_folder):
         self.frequency = frequency
         self.data_folder = data_folder
 
         # Get the inputs and mirror them
-        self.reshaped_val_inputs, self.reshaped_val_labels = data_provider.dataset_from_h5py('validation')
+        self.reshaped_val_inputs, self.reshaped_val_labels = dset.get_validation_set()
         self.reshaped_val_inputs = aug.mirror_across_borders(self.reshaped_val_inputs, model.fov)
 
         self.rand_f_score = tf.placeholder(tf.float32)
@@ -134,7 +134,7 @@ class Learner:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.sess.close()
 
-    def train(self, training_params, data_provider, hooks):
+    def train(self, training_params, dset, hooks):
 
         sess = self.sess
         model = self.model
@@ -152,10 +152,17 @@ class Learner:
         output_size = training_params.output_size
         input_size = fov + 2 * (output_size // 2)
 
-        # Iterate through the dataset
-        for step, (inputs, labels) in enumerate(data_provider.batch_iterator(fov, output_size, input_size)):
+        diff = input_size - output_size
 
+        # Iterate through the dataset
+        for step in range(training_params.n_iter):
+
+            inputs, labels = dset.random_sample(input_size)
             # Run the optimizer
+
+            # Crop the model to the appropriate field of view
+            labels = labels[:, diff:fov + diff, diff:fov + diff, :]
+
             sess.run(optimize_step, feed_dict={
                 model.image: inputs,
                 model.target: labels
@@ -163,10 +170,6 @@ class Learner:
 
             for hook in hooks:
                 hook.eval(step, model, sess, summary_writer, inputs, labels)
-
-            # Stop when we've trained enough
-            if step == training_params.n_iter:
-                break
 
     def restore(self):
         self.model.saver.restore(self.sess, self.ckpt_folder + 'model.ckpt')

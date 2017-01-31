@@ -1,4 +1,5 @@
 import tensorflow as tf
+import em_dataset as em
 
 
 class Layer(object):
@@ -67,9 +68,17 @@ class BNLayer(Layer):
 
 
 class ConvArchitecture:
-    def __init__(self, model_name, layers):
+    def __init__(self, model_name, output_mode, layers):
+        self.output_mode = output_mode
         self.model_name = model_name
         self.layers = layers
+
+        if output_mode == em.BOUNDARIES_MODE:
+            self.n_outputs = 1
+        elif output_mode == em.AFFINITIES_2D_MODE:
+            self.n_outputs = 2
+        elif output_mode == em.AFFINITIES_2D_MODE:
+            self.n_outputs = 3
 
         n_poolings = 0
         self.receptive_field = 1
@@ -110,6 +119,7 @@ class ConvArchitecture:
 
 N4 = ConvArchitecture(
     model_name='n4',
+    output_mode=em.AFFINITIES_2D_MODE,
     layers=[
         Conv2DLayer(filter_size=4, n_feature_maps=48, activation_fn=tf.nn.relu),
         PoolLayer(filter_size=2),
@@ -126,6 +136,7 @@ N4 = ConvArchitecture(
 
 N4_WIDENED = ConvArchitecture(
     model_name='N4_widened',
+    output_mode=em.AFFINITIES_2D_MODE,
     layers=[
         Conv2DLayer(filter_size=4, n_feature_maps=48, activation_fn=tf.nn.relu),
         PoolLayer(filter_size=2),
@@ -142,6 +153,7 @@ N4_WIDENED = ConvArchitecture(
 
 N4_DEEPER = ConvArchitecture(
     model_name='N4_deeper',
+    output_mode=em.AFFINITIES_2D_MODE,
     layers=[
         Conv2DLayer(filter_size=4, n_feature_maps=48, activation_fn=tf.nn.relu),
         PoolLayer(filter_size=2),
@@ -162,6 +174,7 @@ N4_DEEPER = ConvArchitecture(
 
 VD2D = ConvArchitecture(
     model_name='VD2D',
+    output_mode=em.AFFINITIES_2D_MODE,
     layers=[
         Conv2DLayer(filter_size=3, n_feature_maps=24, activation_fn=tf.nn.relu),
         Conv2DLayer(filter_size=3, n_feature_maps=24, activation_fn=tf.nn.relu),
@@ -183,6 +196,7 @@ VD2D = ConvArchitecture(
 
 BN_VD2D = ConvArchitecture(
     model_name='bn_VD2D',
+    output_mode=em.AFFINITIES_2D_MODE,
     layers=[
         Conv2DLayer(filter_size=3, n_feature_maps=24), BNLayer(activation_fn=tf.nn.relu),
         Conv2DLayer(filter_size=3, n_feature_maps=24), BNLayer(activation_fn=tf.nn.relu),
@@ -204,6 +218,7 @@ BN_VD2D = ConvArchitecture(
 
 BN_VD2D_RELU = ConvArchitecture(
     model_name='bn_VD2D_relu',
+    output_mode=em.AFFINITIES_2D_MODE,
     layers=[
         Conv2DLayer(filter_size=3, n_feature_maps=24), BNLayer(activation_fn=tf.nn.relu),
         Conv2DLayer(filter_size=3, n_feature_maps=24), BNLayer(activation_fn=tf.nn.relu),
@@ -224,6 +239,29 @@ BN_VD2D_RELU = ConvArchitecture(
 )
 
 
+VD2D_BOUNDARIES = ConvArchitecture(
+    model_name='VD2D_boundaries',
+    output_mode=em.BOUNDARIES_MODE,
+    layers=[
+        Conv2DLayer(filter_size=3, n_feature_maps=24, activation_fn=tf.nn.relu),
+        Conv2DLayer(filter_size=3, n_feature_maps=24, activation_fn=tf.nn.relu),
+        Conv2DLayer(filter_size=2, n_feature_maps=24, activation_fn=tf.nn.tanh),
+        PoolLayer(filter_size=2),
+        Conv2DLayer(filter_size=3, n_feature_maps=36, activation_fn=tf.nn.relu),
+        Conv2DLayer(filter_size=3, n_feature_maps=36, activation_fn=tf.nn.tanh),
+        PoolLayer(filter_size=2),
+        Conv2DLayer(filter_size=3, n_feature_maps=48, activation_fn=tf.nn.relu),
+        Conv2DLayer(filter_size=3, n_feature_maps=48, activation_fn=tf.nn.tanh),
+        PoolLayer(filter_size=2),
+        Conv2DLayer(filter_size=3, n_feature_maps=60, activation_fn=tf.nn.relu),
+        Conv2DLayer(filter_size=3, n_feature_maps=60, activation_fn=tf.nn.tanh),
+        PoolLayer(filter_size=2),
+        Conv2DLayer(filter_size=3, n_feature_maps=200, activation_fn=tf.nn.relu),
+        Conv2DLayer(filter_size=1, n_feature_maps=1),
+    ]
+)
+
+
 class ConvNet:
     def __init__(self, architecture, is_training=False):
 
@@ -234,7 +272,7 @@ class ConvNet:
 
         # Define the inputs
         self.image = tf.placeholder(tf.float32, shape=[None, None, None, 1])
-        self.target = tf.placeholder(tf.float32, shape=[None, None, None, 2])
+        self.target = tf.placeholder(tf.float32, shape=[None, None, None, architecture.n_outputs])
 
         n_poolings = 0
 

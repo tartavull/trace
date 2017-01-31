@@ -17,6 +17,7 @@ except Exception:
           " If this fails, segascorus is likely not compatible with your computer (i.e. Macs).")
 
 
+
 def rand_error(model, data_folder, sigmoid_prediction, num_layers, output_shape, watershed_high=0.9, watershed_low=0.3):
     # Save affinities to temporary file
     # TODO pad the image with zeros so that the output covers the whole dataset
