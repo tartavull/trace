@@ -33,7 +33,12 @@ DEFAULT_TRAINING_PARAMS = TrainingParams(
 )
 
 
-class LossHook:
+class Hook(object):
+    def eval(self, step, model, session, summary_writer, inputs, labels):
+        raise NotImplementedError('Abstract Class!')
+
+
+class LossHook(Hook):
     def __init__(self, frequency, model):
         self.frequency = frequency
         self.training_summaries = tf.summary.merge([
@@ -53,7 +58,7 @@ class LossHook:
             summary_writer.add_summary(summary, step)
 
 
-class ValidationHook:
+class ValidationHook(Hook):
     def __init__(self, frequency, dset, model, data_folder):
         self.frequency = frequency
         self.data_folder = data_folder
@@ -114,7 +119,7 @@ class ValidationHook:
             summary_writer.add_summary(score_summary, step)
 
 
-class ModelSaverHook:
+class ModelSaverHook(Hook):
     def __init__(self, frequency, ckpt_folder):
         self.frequency = frequency
         self.ckpt_folder = ckpt_folder
