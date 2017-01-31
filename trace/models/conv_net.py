@@ -3,6 +3,7 @@ import em_dataset as em
 
 
 class Layer(object):
+    depth = 0
     def __init__(self, filter_size, n_feature_maps, activation_fn=lambda x: x):
         self.filter_size = filter_size
         self.n_feature_maps = n_feature_maps
@@ -18,19 +19,19 @@ class Conv2DLayer(Layer):
     def connect(self, prev_layer, prev_n_feature_maps, dilation_rate, is_training):
         # Create the tensorflow variables
         filters_shape = [self.filter_size, self.filter_size, prev_n_feature_maps, self.n_feature_maps]
-        filters = tf.Variable(tf.truncated_normal(filters_shape, stddev=0.1))
-        bias = tf.Variable(tf.constant(0.1, shape=[self.n_feature_maps]))
+        self.weights = tf.Variable(tf.truncated_normal(filters_shape, stddev=0.1))
+        self.biases = tf.Variable(tf.constant(0.1, shape=[self.n_feature_maps]))
 
         # Perform a dilated convolution on the previous layer, where the dilation rate is dependent on the
         # number of poolings so far.
-        convolution = tf.nn.convolution(prev_layer, filters, strides=[1, 1], padding='VALID',
+        convolution = tf.nn.convolution(prev_layer, self.weights, strides=[1, 1], padding='VALID',
                                         dilation_rate=[dilation_rate, dilation_rate])
 
         # Apply the activation function
-        output_layer = self.activation_fn(convolution + bias)
+        self.activations = self.activation_fn(convolution + self.biases)
 
         # Prepare the next values in the loop
-        return output_layer, self.n_feature_maps
+        return self.activations, self.n_feature_maps
 
 
 class PoolLayer(Layer):
@@ -41,12 +42,12 @@ class PoolLayer(Layer):
 
     def connect(self, prev_layer, prev_n_feature_maps, dilation_rate, is_training):
         # Max pool
-        output_layer = tf.nn.pool(prev_layer, window_shape=[self.filter_size, self.filter_size],
+        self.activations = tf.nn.pool(prev_layer, window_shape=[self.filter_size, self.filter_size],
                                   dilation_rate=[dilation_rate, dilation_rate], strides=[1, 1],
                                   padding='VALID',
                                   pooling_type='MAX')
 
-        return output_layer, prev_n_feature_maps
+        return self.activations, prev_n_feature_maps
 
 
 class BNLayer(Layer):
@@ -61,10 +62,10 @@ class BNLayer(Layer):
         bn_conv = tf.contrib.layers.batch_norm(prev_layer, center=True, scale=True, is_training=is_training, scope='bn')
 
         # Apply the activation function
-        output_layer = self.activation_fn(bn_conv)
+        self.activations = self.activation_fn(bn_conv)
 
         # Prepare the next values in the loop
-        return output_layer, prev_n_feature_maps
+        return self.activations, prev_n_feature_maps
 
 
 class ConvArchitecture:
@@ -281,19 +282,17 @@ class ConvNet:
 
         layer_num = 0
 
-        for layer in architecture.layers:
+        for layer_num, layer in enumerate(architecture.layers):
 
             # Double the dilation rate for a given layer every time we pool.
             dilation_rate = 2 ** n_poolings
 
             with tf.variable_scope('layer' + str(layer_num)):
-
+                layer.depth = layer_num
                 prev_layer, prev_n_feature_maps = layer.connect(prev_layer, prev_n_feature_maps, dilation_rate, is_training)
 
                 if type(layer) is PoolLayer:
                     n_poolings += 1
-
-            layer_num += 1
 
 
         # Predictions

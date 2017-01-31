@@ -130,6 +130,130 @@ class ModelSaverHook(Hook):
             print("Model saved in file: %s" % save_path)
 
 
+class ImageVisualizationHook(Hook):
+    def __init__(self, frequency, model):
+        self.frequency = frequency
+        self.training_summaries = tf.summary.merge([
+            tf.summary.image('input_image', model.image),
+            tf.summary.image('output_patch', model.image[:,model.fov:-model.fov,model.fov:-model.fov,:),
+            tf.summary.image('output_target', model.target)
+            tf.summary.image('predictions', model.prediction)
+        ])
+
+    def eval(self, step, model, session, summary_writer, inputs, labels):
+        if step % self.frequency == 0:
+            print('step :' + str(step))
+
+            summary = session.run(self.training_summaries, feed_dict={
+                model.image: inputs,
+                model.target: labels
+            })
+
+            summary_writer.add_summary(summary, step)
+
+
+class HistogramHook(Hook):
+    def __init__(self, frequency, model):
+        self.frequency = frequency
+        histograms = []
+        for layer in model.architecture.layers:
+            layer_str = 'layer ' + str(layer.depth) + ': ' + layer.layer_type
+            histograms.append(tf.summary.histogram(layer_str + ' activations',
+                                                        layer.activations))
+            if type(layer) is Conv2DLayer:
+                histograms.append(tf.summary.histogram(layer_str + ' weights',
+                                                            layer.weights))
+                histograms.append(tf.summary.histogram(layer_str + ' biases',
+                                                            layer.biases))
+
+        histograms.append(tf.summary.histogram('prediction', model.prediction))
+
+        self.training_summaries = tf.summary.merge(histograms)
+
+    def eval(self, step, model, session, summary_writer, inputs, labels):
+        if step % self.frequency == 0:
+            print('step :' + str(step))
+
+            summary = session.run(self.training_summaries, feed_dict={
+                model.image: inputs,
+                model.target: labels
+            })
+
+            summary_writer.add_summary(summary, step)
+
+
+class LayerVisualizationHook(Hook):
+    def __init__(self, frequency, model):
+        self.frequency = frequency
+        summaries = []
+        for layer in model.architecture.layers:
+            layer_str = 'layer ' + str(layer.depth) + ': ' + layer.layer_type
+            activations = self.computeVisualizationGrid(layer.activations,
+                                layer.n_feature_maps, layer.filter_size)
+            summaries.append(tf.summary.image(layer_str + ' activations', activations))
+            if type(layer) is Conv2DLayer:
+                # How many weights are there? Seems like a lot
+                weights = self.computeVisualizationGrid(layer.weights, layer.n_featuremaps)
+                biases = self.computeVisualizationGrid(layer.biases)
+                summaries.append(tf.summary.image(layer_str + ' weights', weights))
+                summaries.append(tf.summary.image(layer_str + ' biases', biases))
+
+
+        self.training_summaries = tf.summary.merge([
+            tf.summary.scalar('cross_entropy', model.cross_entropy),
+            tf.summary.scalar('pixel_error', model.pixel_error),
+        ])
+
+    def eval(self, step, model, session, summary_writer, inputs, labels):
+        if step % self.frequency == 0:
+            print('step :' + str(step))
+
+            summary = session.run(self.training_summaries, feed_dict={
+                model.image: inputs,
+                model.target: labels
+            })
+
+            summary_writer.add_summary(summary, step)
+
+    def computeVisualizationGrid(activations, num_maps, map_size, width=16, height=0):
+        cx = width
+        if height == 0:
+            cy = num_maps // width
+        else:
+            cy = height
+
+        # Arrange the feature maps into a grid
+        ix = map_size
+        iy = ix
+        # Ensure shape is correct
+        reshaped = tf.reshape(activations, tf.pack([iy, ix, num_maps]))
+
+        border_thickness = 4
+        ix += border_thickness
+        iy += border_thickness
+
+        # Add a border to each image
+        padded = tf.image.resize_image_with_crop_or_pad(reshaped, iy, ix)
+
+        # Separate the feature maps into rows and columns
+        grid = tf.reshape(padded, tf.pack([iy, ix, cy, cx]))
+
+        # Swap the order that the dimensions are iterated through upon reshape.
+        # First, the first (iy) row (ix) of pixels in the first (cy) row (cx) of
+        # feature maps is iterated through, followed by the first row in the
+        # second feature map until the first row of feature maps is completed.
+        # Then this procedure is repeated for the second row of pixels in
+        # the first row of feature maps, and then the third row, etc, until
+        # the first row of feature maps is completed. Then we move to the
+        # second row of feature maps, and so on.
+        grid = tf.transpose(grid, (2,0,3,1)) # cy, iy, cx, ix
+
+        # Reshape into final grid image.
+        grid = tf.reshape(grid, tf.pack([1, cy * iy, cx * ix, 1]))
+
+        return grid
+
+
 class Learner:
     def __init__(self, model, ckpt_folder):
         self.model = model
@@ -155,7 +279,7 @@ class Learner:
 
         fov = model.fov
         output_size = training_params.output_size
-        input_size = fov + 2 * (output_size // 2)
+        input_size = output_size + fov - 1
 
         diff = input_size - output_size
 
