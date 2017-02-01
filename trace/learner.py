@@ -3,6 +3,7 @@
 from __future__ import print_function
 from __future__ import division
 
+import math
 import tensorflow as tf
 import augmentation as aug
 
@@ -133,16 +134,16 @@ class ModelSaverHook(Hook):
 class ImageVisualizationHook(Hook):
     def __init__(self, frequency, model):
         self.frequency = frequency
-        self.training_summaries = tf.summary.merge([
-            tf.summary.image('input_image', model.image),
-            tf.summary.image('output_patch', model.image[:,model.fov:-model.fov,model.fov:-model.fov,:),
-            tf.summary.image('output_target', model.target)
-            tf.summary.image('predictions', model.prediction)
-        ])
+        with tf.variable_scope('images'):
+            self.training_summaries = tf.summary.merge([
+                tf.summary.image('input_image', model.image),
+                #tf.summary.image('output_patch', model.image[:,model.fov:-model.fov,model.fov:-model.fov,:]),
+                tf.summary.image('output_target', model.target[:,:,:,:1]),
+                tf.summary.image('predictions', model.prediction[:,:,:,:1]),
+            ])
 
     def eval(self, step, model, session, summary_writer, inputs, labels):
         if step % self.frequency == 0:
-            print('step :' + str(step))
 
             summary = session.run(self.training_summaries, feed_dict={
                 model.image: inputs,
@@ -156,23 +157,23 @@ class HistogramHook(Hook):
     def __init__(self, frequency, model):
         self.frequency = frequency
         histograms = []
-        for layer in model.architecture.layers:
-            layer_str = 'layer ' + str(layer.depth) + ': ' + layer.layer_type
-            histograms.append(tf.summary.histogram(layer_str + ' activations',
-                                                        layer.activations))
-            if type(layer) is Conv2DLayer:
-                histograms.append(tf.summary.histogram(layer_str + ' weights',
-                                                            layer.weights))
-                histograms.append(tf.summary.histogram(layer_str + ' biases',
-                                                            layer.biases))
+        with tf.variable_scope('histograms', reuse=True):
+            for layer in model.architecture.layers:
+                layer_str = 'layer ' + str(layer.depth) + ': ' + layer.layer_type
+                histograms.append(tf.summary.histogram(layer_str + \
+                                                ' activations', layer.activations))
+                if hasattr(layer, 'weights') and hasattr(layer, 'biases'):
+                    histograms.append(tf.summary.histogram(layer_str + \
+                                                ' weights', layer.weights))
+                    histograms.append(tf.summary.histogram(layer_str + \
+                                            ' biases', layer.biases))
 
-        histograms.append(tf.summary.histogram('prediction', model.prediction))
+            histograms.append(tf.summary.histogram('prediction', model.prediction))
 
         self.training_summaries = tf.summary.merge(histograms)
 
     def eval(self, step, model, session, summary_writer, inputs, labels):
         if step % self.frequency == 0:
-            print('step :' + str(step))
 
             summary = session.run(self.training_summaries, feed_dict={
                 model.image: inputs,
@@ -187,10 +188,10 @@ class LayerVisualizationHook(Hook):
         self.frequency = frequency
         summaries = []
         for layer in model.architecture.layers:
-            layer_str = 'layer ' + str(layer.depth) + ': ' + layer.layer_type + \
-                                                            'activations'
+            layer_str = 'layer ' + str(layer.depth) + ' ' + layer.layer_type + \
+                                                            ' activations'
             activations = self.computeVisualizationGrid(layer.activations,
-                                layer.n_feature_maps, layer.filter_size)
+                                layer.n_feature_maps)
             summaries.append(tf.summary.image(layer_str, activations))
 
 
@@ -198,7 +199,6 @@ class LayerVisualizationHook(Hook):
 
     def eval(self, step, model, session, summary_writer, inputs, labels):
         if step % self.frequency == 0:
-            print('step :' + str(step))
 
             summary = session.run(self.training_summaries, feed_dict={
                 model.image: inputs,
@@ -207,22 +207,31 @@ class LayerVisualizationHook(Hook):
 
             summary_writer.add_summary(summary, step)
 
-    def computeVisualizationGrid(activations, num_maps, map_size, width=16, height=0):
-        cx = width
-        if height == 0:
-            cy = num_maps // width
+    def computeVisualizationGrid(self, activations, num_maps, width=16, height=0):
+        if num_maps % width == 0:
+            cx = width
+            if height == 0:
+                cy = num_maps // width
+            else:
+                cy = height
         else:
-            cy = height
+            cx = int(math.sqrt(num_maps))
+            while num_maps % cx != 0:
+                cx -= 1
+            cy = num_maps // cx
+
 
         # Arrange the feature maps into a grid
-        ix = map_size
-        iy = ix
-        # Ensure shape is correct
-        reshaped = tf.reshape(activations, tf.pack([iy, ix, num_maps]))
+        # -------------------
+
+        # Choose first example from batch
+        reshaped = activations[0,:,:,:]
+        dim = tf.shape(reshaped)
+        map_size = dim[0] # size of feature map
 
         border_thickness = 4
-        ix += border_thickness
-        iy += border_thickness
+        ix = map_size + border_thickness
+        iy = ix
 
         # Add a border to each image
         padded = tf.image.resize_image_with_crop_or_pad(reshaped, iy, ix)
