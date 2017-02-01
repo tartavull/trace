@@ -22,6 +22,15 @@ def model_dict(x):
         # 'n4-bn': default_N4_bn()
     }[x]
 
+def config_dict(x):
+    return {
+        'isbi': default_isbi(),
+    }[x]
+
+def default_isbi():
+    return {
+        'folder': os.path.dirname(os.path.abspath(__file__)) + '/isbi/'
+    }
 
 @click.group()
 def cli():
@@ -53,11 +62,11 @@ def visualize(dataset, split, aff, ip, port):
     viewer = neuroglancer.Viewer(voxel_size=[6, 6, 30])
     if aff:
         import augmentation
-        augmentation.maybe_create_affinities(split)
-        add_affinities(config.folder, split + '-affinities', viewer)
+        #augmentation.maybe_create_affinities(split)
+        add_affinities(config['folder'], split + '-affinities', viewer)
     else:
-        add_file(config.folder, split + '-input', viewer)
-        add_file(config.folder, split + '-labels', viewer)
+        add_file(config['folder'], split + '-input', viewer)
+        add_file(config['folder'], split + '-labels', viewer)
 
     print('open your brower at:')
     print(viewer.__str__().replace('172.17.0.2', '54.166.106.209')) # Replace the second argument with your own server's ip address
