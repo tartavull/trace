@@ -98,7 +98,8 @@ class EMDataset(object):
         distorted_image = tf.image.random_brightness(self.elastically_deformed_image, max_delta=0.15)
         distorted_image = tf.image.random_contrast(distorted_image, lower=0.5, upper=1.5)
 
-        self.standardized_image = tf.image.per_image_standardization(distorted_image)
+        #self.standardized_image = tf.image.per_image_standardization(distorted_image)
+        self.standardized_image = distorted_image
 
         self.sess = tf.Session()
         self.sess.run(tf.global_variables_initializer())
@@ -113,14 +114,14 @@ class EMDataset(object):
         # Generate a distorted sample
 
         # The distortion causes weird things at the boundaries, so we pad our sample and crop to get desired patch size
-        crop_padding = 20
+        crop_padding = 40
 
         adjusted_patch_size = patch_size + crop_padding
         intermediate = self.sess.run(self.distorted_sample, feed_dict={
             self.patch_size: adjusted_patch_size,
         })
 
-        separated_image = intermediate[:, :, 0:1]
+        separated_image = intermediate[:, :, :1]
         separated_labels = intermediate[:, :, 1:]
 
         sigma = np.random.randint(low=35, high=100)
@@ -134,9 +135,9 @@ class EMDataset(object):
             self.elastically_deformed_image: el_image
         })
 
-        cropped_image = im_sample[crop_padding // 2:patch_size + crop_padding // 2,
-                        crop_padding // 2:patch_size + crop_padding // 2]
-        cropped_labels = el_labels[crop_padding // 2:patch_size + crop_padding // 2,
-                         crop_padding // 2:patch_size + crop_padding // 2]
+        cropped_image = im_sample[crop_padding // 2:-crop_padding // 2,
+                        crop_padding // 2:-crop_padding // 2]
+        cropped_labels = el_labels[crop_padding // 2:-crop_padding // 2,
+                         crop_padding // 2:-crop_padding // 2]
 
         return np.expand_dims(cropped_image, axis=0), np.expand_dims(cropped_labels, axis=0)

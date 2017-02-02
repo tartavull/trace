@@ -172,7 +172,7 @@ def train(model_type, params_type, dataset, n_iter, run_name):
         optimizer=tf.train.AdamOptimizer,
         learning_rate=0.0001,
         n_iter=n_iter,
-        output_size=95,
+        output_size=101,
     )
 
     # Train the model

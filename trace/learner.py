@@ -28,7 +28,7 @@ class TrainingParams:
 
 DEFAULT_TRAINING_PARAMS = TrainingParams(
     optimizer=tf.train.AdamOptimizer,
-    learning_rate=0.0001,
+    learning_rate=0.00001,
     n_iter=50000,
     output_size=101,
 )
@@ -137,7 +137,8 @@ class ImageVisualizationHook(Hook):
         with tf.variable_scope('images'):
             self.training_summaries = tf.summary.merge([
                 tf.summary.image('input_image', model.image),
-                #tf.summary.image('output_patch', model.image[:,model.fov:-model.fov,model.fov:-model.fov,:]),
+                tf.summary.image('output_patch', model.image[:,
+                      model.fov//2:-model.fov//2,model.fov//2:-model.fov//2,:]),
                 tf.summary.image('output_target', model.target[:,:,:,:1]),
                 tf.summary.image('predictions', model.prediction[:,:,:,:1]),
             ])
@@ -282,7 +283,6 @@ class Learner:
         output_size = training_params.output_size
         input_size = output_size + fov - 1
 
-        diff = input_size - output_size
 
         # Iterate through the dataset
         for step in range(training_params.n_iter):
@@ -291,7 +291,7 @@ class Learner:
             # Run the optimizer
 
             # Crop the model to the appropriate field of view
-            labels = labels[:, diff:fov + diff, diff:fov + diff, :]
+            labels = labels[:, fov//2:-(fov//2), fov//2:-(fov//2), :]
 
             sess.run(optimize_step, feed_dict={
                 model.image: inputs,
