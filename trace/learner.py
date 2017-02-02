@@ -60,7 +60,8 @@ class LossHook(Hook):
 
 
 class ValidationHook(Hook):
-    def __init__(self, frequency, dset, model, data_folder):
+    def __init__(self, frequency, dset, model, data_folder, boundary_mode):
+        self.boundary_mode = boundary_mode
         self.frequency = frequency
         self.data_folder = data_folder
 
@@ -104,9 +105,11 @@ class ValidationHook(Hook):
             val_n_layers = self.reshaped_val_inputs.shape[0]
             val_output_dim = self.reshaped_val_inputs.shape[1] - model.fov + 1
 
+            reshaped_pred = validation_prediction.squeeze(axis=(3,))
             # Calculate rand and VI scores
-            scores = evaluation.rand_error(model, self.data_folder, validation_prediction, val_n_layers,
-                                           val_output_dim, watershed_high=0.95)
+            scores = evaluation.rand_error(model, self.data_folder, 'validation-labels.tif',
+                                           reshaped_pred, val_n_layers, val_output_dim,
+                                           data_type=self.boundary_mode)
 
             score_summary = session.run(self.validation_summaries,
                                         feed_dict={self.rand_f_score: scores['Rand F-Score Full'],
@@ -138,14 +141,13 @@ class ImageVisualizationHook(Hook):
             self.training_summaries = tf.summary.merge([
                 tf.summary.image('input_image', model.image),
                 tf.summary.image('output_patch', model.image[:,
-                      model.fov//2:-model.fov//2,model.fov//2:-model.fov//2,:]),
-                tf.summary.image('output_target', model.target[:,:,:,:1]),
-                tf.summary.image('predictions', model.prediction[:,:,:,:1]),
+                                                 model.fov // 2:-model.fov // 2, model.fov // 2:-model.fov // 2, :]),
+                tf.summary.image('output_target', model.target[:, :, :, :1]),
+                tf.summary.image('predictions', model.prediction[:, :, :, :1]),
             ])
 
     def eval(self, step, model, session, summary_writer, inputs, labels):
         if step % self.frequency == 0:
-
             summary = session.run(self.training_summaries, feed_dict={
                 model.image: inputs,
                 model.target: labels
@@ -162,12 +164,12 @@ class HistogramHook(Hook):
             for layer in model.architecture.layers:
                 layer_str = 'layer ' + str(layer.depth) + ': ' + layer.layer_type
                 histograms.append(tf.summary.histogram(layer_str + \
-                                                ' activations', layer.activations))
+                                                       ' activations', layer.activations))
                 if hasattr(layer, 'weights') and hasattr(layer, 'biases'):
                     histograms.append(tf.summary.histogram(layer_str + \
-                                                ' weights', layer.weights))
+                                                           ' weights', layer.weights))
                     histograms.append(tf.summary.histogram(layer_str + \
-                                            ' biases', layer.biases))
+                                                           ' biases', layer.biases))
 
             histograms.append(tf.summary.histogram('prediction', model.prediction))
 
@@ -175,7 +177,6 @@ class HistogramHook(Hook):
 
     def eval(self, step, model, session, summary_writer, inputs, labels):
         if step % self.frequency == 0:
-
             summary = session.run(self.training_summaries, feed_dict={
                 model.image: inputs,
                 model.target: labels
@@ -190,17 +191,15 @@ class LayerVisualizationHook(Hook):
         summaries = []
         for layer in model.architecture.layers:
             layer_str = 'layer ' + str(layer.depth) + ' ' + layer.layer_type + \
-                                                            ' activations'
+                        ' activations'
             activations = self.computeVisualizationGrid(layer.activations,
-                                layer.n_feature_maps)
+                                                        layer.n_feature_maps)
             summaries.append(tf.summary.image(layer_str, activations))
-
 
         self.training_summaries = tf.summary.merge(summaries)
 
     def eval(self, step, model, session, summary_writer, inputs, labels):
         if step % self.frequency == 0:
-
             summary = session.run(self.training_summaries, feed_dict={
                 model.image: inputs,
                 model.target: labels
@@ -221,14 +220,13 @@ class LayerVisualizationHook(Hook):
                 cx -= 1
             cy = num_maps // cx
 
-
         # Arrange the feature maps into a grid
         # -------------------
 
         # Choose first example from batch
-        reshaped = activations[0,:,:,:]
+        reshaped = activations[0, :, :, :]
         dim = tf.shape(reshaped)
-        map_size = dim[0] # size of feature map
+        map_size = dim[0]  # size of feature map
 
         border_thickness = 4
         ix = map_size + border_thickness
@@ -248,7 +246,7 @@ class LayerVisualizationHook(Hook):
         # the first row of feature maps, and then the third row, etc, until
         # the first row of feature maps is completed. Then we move to the
         # second row of feature maps, and so on.
-        grid = tf.transpose(grid, (2,0,3,1)) # cy, iy, cx, ix
+        grid = tf.transpose(grid, (2, 0, 3, 1))  # cy, iy, cx, ix
 
         # Reshape into final grid image.
         grid = tf.reshape(grid, tf.pack([1, cy * iy, cx * ix, 1]))
@@ -283,7 +281,6 @@ class Learner:
         output_size = training_params.output_size
         input_size = output_size + fov - 1
 
-
         # Iterate through the dataset
         for step in range(training_params.n_iter):
 
@@ -291,7 +288,7 @@ class Learner:
             # Run the optimizer
 
             # Crop the model to the appropriate field of view
-            labels = labels[:, fov//2:-(fov//2), fov//2:-(fov//2), :]
+            labels = labels[:, fov // 2:-(fov // 2), fov // 2:-(fov // 2), :]
 
             sess.run(optimize_step, feed_dict={
                 model.image: inputs,

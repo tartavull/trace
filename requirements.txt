@@ -6,3 +6,4 @@ tifffile
 h5py
 tensorflow
 tqdm
+scikit-image
