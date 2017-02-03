@@ -15,7 +15,7 @@ class Layer(object):
 
 class Conv2DLayer(Layer):
     layer_type = 'conv2d'
-    
+
     def __init__(self, *args, **kwargs):
         self.is_valid = kwargs['is_valid']
         del kwargs['is_valid']
@@ -208,6 +208,28 @@ VD2D = ConvArchitecture(
     ]
 )
 
+VD2D_BOUNDARIES = ConvArchitecture(
+    model_name='VD2D_boundaries',
+    output_mode=em.BOUNDARIES_MODE,
+    layers=[
+        Conv2DLayer(filter_size=3, n_feature_maps=24, activation_fn=tf.nn.relu, is_valid=True),
+        Conv2DLayer(filter_size=3, n_feature_maps=24, activation_fn=tf.nn.relu, is_valid=True),
+        Conv2DLayer(filter_size=2, n_feature_maps=24, activation_fn=tf.nn.tanh, is_valid=True),
+        PoolLayer(filter_size=2),
+        Conv2DLayer(filter_size=3, n_feature_maps=36, activation_fn=tf.nn.relu, is_valid=True),
+        Conv2DLayer(filter_size=3, n_feature_maps=36, activation_fn=tf.nn.tanh, is_valid=True),
+        PoolLayer(filter_size=2),
+        Conv2DLayer(filter_size=3, n_feature_maps=48, activation_fn=tf.nn.relu, is_valid=True),
+        Conv2DLayer(filter_size=3, n_feature_maps=48, activation_fn=tf.nn.tanh, is_valid=True),
+        PoolLayer(filter_size=2),
+        Conv2DLayer(filter_size=3, n_feature_maps=60, activation_fn=tf.nn.relu, is_valid=True),
+        Conv2DLayer(filter_size=3, n_feature_maps=60, activation_fn=tf.nn.tanh, is_valid=True),
+        PoolLayer(filter_size=2),
+        Conv2DLayer(filter_size=3, n_feature_maps=200, activation_fn=tf.nn.relu, is_valid=True),
+        Conv2DLayer(filter_size=1, n_feature_maps=1, is_valid=True),
+    ]
+)
+
 BN_VD2D = ConvArchitecture(
     model_name='bn_VD2D',
     output_mode=em.AFFINITIES_2D_MODE,
@@ -253,27 +275,7 @@ BN_VD2D_RELU = ConvArchitecture(
 )
 
 
-VD2D_BOUNDARIES = ConvArchitecture(
-    model_name='VD2D_boundaries',
-    output_mode=em.BOUNDARIES_MODE,
-    layers=[
-        Conv2DLayer(filter_size=3, n_feature_maps=24, activation_fn=tf.nn.relu, is_valid=True),
-        Conv2DLayer(filter_size=3, n_feature_maps=24, activation_fn=tf.nn.relu, is_valid=True),
-        Conv2DLayer(filter_size=2, n_feature_maps=24, activation_fn=tf.nn.tanh, is_valid=True),
-        PoolLayer(filter_size=2),
-        Conv2DLayer(filter_size=3, n_feature_maps=36, activation_fn=tf.nn.relu, is_valid=True),
-        Conv2DLayer(filter_size=3, n_feature_maps=36, activation_fn=tf.nn.tanh, is_valid=True),
-        PoolLayer(filter_size=2),
-        Conv2DLayer(filter_size=3, n_feature_maps=48, activation_fn=tf.nn.relu, is_valid=True),
-        Conv2DLayer(filter_size=3, n_feature_maps=48, activation_fn=tf.nn.tanh, is_valid=True),
-        PoolLayer(filter_size=2),
-        Conv2DLayer(filter_size=3, n_feature_maps=60, activation_fn=tf.nn.relu, is_valid=True),
-        Conv2DLayer(filter_size=3, n_feature_maps=60, activation_fn=tf.nn.tanh, is_valid=True),
-        PoolLayer(filter_size=2),
-        Conv2DLayer(filter_size=3, n_feature_maps=200, activation_fn=tf.nn.relu, is_valid=True),
-        Conv2DLayer(filter_size=1, n_feature_maps=1, is_valid=True),
-    ]
-)
+
 
 
 class ConvNet:

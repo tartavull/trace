@@ -151,7 +151,9 @@ def __rand_error_affinities(model, data_folder, sigmoid_prediction, num_layers, 
 def rand_error(model, data_folder, labels_file, sigmoid_prediction, num_layers, output_shape, data_type='boundaries'):
 
     if data_type == 'boundaries':
+        # Squeeze the single layer into one
+        reshaped_pred = sigmoid_prediction.squeeze(axis=(3,))
         true_labels = tiff.imread(data_folder + labels_file)
-        return __rand_error_boundaries(true_labels, sigmoid_prediction)
+        return __rand_error_boundaries(true_labels, reshaped_pred)
     else:
         return __rand_error_affinities(model, data_folder, sigmoid_prediction, num_layers, output_shape)
