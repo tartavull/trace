@@ -140,7 +140,9 @@ class ImageVisualizationHook(Hook):
             self.training_summaries = tf.summary.merge([
                 tf.summary.image('input_image', model.image),
                 tf.summary.image('output_patch', model.image[:,
-                                                 model.fov // 2:-model.fov // 2, model.fov // 2:-model.fov // 2, :]),
+                                                 model.fov // 2:-model.fov // 2,
+                                                 model.fov // 2:-model.fov // 2,
+                                                 :]),
                 tf.summary.image('output_target', model.target[:, :, :, :1]),
                 tf.summary.image('predictions', model.prediction[:, :, :, :1]),
             ])

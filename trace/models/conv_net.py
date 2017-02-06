@@ -91,7 +91,7 @@ class ConvArchitecture:
             self.n_outputs = 1
         elif output_mode == em.AFFINITIES_2D_MODE:
             self.n_outputs = 2
-        elif output_mode == em.AFFINITIES_2D_MODE:
+        elif output_mode == em.AFFINITIES_3D_MODE:
             self.n_outputs = 3
 
         n_poolings = 0
