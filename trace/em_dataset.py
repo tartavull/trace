@@ -95,9 +95,9 @@ class EMDataset(object):
         # Independently, feed in warped image
         self.elastically_deformed_image = tf.placeholder(np.float64, shape=[None, None, 1], name="elas_deform_input")
 
-        self.standardized_image = tf.image.per_image_standardization(self.elastically_deformed_image)
+        # self.standardized_image = tf.image.per_image_standardization(self.elastically_deformed_image)
 
-        distorted_image = tf.image.random_brightness(self.standardized_image, max_delta=0.15)
+        distorted_image = tf.image.random_brightness(self.elastically_deformed_image, max_delta=0.15)
         self.distorted_image = tf.image.random_contrast(distorted_image, lower=0.5, upper=1.5)
 
 
