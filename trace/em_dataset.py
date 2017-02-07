@@ -35,7 +35,7 @@ class EMDataset(object):
         if output_mode == BOUNDARIES_MODE:
             # Expand dimensions from [None, None, None] -> [None, None, None, 1]
             train_labels = np.expand_dims(train_labels, 3) // 255.0
-            self.validation_labels = np.expand_dims(validation_labels, 3)
+            self.validation_labels = np.expand_dims(validation_labels, 3) // 255.0
 
         elif output_mode == AFFINITIES_2D_MODE:
             # Affinitize in 2 dimensions

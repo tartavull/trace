@@ -106,7 +106,7 @@ class ValidationHook(Hook):
             val_output_dim = self.reshaped_val_inputs.shape[1] - model.fov + 1
 
             # Calculate rand and VI scores
-            scores = evaluation.rand_error(model, self.data_folder, 'validation-labels.tif',
+            scores = evaluation.rand_error(model, self.data_folder, self.reshaped_val_labels,
                                            validation_prediction, val_n_layers, val_output_dim,
                                            data_type=self.boundary_mode)
 
