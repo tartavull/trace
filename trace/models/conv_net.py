@@ -121,15 +121,14 @@ class ConvArchitecture:
             # Double the dilation rate for a given layer every time we pool.
             dilation_rate = 2 ** n_poolings
 
-            if type(layer) is PoolLayer:
+            if layer.layer_type == 'pool':
                 n_poolings += 1
 
             # Calculate the receptive field
-            receptive_field = (layer.filter_size * receptive_field) - (receptive_field - dilation_rate) * \
-                                                                      (layer.filter_size - 1)
+            receptive_field = (layer.filter_size * receptive_field) - (receptive_field - dilation_rate) * (layer.filter_size - 1)
 
             layer_num += 1
-            print("Layer %d,\ttype: %s,\tfilter: [%d, %d],\tFOV: %d" % (layer_num, layer['type'], layer.filter_size, layer.filter_size, receptive_field))
+            print("Layer %d,\ttype: %s,\tfilter: [%d, %d],\tFOV: %d" % (layer_num, layer.layer_type, layer.filter_size, layer.filter_size, receptive_field))
 
 N4 = ConvArchitecture(
     model_name='n4',

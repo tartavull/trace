@@ -77,8 +77,8 @@ class ValidationHook(Hook):
         self.vi_f_score_split = tf.placeholder(tf.float32)
 
         self.training_summaries = tf.summary.merge([
-            tf.summary.scalar('cross_entropy', model.cross_entropy),
-            tf.summary.scalar('pixel_error', model.pixel_error),
+            tf.summary.scalar('validation_cross_entropy', model.cross_entropy),
+            tf.summary.scalar('validation_pixel_error', model.pixel_error),
         ])
 
         self.validation_summaries = tf.summary.merge([
