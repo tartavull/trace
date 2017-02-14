@@ -208,15 +208,16 @@ class ConvNet:
         self.fov = architecture.receptive_field
 
         # Define the inputs
-        self.image = tf.placeholder(tf.float32, shape=[None, None, None, 1])
-        self.target = tf.placeholder(tf.float32, shape=[None, None, None, architecture.n_outputs])
-
-        # Standardize each input image
-        standardized_image = tf.image.per_image_standardization(self.image)
+        self.queue = tf.FIFOQueue(5, tf.float32)# shapes=[None, None, None, architecture.n_outputs])
+        self.example = self.queue.dequeue()
+        self.image = self.example[:, :, :, :1]
+        fov = self.fov
+        # Crop the model to the appropriate field of view
+        self.target = self.example[:, fov // 2:-(fov // 2), fov // 2:-(fov // 2), 1:]
 
         n_poolings = 0
 
-        prev_layer = standardized_image
+        prev_layer = self.image
         prev_n_feature_maps = 1
 
         layer_num = 0

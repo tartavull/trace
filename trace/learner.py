@@ -275,29 +275,35 @@ class Learner:
         # Definte an optimizer
         optimize_step = training_params.optimizer(training_params.learning_rate).minimize(model.cross_entropy)
 
+        # Create enqueue op
+        enqueue_op = dset.generate_random_samples(model)
+
+        # Create Queuerunner to handle queueing of training examples
+        qr = tf.train.QueueRunner(model.queue, [enqueue_op] * 4)
+
+
         # Initialize the variables
         sess.run(tf.global_variables_initializer())
 
-        fov = model.fov
         output_size = training_params.output_size
         input_size = output_size + fov - 1
 
+        # Create a Coordinator, launch the Queuerunner threads
+        coord = tf.train.Coordinator()
+        enqueue_threads = qr.create_threads(sess, coord=coord, start=True)
+
         # Iterate through the dataset
         for step in range(training_params.n_iter):
+            if coord.should_stop():
+                break
 
-            inputs, labels = dset.random_sample(input_size)
             # Run the optimizer
-
-            # Crop the model to the appropriate field of view
-            labels = labels[:, fov // 2:-(fov // 2), fov // 2:-(fov // 2), :]
-
-            sess.run(optimize_step, feed_dict={
-                model.image: inputs,
-                model.target: labels
-            })
+            sess.run(optimize_step, feed_dict={'FOV:0': input_size})
 
             for hook in hooks:
                 hook.eval(step, model, sess, summary_writer, inputs, labels)
+        coord.request_stop()
+        coord.join(enqueue_threads)
 
     def restore(self):
         self.model.saver.restore(self.sess, self.ckpt_folder + 'model.ckpt')

@@ -75,7 +75,8 @@ class EMDataset(object):
         train_stacked = np.concatenate((train_inputs, train_labels), axis=3)
 
         # Define inputs to the graph
-        self.patch_size = tf.placeholder(tf.int32, name="FOV")
+        self.crop_padding = 40
+        self.patch_size = tf.placeholder(tf.int32, name='FOV') + self.crop_padding
 
         # Create dataset, and pad the dataset with mirroring
         dataset = tf.constant(train_stacked)
@@ -87,13 +88,14 @@ class EMDataset(object):
         squeezed_sample = tf.squeeze(sample)
 
         # Perform the first transformation
-        self.distorted_sample = tf.image.random_flip_left_right(squeezed_sample)
-        self.distorted_sample = tf.image.random_flip_up_down(self.distorted_sample)
+        distorted_sample = tf.image.random_flip_left_right(squeezed_sample)
+        self.distorted_sample = tf.image.random_flip_up_down(distorted_sample)
 
         # IDEALLY, we'd have elastic deformation here, but right now too much overhead to compute
 
         # Independently, feed in warped image
-        self.elastically_deformed_image = tf.placeholder(np.float64, shape=[None, None, 1], name="elas_deform_input")
+        #self.elastically_deformed_image = tf.placeholder(np.float64, shape=[None, None, 1], name="elas_deform_input")
+        self.elastically_deformed_image = self.distorted_sample
 
         # self.standardized_image = tf.image.per_image_standardization(self.elastically_deformed_image)
 
@@ -101,8 +103,8 @@ class EMDataset(object):
         self.distorted_image = tf.image.random_contrast(distorted_image, lower=0.5, upper=1.5)
 
 
-        self.sess = tf.Session()
-        self.sess.run(tf.global_variables_initializer())
+        #self.sess = tf.Session()
+        #self.sess.run(tf.global_variables_initializer())
 
     def get_validation_set(self):
         return self.validation_inputs, self.validation_labels
@@ -110,34 +112,25 @@ class EMDataset(object):
     def get_test_set(self):
         return self.test_inputs
 
-    def random_sample(self, patch_size):
-        # Generate a distorted sample
+    def generate_random_samples(self, model):
+        # Create op for generation and enqueueing of random samples.
 
         # The distortion causes weird things at the boundaries, so we pad our sample and crop to get desired patch size
-        crop_padding = 40
 
-        adjusted_patch_size = patch_size + crop_padding
-        intermediate = self.sess.run(self.distorted_sample, feed_dict={
-            self.patch_size: adjusted_patch_size,
-        })
 
-        separated_image = intermediate[:, :, :1]
-        separated_labels = intermediate[:, :, 1:]
-
-        sigma = np.random.randint(low=35, high=100)
+        #sigma = np.random.randint(low=35, high=100)
 
         # Apply elastic deformation
 
         # TODO(beisner): Move affinitization after elastic deformation, or think about it...
-        el_image, el_labels = aug.elastic_transform(separated_image, separated_labels, alpha=2000, sigma=sigma)
+        #el_image, el_labels = aug.elastic_transform(separated_image, separated_labels, alpha=2000, sigma=sigma)
 
-        im_sample = self.sess.run(self.distorted_image, feed_dict={
-            self.elastically_deformed_image: el_image
-        })
+        crop_padding = self.crop_padding
+        cropped_image = self.distorted_image[crop_padding // 2:-crop_padding // 2,
+                crop_padding // 2:-crop_padding // 2, :1]
+        cropped_labels = self.elastically_deformed_image[crop_padding // 2:-crop_padding // 2,
+                crop_padding // 2:-crop_padding // 2, 1:]
 
-        cropped_image = im_sample[crop_padding // 2:-crop_padding // 2,
-                        crop_padding // 2:-crop_padding // 2]
-        cropped_labels = el_labels[crop_padding // 2:-crop_padding // 2,
-                         crop_padding // 2:-crop_padding // 2]
+        training_example = tf.concat(0, [tf.expand_dims(cropped_image, axis=0), tf.expand_dims(cropped_labels, axis=0)])
 
-        return np.expand_dims(cropped_image, axis=0), np.expand_dims(cropped_labels, axis=0)
+        return model.queue.enqueue(training_example)
