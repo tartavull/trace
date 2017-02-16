@@ -211,8 +211,8 @@ class ConvNet:
         self.image = tf.placeholder(tf.float32, shape=[None, None, None, 1])
         self.target = tf.placeholder(tf.float32, shape=[None, None, None, architecture.n_outputs])
 
-        # Standardize each input image
-        standardized_image = tf.image.per_image_standardization(self.image)
+        # Standardize each input image, using map because per_image_standardization takes one image at a time
+        standardized_image = tf.map_fn(lambda img: tf.image.per_image_standardization(img), self.image)
 
         n_poolings = 0
 
