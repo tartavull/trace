@@ -212,11 +212,10 @@ class ConvNet:
         self.target = tf.placeholder(tf.float32, shape=[None, None, None, architecture.n_outputs])
 
         # Standardize each input image
-        standardized_image = tf.image.per_image_standardization(self.image)
 
         n_poolings = 0
 
-        prev_layer = standardized_image
+        prev_layer = self.image
         prev_n_feature_maps = 1
 
         layer_num = 0

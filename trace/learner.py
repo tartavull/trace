@@ -281,6 +281,7 @@ class Learner:
         fov = model.fov
         output_size = training_params.output_size
         input_size = output_size + fov - 1
+        print(input_size)
 
         # Iterate through the dataset
         for step in range(training_params.n_iter):

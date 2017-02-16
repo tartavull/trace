@@ -10,7 +10,6 @@ import utils
 
 import tensorflow as tf
 
-import sampler as sam
 import em_dataset as em
 
 import download_data
