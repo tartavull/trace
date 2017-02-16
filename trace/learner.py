@@ -265,7 +265,6 @@ class Learner:
         self.sess.close()
 
     def train(self, training_params, dset, hooks):
-
         sess = self.sess
         model = self.model
 
@@ -276,20 +275,21 @@ class Learner:
         optimize_step = training_params.optimizer(training_params.learning_rate).minimize(model.cross_entropy)
 
         # Create enqueue op
-        enqueue_op = dset.generate_random_samples(model)
+        with tf.device('/cpu:0'):
+            enqueue_op = dset.generate_random_samples(model)
 
-        # Create Queuerunner to handle queueing of training examples
-        qr = tf.train.QueueRunner(model.queue, [enqueue_op] * 4)
+            # Create Queuerunner to handle queueing of training examples
+            qr = tf.train.QueueRunner(model.queue, [enqueue_op] * 5)
 
-        output_size = training_params.output_size
-        input_size = output_size + model.fov - 1
+            output_size = training_params.output_size
+            input_size = output_size + model.fov - 1
 
-        # Initialize the variables
-        sess.run(tf.global_variables_initializer(), feed_dict={'FOV:0': input_size})
+            # Initialize the variables
+            sess.run(tf.global_variables_initializer(), feed_dict={'FOV:0': input_size})
 
-        # Create a Coordinator, launch the Queuerunner threads
-        coord = tf.train.Coordinator()
-        enqueue_threads = qr.create_threads(sess, coord=coord, daemon=True, start=True)
+            # Create a Coordinator, launch the Queuerunner threads
+            coord = tf.train.Coordinator()
+            enqueue_threads = qr.create_threads(sess, coord=coord, daemon=True, start=True)
 
         # Iterate through the dataset
         for step in range(training_params.n_iter):
@@ -303,8 +303,10 @@ class Learner:
             for hook in hooks:
                 pass
                 #hook.eval(step, model, sess, summary_writer, inputs, labels)
-        coord.request_stop()
-        coord.join(enqueue_threads)
+
+        with tf.device('/cpu:0'):
+            coord.request_stop()
+            coord.join(enqueue_threads)
 
     def restore(self):
         self.model.saver.restore(self.sess, self.ckpt_folder + 'model.ckpt')
