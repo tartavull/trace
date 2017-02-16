@@ -163,7 +163,7 @@ def train(model_type, params_type, dataset, n_iter, run_name):
         learner.ModelSaverHook(1000, ckpt_folder),
         learner.ValidationHook(500, dset, model, data_folder, params.output_mode),
         learner.ImageVisualizationHook(500, model),
-        learner.HistogramHook(10, model),
+        learner.HistogramHook(100, model),
         learner.LayerVisualizationHook(500, model),
     ]
 

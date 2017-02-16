@@ -35,7 +35,7 @@ DEFAULT_TRAINING_PARAMS = TrainingParams(
 
 
 class Hook(object):
-    def eval(self, step, model, session, summary_writer, inputs, labels):
+    def eval(self, step, model, session, summary_writer):
         raise NotImplementedError('Abstract Class!')
 
 
@@ -47,14 +47,11 @@ class LossHook(Hook):
             tf.summary.scalar('pixel_error', model.pixel_error),
         ])
 
-    def eval(self, step, model, session, summary_writer, inputs, labels):
+    def eval(self, step, model, session, summary_writer):
         if step % self.frequency == 0:
             print('step :' + str(step))
 
-            summary = session.run(self.training_summaries, feed_dict={
-                model.image: inputs,
-                model.target: labels
-            })
+            summary = session.run(self.training_summaries)
 
             summary_writer.add_summary(summary, step)
 
@@ -90,7 +87,7 @@ class ValidationHook(Hook):
             tf.summary.scalar('vi_split_score', self.vi_f_score_split),
         ])
 
-    def eval(self, step, model, session, summary_writer, inputs, labels):
+    def eval(self, step, model, session, summary_writer):
         if step % self.frequency == 0:
             # Make predictions on the validation set
             validation_prediction, validation_training_summary = session.run(
@@ -127,7 +124,7 @@ class ModelSaverHook(Hook):
         self.frequency = frequency
         self.ckpt_folder = ckpt_folder
 
-    def eval(self, step, model, session, summary_writer, inputs, labels):
+    def eval(self, step, model, session, summary_writer):
         if step % self.frequency == 0:
             save_path = model.saver.save(session, self.ckpt_folder + 'model.ckpt')
             print("Model saved in file: %s" % save_path)
@@ -147,12 +144,9 @@ class ImageVisualizationHook(Hook):
                 tf.summary.image('predictions', model.prediction[:, :, :, :1]),
             ])
 
-    def eval(self, step, model, session, summary_writer, inputs, labels):
+    def eval(self, step, model, session, summary_writer):
         if step % self.frequency == 0:
-            summary = session.run(self.training_summaries, feed_dict={
-                model.image: inputs,
-                model.target: labels
-            })
+            summary = session.run(self.training_summaries)
 
             summary_writer.add_summary(summary, step)
 
@@ -176,12 +170,9 @@ class HistogramHook(Hook):
 
         self.training_summaries = tf.summary.merge(histograms)
 
-    def eval(self, step, model, session, summary_writer, inputs, labels):
+    def eval(self, step, model, session, summary_writer):
         if step % self.frequency == 0:
-            summary = session.run(self.training_summaries, feed_dict={
-                model.image: inputs,
-                model.target: labels
-            })
+            summary = session.run(self.training_summaries)
 
             summary_writer.add_summary(summary, step)
 
@@ -199,12 +190,9 @@ class LayerVisualizationHook(Hook):
 
         self.training_summaries = tf.summary.merge(summaries)
 
-    def eval(self, step, model, session, summary_writer, inputs, labels):
+    def eval(self, step, model, session, summary_writer):
         if step % self.frequency == 0:
-            summary = session.run(self.training_summaries, feed_dict={
-                model.image: inputs,
-                model.target: labels
-            })
+            summary = session.run(self.training_summaries)
 
             summary_writer.add_summary(summary, step)
 
@@ -265,7 +253,6 @@ class Learner:
         self.sess.close()
 
     def train(self, training_params, dset, hooks):
-
         sess = self.sess
         model = self.model
 
@@ -275,29 +262,35 @@ class Learner:
         # Definte an optimizer
         optimize_step = training_params.optimizer(training_params.learning_rate).minimize(model.cross_entropy)
 
-        # Initialize the variables
-        sess.run(tf.global_variables_initializer())
+        # Create enqueue op
+        enqueue_op = dset.generate_random_samples(model)
 
-        fov = model.fov
+        # Create Queuerunner to handle queueing of training examples
+        qr = tf.train.QueueRunner(model.queue, [enqueue_op] * 5)
+
         output_size = training_params.output_size
-        input_size = output_size + fov - 1
+        input_size = output_size + model.fov - 1
+
+        # Initialize the variables
+        sess.run(tf.global_variables_initializer(), feed_dict={'FOV:0': input_size})
+
+        # Create a Coordinator, launch the Queuerunner threads
+        coord = tf.train.Coordinator()
+        enqueue_threads = qr.create_threads(sess, coord=coord, daemon=True, start=True)
 
         # Iterate through the dataset
         for step in range(training_params.n_iter):
+            if coord.should_stop():
+                break
 
-            inputs, labels = dset.random_sample(input_size)
             # Run the optimizer
-
-            # Crop the model to the appropriate field of view
-            labels = labels[:, fov // 2:-(fov // 2), fov // 2:-(fov // 2), :]
-
-            sess.run(optimize_step, feed_dict={
-                model.image: inputs,
-                model.target: labels
-            })
+            sess.run(optimize_step)
 
             for hook in hooks:
-                hook.eval(step, model, sess, summary_writer, inputs, labels)
+                hook.eval(step, model, sess, summary_writer)
+
+        coord.request_stop()
+        coord.join(enqueue_threads)
 
     def restore(self):
         self.model.saver.restore(self.sess, self.ckpt_folder + 'model.ckpt')
