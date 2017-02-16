@@ -89,16 +89,28 @@ class ValidationHook(Hook):
             tf.summary.scalar('vi_split_score', self.vi_f_score_split),
         ])
 
+        with tf.variable_scope('validation_images'):
+            self.validation_image_summaries = tf.summary.merge([
+                tf.summary.image('validation_input_image', model.image),
+                tf.summary.image('validation_output_patch', model.image[:,
+                                                 model.fov // 2:-model.fov // 2,
+                                                 model.fov // 2:-model.fov // 2,
+                                                 :]),
+                tf.summary.image('validation_output_target', model.target[:, :, :, :1]),
+                tf.summary.image('validation_predictions', model.prediction[:, :, :, :1]),
+            ])
+
     def eval(self, step, model, session, summary_writer):
         if step % self.frequency == 0:
             # Make predictions on the validation set
-            validation_prediction, validation_training_summary = session.run(
-                [model.prediction, self.training_summaries],
+            validation_prediction, validation_training_summary, validation_image_summary = session.run(
+                [model.prediction, self.training_summaries, self.validation_image_summaries],
                 feed_dict={
                     model.example: self.mirrored_val_examples
                 })
 
             summary_writer.add_summary(validation_training_summary, step)
+            summary_writer.add_summary(validation_image_summary, step)
 
             val_n_layers = self.reshaped_val_inputs.shape[0]
             val_output_dim = self.reshaped_val_labels.shape[1]
