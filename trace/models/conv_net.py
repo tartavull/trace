@@ -208,6 +208,7 @@ class ConvNet:
         self.fov = architecture.receptive_field
 
         # Define the inputs
+       # with tf.device('/cpu:0'):
         self.queue = tf.FIFOQueue(5, tf.float32)# shapes=[None, None, None, architecture.n_outputs])
         self.example = self.queue.dequeue()
         self.image = self.example[:, :, :, :1]

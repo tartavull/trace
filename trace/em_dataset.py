@@ -14,6 +14,7 @@ AFFINITIES_3D_MODE = 'affinities-3d'
 
 class EMDataset(object):
     def __init__(self, data_folder, output_mode='boundaries'):
+#        with tf.device('/cpu:0'):
         self.data_folder = data_folder
         self.output_mode = output_mode
 
@@ -76,12 +77,13 @@ class EMDataset(object):
 
         # Define inputs to the graph
         self.crop_padding = 40
-        self.patch_size = tf.placeholder(tf.int32, name='FOV') + self.crop_padding
+        self.patch_size_placeholder = tf.placeholder(dtype=tf.int32, shape=(), name='FOV')
+        self.patch_size = tf.Variable(self.patch_size_placeholder, name='patch_size') + self.crop_padding
 
         # Create dataset, and pad the dataset with mirroring
         dataset = tf.constant(train_stacked)
         pad = tf.floordiv(self.patch_size, 2)
-        padded_dataset = tf.pad(dataset, [[0, 0], [pad, pad], [pad, pad], [0, 0]], mode="REFLECT")
+        padded_dataset = tf.pad(dataset, [[0, 0], tf.pack([pad, pad]), tf.pack([pad, pad]), [0, 0]], mode="REFLECT")
 
         # Sample and squeeze the dataset, squeezing so that we can perform the distortions
         sample = tf.random_crop(padded_dataset, size=[1, self.patch_size, self.patch_size, train_stacked.shape[3]])
@@ -125,12 +127,14 @@ class EMDataset(object):
         # TODO(beisner): Move affinitization after elastic deformation, or think about it...
         #el_image, el_labels = aug.elastic_transform(separated_image, separated_labels, alpha=2000, sigma=sigma)
 
+        #with tf.device('/cpu:0'):
         crop_padding = self.crop_padding
         cropped_image = self.distorted_image[crop_padding // 2:-crop_padding // 2,
                 crop_padding // 2:-crop_padding // 2, :1]
         cropped_labels = self.elastically_deformed_image[crop_padding // 2:-crop_padding // 2,
                 crop_padding // 2:-crop_padding // 2, 1:]
 
-        training_example = tf.concat(0, [tf.expand_dims(cropped_image, axis=0), tf.expand_dims(cropped_labels, axis=0)])
+        training_example = tf.concat(3, [tf.expand_dims(cropped_image, 0), tf.expand_dims(cropped_labels, 0)])
 
-        return model.queue.enqueue(training_example)
+        enqueue_op = model.queue.enqueue(training_example)
+        return enqueue_op
