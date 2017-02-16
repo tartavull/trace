@@ -10,6 +10,10 @@ Tests for `trace` module.
 
 import os.path
 import os
+import sys
+
+# monkey with the path
+sys.path.insert(0, os.path.abspath('./trace'))
 
 from click.testing import CliRunner
 
