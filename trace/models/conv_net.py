@@ -1,6 +1,6 @@
 import em_dataset as em
 
-from .common  import *
+from .common import *
 
 
 class ConvArchitecture:
@@ -209,19 +209,23 @@ class ConvNet:
 
         # Define the inputs
        # with tf.device('/cpu:0'):
+
+        # Create a queue
         self.queue = tf.FIFOQueue(50, tf.float32)
+
+        # Draw example from the queue and separate
         self.example = tf.placeholder_with_default(self.queue.dequeue(), shape=[None, None, None, architecture.n_outputs + 1])
         self.image = self.example[:, :, :, :1]
-        fov = self.fov
-        # Crop the model to the appropriate field of view
-        self.target = self.example[:, fov // 2:-(fov // 2), fov // 2:-(fov // 2), 1:]
+        # Crop the labels to the appropriate field of view
+        self.target = self.example[:, self.fov // 2:-(self.fov // 2), self.fov // 2:-(self.fov // 2), 1:]
+
+        # Standardize each input image, using map because per_image_standardization takes one image at a time
+        standardized_image = tf.map_fn(lambda img: tf.image.per_image_standardization(img), self.image)
 
         n_poolings = 0
 
-        prev_layer = self.image
+        prev_layer = standardized_image
         prev_n_feature_maps = 1
-
-        layer_num = 0
 
         for layer_num, layer in enumerate(architecture.layers):
 
@@ -234,7 +238,6 @@ class ConvNet:
 
                 if type(layer) is PoolLayer:
                     n_poolings += 1
-
 
         # Predictions
         self.prediction = tf.nn.sigmoid(prev_layer)

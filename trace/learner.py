@@ -226,7 +226,7 @@ class LayerVisualizationHook(Hook):
         padded = tf.image.resize_image_with_crop_or_pad(reshaped, iy, ix)
 
         # Separate the feature maps into rows and columns
-        grid = tf.reshape(padded, tf.pack([iy, ix, cy, cx]))
+        grid = tf.reshape(padded, tf.stack([iy, ix, cy, cx]))
 
         # Swap the order that the dimensions are iterated through upon reshape.
         # First, the first (iy) row (ix) of pixels in the first (cy) row (cx) of
@@ -239,7 +239,7 @@ class LayerVisualizationHook(Hook):
         grid = tf.transpose(grid, (2, 0, 3, 1))  # cy, iy, cx, ix
 
         # Reshape into final grid image.
-        grid = tf.reshape(grid, tf.pack([1, cy * iy, cx * ix, 1]))
+        grid = tf.reshape(grid, tf.stack([1, cy * iy, cx * ix, 1]))
 
         return grid
 
@@ -264,6 +264,7 @@ class Learner:
         optimize_step = training_params.optimizer(training_params.learning_rate).minimize(model.cross_entropy)
 
         # Create enqueue op
+
         #with tf.device('/cpu:0'):
         enqueue_op = dset.generate_random_samples(model)
 

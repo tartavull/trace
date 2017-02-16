@@ -81,9 +81,10 @@ class EMDataset(object):
         self.patch_size = tf.Variable(self.patch_size_placeholder, name='patch_size') + self.crop_padding
 
         # Create dataset, and pad the dataset with mirroring
-        dataset = tf.constant(train_stacked)
+        dataset = tf.constant(train_stacked, dtype=tf.float32)
+
         pad = tf.floordiv(self.patch_size, 2)
-        padded_dataset = tf.pad(dataset, [[0, 0], tf.pack([pad, pad]), tf.pack([pad, pad]), [0, 0]], mode="REFLECT")
+        padded_dataset = tf.pad(dataset, [[0, 0], tf.stack([pad, pad]), tf.stack([pad, pad]), [0, 0]], mode="REFLECT")
 
         # Sample and squeeze the dataset, squeezing so that we can perform the distortions
         sample = tf.random_crop(padded_dataset, size=[1, self.patch_size, self.patch_size, train_stacked.shape[3]])
@@ -103,7 +104,6 @@ class EMDataset(object):
 
         distorted_image = tf.image.random_brightness(self.elastically_deformed_image, max_delta=0.15)
         self.distorted_image = tf.image.random_contrast(distorted_image, lower=0.5, upper=1.5)
-
 
         #self.sess = tf.Session()
         #self.sess.run(tf.global_variables_initializer())
@@ -137,4 +137,5 @@ class EMDataset(object):
         training_example = tf.concat(3, [tf.expand_dims(cropped_image, 0), tf.expand_dims(cropped_labels, 0)])
 
         enqueue_op = model.queue.enqueue(training_example)
+
         return enqueue_op
