@@ -35,7 +35,7 @@ DEFAULT_TRAINING_PARAMS = TrainingParams(
 
 
 class Hook(object):
-    def eval(self, step, model, session, summary_writer, inputs, labels):
+    def eval(self, step, model, session, summary_writer):
         raise NotImplementedError('Abstract Class!')
 
 
@@ -47,14 +47,11 @@ class LossHook(Hook):
             tf.summary.scalar('pixel_error', model.pixel_error),
         ])
 
-    def eval(self, step, model, session, summary_writer, inputs, labels):
+    def eval(self, step, model, session, summary_writer):
         if step % self.frequency == 0:
             print('step :' + str(step))
 
-            summary = session.run(self.training_summaries, feed_dict={
-                model.image: inputs,
-                model.target: labels
-            })
+            summary = session.run(self.training_summaries)
 
             summary_writer.add_summary(summary, step)
 
@@ -90,7 +87,7 @@ class ValidationHook(Hook):
             tf.summary.scalar('vi_split_score', self.vi_f_score_split),
         ])
 
-    def eval(self, step, model, session, summary_writer, inputs, labels):
+    def eval(self, step, model, session, summary_writer):
         if step % self.frequency == 0:
             # Make predictions on the validation set
             validation_prediction, validation_training_summary = session.run(
@@ -127,7 +124,7 @@ class ModelSaverHook(Hook):
         self.frequency = frequency
         self.ckpt_folder = ckpt_folder
 
-    def eval(self, step, model, session, summary_writer, inputs, labels):
+    def eval(self, step, model, session, summary_writer):
         if step % self.frequency == 0:
             save_path = model.saver.save(session, self.ckpt_folder + 'model.ckpt')
             print("Model saved in file: %s" % save_path)
@@ -147,12 +144,9 @@ class ImageVisualizationHook(Hook):
                 tf.summary.image('predictions', model.prediction[:, :, :, :1]),
             ])
 
-    def eval(self, step, model, session, summary_writer, inputs, labels):
+    def eval(self, step, model, session, summary_writer):
         if step % self.frequency == 0:
-            summary = session.run(self.training_summaries, feed_dict={
-                model.image: inputs,
-                model.target: labels
-            })
+            summary = session.run(self.training_summaries)
 
             summary_writer.add_summary(summary, step)
 
@@ -176,12 +170,9 @@ class HistogramHook(Hook):
 
         self.training_summaries = tf.summary.merge(histograms)
 
-    def eval(self, step, model, session, summary_writer, inputs, labels):
+    def eval(self, step, model, session, summary_writer):
         if step % self.frequency == 0:
-            summary = session.run(self.training_summaries, feed_dict={
-                model.image: inputs,
-                model.target: labels
-            })
+            summary = session.run(self.training_summaries)
 
             summary_writer.add_summary(summary, step)
 
@@ -199,12 +190,9 @@ class LayerVisualizationHook(Hook):
 
         self.training_summaries = tf.summary.merge(summaries)
 
-    def eval(self, step, model, session, summary_writer, inputs, labels):
+    def eval(self, step, model, session, summary_writer):
         if step % self.frequency == 0:
-            summary = session.run(self.training_summaries, feed_dict={
-                model.image: inputs,
-                model.target: labels
-            })
+            summary = session.run(self.training_summaries)
 
             summary_writer.add_summary(summary, step)
 
@@ -301,8 +289,7 @@ class Learner:
             sess.run(optimize_step)
 
             for hook in hooks:
-                pass
-                #hook.eval(step, model, sess, summary_writer, inputs, labels)
+                hook.eval(step, model, sess, summary_writer)
 
         with tf.device('/cpu:0'):
             coord.request_stop()
