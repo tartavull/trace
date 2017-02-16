@@ -64,7 +64,9 @@ class ValidationHook(Hook):
 
         # Get the inputs and mirror them
         self.reshaped_val_inputs, self.reshaped_val_labels = dset.get_validation_set()
-        self.reshaped_val_inputs = aug.mirror_across_borders(self.reshaped_val_inputs, model.fov)
+        self.val_examples = np.concatenate([self.reshaped_val_inputs, self.reshaped_val_labels], axis=3)
+        self.mirrored_val_examples = aug.mirror_across_borders(np.concatenate([
+                            self.reshaped_val_inputs, self.reshaped_val_labels], axis=3), model.fov)
 
         self.rand_f_score = tf.placeholder(tf.float32)
         self.rand_f_score_merge = tf.placeholder(tf.float32)
@@ -93,14 +95,13 @@ class ValidationHook(Hook):
             validation_prediction, validation_training_summary = session.run(
                 [model.prediction, self.training_summaries],
                 feed_dict={
-                    model.image: self.reshaped_val_inputs,
-                    model.target: self.reshaped_val_labels
+                    model.example: self.mirrored_val_examples
                 })
 
             summary_writer.add_summary(validation_training_summary, step)
 
             val_n_layers = self.reshaped_val_inputs.shape[0]
-            val_output_dim = self.reshaped_val_inputs.shape[1] - model.fov + 1
+            val_output_dim = self.reshaped_val_labels.shape[1]
 
             # Calculate rand and VI scores
             scores = evaluation.rand_error(model, self.data_folder, self.reshaped_val_labels,
@@ -263,27 +264,26 @@ class Learner:
         optimize_step = training_params.optimizer(training_params.learning_rate).minimize(model.cross_entropy)
 
         # Create enqueue op
-        with tf.device('/cpu:0'):
-            enqueue_op = dset.generate_random_samples(model)
+        #with tf.device('/cpu:0'):
+        enqueue_op = dset.generate_random_samples(model)
 
-            # Create Queuerunner to handle queueing of training examples
-            qr = tf.train.QueueRunner(model.queue, [enqueue_op] * 5)
+        # Create Queuerunner to handle queueing of training examples
+        qr = tf.train.QueueRunner(model.queue, [enqueue_op] * 5)
 
-            output_size = training_params.output_size
-            input_size = output_size + model.fov - 1
+        output_size = training_params.output_size
+        input_size = output_size + model.fov - 1
 
-            # Initialize the variables
-            sess.run(tf.global_variables_initializer(), feed_dict={'FOV:0': input_size})
+        # Initialize the variables
+        sess.run(tf.global_variables_initializer(), feed_dict={'FOV:0': input_size})
 
-            # Create a Coordinator, launch the Queuerunner threads
-            coord = tf.train.Coordinator()
-            enqueue_threads = qr.create_threads(sess, coord=coord, daemon=True, start=True)
+        # Create a Coordinator, launch the Queuerunner threads
+        coord = tf.train.Coordinator()
+        enqueue_threads = qr.create_threads(sess, coord=coord, daemon=True, start=True)
 
         # Iterate through the dataset
         for step in range(training_params.n_iter):
             if coord.should_stop():
                 break
-            print(step)
 
             # Run the optimizer
             sess.run(optimize_step)
@@ -291,9 +291,9 @@ class Learner:
             for hook in hooks:
                 hook.eval(step, model, sess, summary_writer)
 
-        with tf.device('/cpu:0'):
-            coord.request_stop()
-            coord.join(enqueue_threads)
+        #with tf.device('/cpu:0'):
+        coord.request_stop()
+        coord.join(enqueue_threads)
 
     def restore(self):
         self.model.saver.restore(self.sess, self.ckpt_folder + 'model.ckpt')

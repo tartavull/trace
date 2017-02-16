@@ -208,9 +208,9 @@ class ConvNet:
         self.fov = architecture.receptive_field
 
         # Define the inputs
-        with tf.device('/cpu:0'):
-            self.queue = tf.FIFOQueue(10, tf.float32)# shapes=[None, None, None, architecture.n_outputs])
-        self.example = self.queue.dequeue()
+       # with tf.device('/cpu:0'):
+        self.queue = tf.FIFOQueue(50, tf.float32)
+        self.example = tf.placeholder_with_default(self.queue.dequeue(), shape=[None, None, None, architecture.n_outputs + 1])
         self.image = self.example[:, :, :, :1]
         fov = self.fov
         # Crop the model to the appropriate field of view
