@@ -207,11 +207,10 @@ class ConvNet:
         self.model_name = self.architecture.model_name
         self.fov = architecture.receptive_field
 
-        # Define the inputs
-       # with tf.device('/cpu:0'):
 
         # Create a queue
-        self.queue = tf.FIFOQueue(50, tf.float32)
+        with tf.device('/cpu:0'):
+            self.queue = tf.FIFOQueue(50, tf.float32)
 
         # Draw example from the queue and separate
         self.example = tf.placeholder_with_default(self.queue.dequeue(), shape=[None, None, None, architecture.n_outputs + 1])

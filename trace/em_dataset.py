@@ -13,8 +13,7 @@ AFFINITIES_3D_MODE = 'affinities-3d'
 
 
 class EMDataset(object):
-    def __init__(self, data_folder, output_mode='boundaries'):
-       # with tf.device('/cpu:0'):
+    def __init__(self, data_folder, input_size, output_mode='boundaries'):
         self.data_folder = data_folder
         self.output_mode = output_mode
 
@@ -76,37 +75,40 @@ class EMDataset(object):
         train_stacked = np.concatenate((train_inputs, train_labels), axis=3)
 
         # Define inputs to the graph
-        self.crop_padding = 40
-        self.patch_size_placeholder = tf.placeholder(dtype=tf.int32, shape=(), name='FOV')
-        self.patch_size = tf.Variable(self.patch_size_placeholder, name='patch_size') + self.crop_padding
+        self.crop_padding = input_size // 4
+        self.patch_size = input_size + self.crop_padding
 
         # Create dataset, and pad the dataset with mirroring
-        dataset = tf.constant(train_stacked, dtype=tf.float32)
+        pad = self.patch_size // 2
+        padded_dataset = np.pad(train_stacked, [[0, 0], [pad, pad], [pad, pad], [0, 0]], mode='reflect')
+        dataset = tf.constant(padded_dataset, dtype=tf.float32)
 
-        pad = tf.floordiv(self.patch_size, 2)
-        padded_dataset = tf.pad(dataset, [[0, 0], tf.stack([pad, pad]), tf.stack([pad, pad]), [0, 0]], mode="REFLECT")
+        with tf.device('/cpu:0'):
+            # Sample and squeeze the dataset, squeezing so that we can perform the distortions
+            sample = tf.random_crop(padded_dataset, size=[1, self.patch_size, self.patch_size, train_stacked.shape[3]])
+            squeezed_sample = tf.squeeze(sample)
 
-        # Sample and squeeze the dataset, squeezing so that we can perform the distortions
-        sample = tf.random_crop(padded_dataset, size=[1, self.patch_size, self.patch_size, train_stacked.shape[3]])
-        squeezed_sample = tf.squeeze(sample)
+            # Perform the first transformation
+            distorted_sample = tf.image.random_flip_left_right(squeezed_sample)
+            self.distorted_sample = tf.image.random_flip_up_down(distorted_sample)
 
-        # Perform the first transformation
-        distorted_sample = tf.image.random_flip_left_right(squeezed_sample)
-        self.distorted_sample = tf.image.random_flip_up_down(distorted_sample)
+            # Apply a random rotation
+            angle = tf.random_uniform(shape=(), minval=0, maxval=6.28)
+            self.rotated_sample = tf.contrib.image.rotate(self.distorted_sample, angle)
 
-        # IDEALLY, we'd have elastic deformation here, but right now too much overhead to compute
+            # IDEALLY, we'd have elastic deformation here, but right now too much overhead to compute
 
-        # Independently, feed in warped image
-        #self.elastically_deformed_image = tf.placeholder(np.float64, shape=[None, None, 1], name="elas_deform_input")
-        self.elastically_deformed_image = self.distorted_sample
+            # Independently, feed in warped image
+            #self.elastically_deformed_image = tf.placeholder(np.float64, shape=[None, None, 1], name="elas_deform_input")
+            self.elastically_deformed_image = self.rotated_sample
 
-        # self.standardized_image = tf.image.per_image_standardization(self.elastically_deformed_image)
+            # self.standardized_image = tf.image.per_image_standardization(self.elastically_deformed_image)
 
-        distorted_image = tf.image.random_brightness(self.elastically_deformed_image, max_delta=0.15)
-        self.distorted_image = tf.image.random_contrast(distorted_image, lower=0.5, upper=1.5)
+            distorted_image = tf.image.random_brightness(self.elastically_deformed_image, max_delta=0.15)
+            self.distorted_image = tf.image.random_contrast(distorted_image, lower=0.5, upper=1.5)
 
-        #self.sess = tf.Session()
-        #self.sess.run(tf.global_variables_initializer())
+            #self.sess = tf.Session()
+            #self.sess.run(tf.global_variables_initializer())
 
     def get_validation_set(self):
         return self.validation_inputs, self.validation_labels
@@ -127,15 +129,15 @@ class EMDataset(object):
         # TODO(beisner): Move affinitization after elastic deformation, or think about it...
         #el_image, el_labels = aug.elastic_transform(separated_image, separated_labels, alpha=2000, sigma=sigma)
 
-        #with tf.device('/cpu:0'):
-        crop_padding = self.crop_padding
-        cropped_image = self.distorted_image[crop_padding // 2:-crop_padding // 2,
-                crop_padding // 2:-crop_padding // 2, :1]
-        cropped_labels = self.elastically_deformed_image[crop_padding // 2:-crop_padding // 2,
-                crop_padding // 2:-crop_padding // 2, 1:]
+        with tf.device('/cpu:0'):
+            crop_padding = self.crop_padding
+            cropped_image = self.distorted_image[crop_padding // 2:-crop_padding // 2,
+                    crop_padding // 2:-crop_padding // 2, :1]
+            cropped_labels = self.elastically_deformed_image[crop_padding // 2:-crop_padding // 2,
+                    crop_padding // 2:-crop_padding // 2, 1:]
 
-        training_example = tf.concat(3, [tf.expand_dims(cropped_image, 0), tf.expand_dims(cropped_labels, 0)])
+            training_example = tf.concat(3, [tf.expand_dims(cropped_image, 0), tf.expand_dims(cropped_labels, 0)])
 
-        enqueue_op = model.queue.enqueue(training_example)
+            enqueue_op = model.queue.enqueue(training_example)
 
         return enqueue_op

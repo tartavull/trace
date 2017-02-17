@@ -7,6 +7,8 @@ import math
 import tensorflow as tf
 import augmentation as aug
 
+from tensorflow.python.client import timeline
+
 try:
     from thirdparty.segascorus import io_utils
     from thirdparty.segascorus import utils
@@ -281,20 +283,31 @@ class Learner:
         enqueue_op = dset.generate_random_samples(model)
 
         # Create Queuerunner to handle queueing of training examples
-        qr = tf.train.QueueRunner(model.queue, [enqueue_op] * 5)
-
-        output_size = training_params.output_size
-        input_size = output_size + model.fov - 1
+        qr = tf.train.QueueRunner(model.queue, [enqueue_op] * 4)
 
         # Initialize the variables
-        sess.run(tf.global_variables_initializer(), feed_dict={'FOV:0': input_size})
+        sess.run(tf.global_variables_initializer())
+
+        '''
+        sess.run(enqueue_op)
+        sess.run(enqueue_op)
+        sess.run(optimize_step)
+        run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
+        run_metadata = tf.RunMetadata()
+        sess.run(enqueue_op, options=run_options, run_metadata=run_metadata)
+        tl = timeline.Timeline(run_metadata.step_stats)
+        ctf = tl.generate_chrome_trace_format()
+        with open('timeline.json', 'w') as f:
+            f.write(ctf)
+        print('done')
+        '''
 
         # Create a Coordinator, launch the Queuerunner threads
         coord = tf.train.Coordinator()
         enqueue_threads = qr.create_threads(sess, coord=coord, daemon=True, start=True)
 
         # Iterate through the dataset
-        for step in range(training_params.n_iter):
+        for step in range(1, training_params.n_iter):
             if coord.should_stop():
                 break
 
@@ -303,6 +316,7 @@ class Learner:
 
             for hook in hooks:
                 hook.eval(step, model, sess, summary_writer)
+
 
         #with tf.device('/cpu:0'):
         coord.request_stop()
