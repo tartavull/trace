@@ -10,6 +10,10 @@ Tests for `trace` module.
 
 import os.path
 import os
+import sys
+
+# monkey with the path
+sys.path.insert(0, os.path.abspath('./trace'))
 
 from click.testing import CliRunner
 
@@ -17,13 +21,12 @@ import trace.cli as cli
 import trace.download_data as download
 import trace.augmentation as augmentation
 import trace.learner as learner
+import trace.em_dataset as em
 
-from trace.dp_transformer import DPTransformer
 from trace.models.conv_net import *
 
 
 class TestTrace(object):
-
     @classmethod
     def setup_class(cls):
         pass
@@ -69,13 +72,28 @@ class TestTrace(object):
         """
         Train model for 10 steps and verify a model was created
         """
-        model = ConvNet(DEFAULT_PARAMS)
-        data_folder = os.path.dirname(os.path.abspath(__file__)) + '/../trace/isbi/'
-        data_provider = DPTransformer(data_folder, 'train.spec')
 
-        learner.train(model, data_provider, data_folder, n_iterations=10)
+        model_params = N4
+
+        run_name = 'test'
+
+        model = ConvNet(model_params)
+        data_folder = os.path.dirname(os.path.abspath(__file__)) + '/../trace/isbi/'
+
+        dset = em.EMDataset(data_folder=data_folder, output_mode=model_params.output_mode)
+
+        ckpt_folder = data_folder + 'results/' + model.model_name + '/run-' + run_name + '/'
+
+        classifier = learner.Learner(model, ckpt_folder)
+
+        training_params = learner.TrainingParams(
+            optimizer=tf.train.AdamOptimizer,
+            learning_rate=0.00001,
+            n_iter=10,
+            output_size=101, )
+
+        classifier.train(training_params, dset, [])
 
     @classmethod
     def teardown_class(cls):
         pass
-
