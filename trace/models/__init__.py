@@ -1,7 +1,9 @@
 from conv_net import *
+from unet import *
 
 MODEL_DICT = {
     'conv': ConvNet,
+    'unet': UNet,
 }
 
 PARAMS_DICT = {
@@ -12,4 +14,5 @@ PARAMS_DICT = {
     'bn_vd2d': BN_VD2D,
     'bn_vd2d_relu': BN_VD2D_RELU,
     'vd2d_bound': VD2D_BOUNDARIES,
+    'res_vnet': RES_VNET,
 }

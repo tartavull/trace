@@ -6,6 +6,7 @@ from __future__ import division
 import math
 import tensorflow as tf
 import augmentation as aug
+import threading
 
 from tensorflow.python.client import timeline
 
@@ -294,7 +295,7 @@ class Learner:
         sess.run(optimize_step)
         run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
         run_metadata = tf.RunMetadata()
-        sess.run(enqueue_op, options=run_options, run_metadata=run_metadata)
+        sess.run(optimize_step, options=run_options, run_metadata=run_metadata)
         tl = timeline.Timeline(run_metadata.step_stats)
         ctf = tl.generate_chrome_trace_format()
         with open('timeline.json', 'w') as f:
@@ -306,10 +307,28 @@ class Learner:
         coord = tf.train.Coordinator()
         enqueue_threads = qr.create_threads(sess, coord=coord, daemon=True, start=True)
 
+        def train_function():
+            step = 0
+            while True:
+                print(step)
+                sess.run(optimize_step)
+                step += 1
+
+        train_threads = []
+        for _ in range(8):
+            th = threading.Thread(target=train_function)
+            th.daemon = True
+            train_threads.append(th)
+        for th in train_threads:
+            th.start()
+        for th in train_threads:
+            th.join()
+
         # Iterate through the dataset
         for step in range(1, training_params.n_iter):
             if coord.should_stop():
                 break
+            break
 
             # Run the optimizer
             sess.run(optimize_step)

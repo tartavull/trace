@@ -93,8 +93,9 @@ class EMDataset(object):
             self.distorted_sample = tf.image.random_flip_up_down(distorted_sample)
 
             # Apply a random rotation
-            angle = tf.random_uniform(shape=(), minval=0, maxval=6.28)
-            self.rotated_sample = tf.contrib.image.rotate(self.distorted_sample, angle)
+            #angle = tf.random_uniform(shape=(), minval=0, maxval=6.28)
+            #self.rotated_sample = tf.contrib.image.rotate(self.distorted_sample, angle)
+            self.rotated_sample = self.distorted_sample
 
             # IDEALLY, we'd have elastic deformation here, but right now too much overhead to compute
 
