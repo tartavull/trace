@@ -69,6 +69,23 @@ N4 = ConvArchitecture(
     ]
 )
 
+N4_3D = ConvArchitecture(
+    model_name='N4_3D',
+    output_mode=em.AFFINITIES_3D_MODE,
+    layers=[
+        Conv3DLayer(filter_size=4, depth=4, n_feature_maps=48, strides=[1,1,1], activation_fn=tf.nn.relu, is_valid=True),
+        Pool3DLayer(filter_size=2, depth=2),
+        Conv3DLayer(filter_size=5, depth=5, n_feature_maps=48, strides=[1,1,1], activation_fn=tf.nn.relu, is_valid=True),
+        Pool3DLayer(filter_size=2, depth=2),
+        Conv3DLayer(filter_size=4, depth=4, n_feature_maps=48, strides=[1,1,1], activation_fn=tf.nn.relu, is_valid=True),
+        Pool3DLayer(filter_size=2, depth=2),
+        Conv3DLayer(filter_size=4, depth=4, n_feature_maps=48, strides=[1,1,1], activation_fn=tf.nn.relu, is_valid=True),
+        Pool3DLayer(filter_size=2, depth=2),
+        Conv3DLayer(filter_size=3, depth=3, n_feature_maps=200, strides=[1,1,1], activation_fn=tf.nn.relu, is_valid=True),
+        Conv3DLayer(filter_size=1, depth=1, n_feature_maps=2, strides=[1,1,1], activation_fn=tf.nn.relu, is_valid=True),
+    ]
+)
+
 N4_WIDENED = ConvArchitecture(
     model_name='N4_widened',
     output_mode=em.AFFINITIES_2D_MODE,
@@ -194,10 +211,6 @@ BN_VD2D_RELU = ConvArchitecture(
         Conv2DLayer(filter_size=3, n_feature_maps=2, is_valid=True), BNLayer(),
     ]
 )
-
-
-
-
 
 class ConvNet:
     def __init__(self, architecture, is_training=False):

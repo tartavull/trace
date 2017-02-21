@@ -81,7 +81,7 @@ def maybe_create_affinities(dataset_prefix, num_examples):
     }
 
     params = {
-        'augment': [],
+        'augment': [{'type':'warp'}, {'type':'flip'}, {'type':'grey', 'mode':'2D'}],
         'drange': [0]
     }
 
