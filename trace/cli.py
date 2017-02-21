@@ -5,27 +5,19 @@ import webbrowser
 import subprocess
 
 import h5py
-
 import click
+import utils
 
-import dataset_config
-import trace
-import models
+import tensorflow as tf
 
+import em_dataset as em
 
-def config_dict(x):
-    return {
-        'snemi3d': dataset_config.snemi3d_config(),
-        'isbi': dataset_config.isbi_config()
-    }[x]
-
-
-def model_dict(x):
-    return {
-        'n4': models.default_N4(),
-        'segnet': models.default_SegNet()
-    }[x]
-
+import download_data
+import ensemble as ens
+import learner
+from dp_transformer import DPTransformer
+from models import MODEL_DICT, PARAMS_DICT
+from ensemble import ENSEMBLE_METHOD_DICT, ENSEMBLE_PARAMS_DICT
 
 @click.group()
 def cli():
@@ -34,13 +26,13 @@ def cli():
 
 @cli.command()
 def download():
-    import dataset_config
-    dataset_config.maybe_create_all_datasets(0.9)
+    current_folder = os.path.dirname(os.path.abspath(__file__)) + '/'
+    download_data.maybe_create_all_datasets(current_folder, 0.9)
 
 
 @cli.command()
-@click.argument('split', type=click.Choice(['train', 'validation', 'test']))
-@click.argument('dataset', type=click.Choice(['snemi3d', 'isbi']))
+@click.argument('split', type=click.Choice(SPLIT))
+@click.argument('dataset', type=click.Choice(download_data.DATASET_NAMES))
 @click.option('--aff/--no-aff', default=False, help="Display only the affinities.")
 @click.option('--ip', default='172.17.0.2', help="IP address for serving")
 @click.option('--port', default=4125, help="Port for serving")
@@ -122,8 +114,8 @@ def add_affinities(folder, filename, viewer):
 
 
 @cli.command()
-@click.argument('split', type=click.Choice(['train', 'validation', 'test']))
-@click.argument('dataset', type=click.Choice(['snemi3d', 'isbi']))
+@click.argument('split', type=click.Choice(SPLIT))
+@click.argument('dataset', type=click.Choice(download_data.DATASET_NAMES))
 @click.option('--high', type=float, default=0.9)
 @click.option('--low', type=float, default=0.3)
 @click.option('--dust', type=int, default=250)
@@ -132,56 +124,175 @@ def watershed(dataset, split, high, low, dust):
     TODO Explain what each argument is, dust is currently ignored
     """
 
-    config = config_dict(dataset)
-
-    curent_dir = os.path.dirname(os.path.abspath(__file__))
+    current_dir = os.path.dirname(os.path.abspath(__file__))
     subprocess.call(["julia",
-                     curent_dir +"/thirdparty/watershed/watershed.jl",
-                     config.folder + split + "-affinities.h5",
-                     config.folder + split + "-labels.h5",
+                     current_dir +"/thirdparty/watershed/watershed.jl",
+                     current_dir + '/' + dataset + '/' + split + "-affinities.h5",
+                     current_dir + '/' + dataset + '/' + split + "-labels.h5",
                      str(high),
                      str(low)])
 
 
 @cli.command()
-@click.argument('model_type', type=click.Choice(['n4', 'segnet']))
-@click.argument('dataset', type=click.Choice(['snemi3d', 'isbi']))
-def train(model_type, dataset):
+@click.argument('model_type', type=click.Choice(MODEL_DICT.keys()))
+@click.argument('params_type', type=click.Choice(PARAMS_DICT.keys()))
+@click.argument('dataset', type=click.Choice(download_data.DATASET_NAMES))
+@click.argument('n_iter', type=int, default=10000)
+@click.argument('run_name', type=str, default='1')
+def train(model_type, params_type, dataset, n_iter, run_name):
     """
     Train an N4 models to predict affinities
     """
+    data_folder = os.path.dirname(os.path.abspath(__file__)) + '/' + dataset + '/'
 
-    trace.train(model_dict(model_type), config_dict(dataset))
+    model_constructor = MODEL_DICT[model_type]
+    params = PARAMS_DICT[params_type]
+    model = model_constructor(params, is_training=True)
+
+    training_params = learner.TrainingParams(
+        optimizer=tf.train.AdamOptimizer,
+        learning_rate=0.0001,
+        n_iter=n_iter,
+        output_size=192,
+    )
+
+    input_size = training_params.output_size + model.fov - 1
+    dset = em.EMDataset(data_folder, input_size, output_mode=params.output_mode)
+
+    ckpt_folder = data_folder + 'results/' + model.model_name + '/run-' + run_name + '/'
+
+    classifier = learner.Learner(model, ckpt_folder)
+
+    hooks = [
+        learner.LossHook(50, model),
+        learner.ModelSaverHook(1000, ckpt_folder),
+        #learner.ValidationHook(500, dset, model, data_folder, params.output_mode),
+        learner.ImageVisualizationHook(500, model),
+        #learner.HistogramHook(100, model),
+        #learner.LayerVisualizationHook(500, model),
+    ]
+
+
+    # Train the model
+    print('Training for %d iterations' % n_iter)
+    classifier.train(training_params, dset, hooks)
 
 
 @cli.command()
-@click.argument('model_type', type=click.Choice(['n4', 'segnet']))
-@click.argument('dataset', type=click.Choice(['snemi3d', 'isbi']))
-@click.argument('split', type=click.Choice(['train', 'validation', 'test']))
-def predict(model_type, dataset, split):
+@click.argument('model_type', type=click.Choice(MODEL_DICT.keys()))
+@click.argument('params_type', type=click.Choice(PARAMS_DICT.keys()))
+@click.argument('dataset', type=click.Choice(download_data.DATASET_NAMES))
+@click.argument('split', type=click.Choice(SPLIT))
+@click.argument('run_name', type=str, default='1')
+def predict(model_type, params_type, dataset, split, run_name):
     """
     Realods a model previously trained
     """
-    import trace
-    trace.predict(model_dict(model_type), config_dict(dataset), split)
+    data_folder = os.path.dirname(os.path.abspath(__file__)) + '/' + dataset + '/'
+    data_provider = DPTransformer(data_folder, 'train.spec')
+
+    # Create the model
+    model_constructor = MODEL_DICT[model_type]
+    params = PARAMS_DICT[params_type]
+    model = model_constructor(params, is_training=False)
+
+    # Inputs we will use
+    inputs, _ = data_provider.dataset_from_h5py(split)
+
+    # Define results folder
+    ckpt_folder = data_folder + 'results/' + model.model_name + '/run-' + run_name + '/'
+
+    # Create and restore the classifier
+    classifier = learner.Learner(model, ckpt_folder)
+    classifier.restore()
+
+    # Predict on the classifier
+    predictions = classifier.predict(inputs)
+
+    # Save the outputs
+    utils.generate_files_from_predictions(ckpt_folder, split, predictions)
 
 
 @cli.command()
-@click.argument('dataset', type=click.Choice(['snemi3d', 'isbi']))
-def grid(dataset):
-    # Grid search on N4, that's it right now
+@click.argument('ensemble_method', type=click.Choice(ENSEMBLE_METHOD_DICT.keys()))
+@click.argument('ensemble_params', type=click.Choice(ENSEMBLE_PARAMS_DICT.keys()))
+@click.argument('dataset', type=click.Choice(download_data.DATASET_NAMES))
+@click.argument('run_name', type=str, default='1')
+def ens_train(ensemble_method, ensemble_params, dataset, run_name):
+    data_folder = os.path.dirname(os.path.abspath(__file__)) + '/' + dataset + '/'
+    data_provider = DPTransformer(data_folder, 'train.spec')
 
-    params = {
-        'm1': [48, 64],
-        'm2': [48, 64],
-        'm3': [48, 64],
-        'm4': [48, 64],
-        'fc': [200, 300],
-        'lr': [0.001],
-        'out': [101, 120]
-    }
+    ensemble_method = ENSEMBLE_METHOD_DICT[ensemble_method]
+    p_name = ensemble_params
+    ensemble_params = ENSEMBLE_PARAMS_DICT[ensemble_params]
 
-    trace.grid_search(config_dict(dataset), params)
+    classifier = ens.EnsembleLearner(ensemble_params, p_name, ensemble_method, data_folder, run_name)
+
+    print('Training the ensemble...')
+    classifier.train(data_provider)
+
+
+@cli.command()
+@click.argument('ensemble_method', type=click.Choice(ENSEMBLE_METHOD_DICT.keys()))
+@click.argument('ensemble_params', type=click.Choice(ENSEMBLE_PARAMS_DICT.keys()))
+@click.argument('dataset', type=click.Choice(download_data.DATASET_NAMES))
+@click.argument('split', type=click.Choice(SPLIT))
+@click.argument('run_name', type=str, default='1')
+def ens_predict(ensemble_method, ensemble_params, dataset, split, run_name):
+    data_folder = os.path.dirname(os.path.abspath(__file__)) + '/' + dataset + '/'
+    data_provider = DPTransformer(data_folder, 'train.spec')
+
+    ensemble_method = ENSEMBLE_METHOD_DICT[ensemble_method]
+
+    p_name = ensemble_params
+    ensemble_params = ENSEMBLE_PARAMS_DICT[ensemble_params]
+
+    # Inputs we will use
+    inputs, _ = data_provider.dataset_from_h5py(split)
+
+    # Create the classifier
+    classifier = ens.EnsembleLearner(ensemble_params, p_name, ensemble_method, data_folder, run_name)
+
+    # Make the predictions
+    predictions = classifier.predict(inputs)
+
+    # Generate output files
+    utils.generate_files_from_predictions(classifier.results_folder, split, predictions)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# @cli.command()
+# @click.argument('dataset', type=click.Choice(['snemi3d', 'isbi', 'isbi-boundaries']))
+# def grid(dataset):
+#     # Grid search on N4, that's it right now
+#
+#     params = {
+#         'm1': [48, 64],
+#         'm2': [48, 64],
+#         'm3': [48, 64],
+#         'm4': [48, 64],
+#         'fc': [200, 300],
+#         'lr': [0.001],
+#         'out': [101, 120]
+#     }
+#
+#     trace.grid_search(config_dict(dataset), params)
 
 
 if __name__ == '__main__':

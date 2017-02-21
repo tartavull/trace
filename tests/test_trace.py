@@ -10,20 +10,23 @@ Tests for `trace` module.
 
 import os.path
 import os
+import sys
 
-import pytest
-import models
+# monkey with the path
+sys.path.insert(0, os.path.abspath('./trace'))
 
-from contextlib import contextmanager
 from click.testing import CliRunner
 
-from trace import trace
-from trace import cli
-from trace import dataset_config
-from trace import augmentation
+import trace.cli as cli
+import trace.download_data as download
+import trace.augmentation as augmentation
+import trace.learner as learner
+import trace.em_dataset as em
+
+from trace.models.conv_net import *
+
 
 class TestTrace(object):
-
     @classmethod
     def setup_class(cls):
         pass
@@ -39,40 +42,58 @@ class TestTrace(object):
         assert help_result.exit_code == 0
         assert '--help  Show this message and exit.' in help_result.output
 
-    def test_comand_line_downloads_dataset(self):
+    def test_comand_line_download_data(self):
         runner = CliRunner()
-        runner.invoke(cli.cli,['download'])
-        snemi3d_config = dataset_config.snemi3d_config()
-        isbi_config = dataset_config.isbi_config()
-        assert os.path.exists(snemi3d_config.folder + snemi3d_config.test_input_h5)
-        assert os.path.exists(isbi_config.folder + isbi_config.test_input_h5)
+        runner.invoke(cli.cli, ['download'])
+        current_folder = os.path.dirname(os.path.abspath(__file__)) + '/../trace/'
+
+        assert os.path.exists(current_folder + download.ISBI + '/' + download.TEST_INPUT + download.H5)
+        assert os.path.exists(current_folder + download.SNEMI3D + '/' + download.TEST_INPUT + download.H5)
 
     def test_watershed(self):
         """
         Create affinities from train-labels and save them as
         test-affinities.h5
-        And then run wateshed on it using the cli
+        And then run watershed on it using the cli
         """
-
-        snemi3d_config = dataset_config.snemi3d_config()
-
-        dataset_config.maybe_create_all_datasets(0.9)
-        augmentation.maybe_create_affinities(dataset_config.folder + 'train')
-        os.rename(snemi3d_config.folder + "train-affinities.h5", snemi3d_config.folder + "test-affinities.h5")
         runner = CliRunner()
-        result = runner.invoke(cli.cli,['watershed'])
+        runner.invoke(cli.cli, ['download'])
+        current_folder = os.path.dirname(os.path.abspath(__file__)) + '/../trace/' + download.SNEMI3D + '/'
+        augmentation.maybe_create_affinities(current_folder + 'train', 89)
+
+        os.rename(current_folder + download.TRAIN_AFFINITIES + download.H5,
+                  current_folder + download.TEST_AFFINITIES + download.H5)
+
+        result = runner.invoke(cli.cli, ['watershed', 'test', 'snemi3d'])
         assert result.exit_code == 0
-        assert os.path.exists(snemi3d_config.folder+'test-labels.h5')
+        assert os.path.exists(current_folder + download.TEST_LABELS + download.H5)
 
     def test_train(self):
         """
         Train model for 10 steps and verify a model was created
         """
-        model = models.default_N4()
-        config = dataset_config.snemi3d_config()
-        trace.train(model, config)
+
+        model_params = N4
+
+        run_name = 'test'
+
+        model = ConvNet(model_params)
+        data_folder = os.path.dirname(os.path.abspath(__file__)) + '/../trace/isbi/'
+
+        dset = em.EMDataset(data_folder=data_folder, output_mode=model_params.output_mode)
+
+        ckpt_folder = data_folder + 'results/' + model.model_name + '/run-' + run_name + '/'
+
+        classifier = learner.Learner(model, ckpt_folder)
+
+        training_params = learner.TrainingParams(
+            optimizer=tf.train.AdamOptimizer,
+            learning_rate=0.00001,
+            n_iter=10,
+            output_size=101, )
+
+        classifier.train(training_params, dset, [])
 
     @classmethod
     def teardown_class(cls):
         pass
-
