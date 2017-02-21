@@ -51,6 +51,7 @@ def maybe_create_affinities(dataset_prefix):
     set_path_to_config(dataset_prefix)
     spec = dataset_prefix + '.spec'
     dp = VolumeDataProvider(spec, net_spec, params)
+    print("hi")
     affinities = dp.random_sample()['label']
     with h5py.File(dataset_prefix + '-affinities.h5','w') as f:
         f.create_dataset('main', data=affinities)
@@ -71,7 +72,7 @@ def batch_iterator(config, fov, output_patch, input_patch):
     }
 
     params = {
-        'augment': [],
+        'augment': [{'type':'warp'},{'type':'flip'},{'type':'grey', 'mode':'2D'}],
         'drange': [0]
     }
 
