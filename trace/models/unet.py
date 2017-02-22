@@ -5,6 +5,10 @@ import operator
 from .common import *
 import em_dataset as em
 
+def make_variable(shape, dtype=tf.float32):
+  initial = tf.constant(val, dtype=dtype, shape=shape)
+  var = tf.Variable(initial, dtype=dtype)
+  return var
 
 class UNet:
     def __init__(self, model_name, output_mode, is_training=False):

@@ -1,7 +1,6 @@
 """
 Download and decompress SNEMI3D and ISBI
 """
-
 from __future__ import print_function
 import os
 import os.path
@@ -11,6 +10,8 @@ import h5py
 import tifffile as tif
 import dataprovider.transform as transform
 import subprocess
+from libtiff import TIFF
+from cremi.io import CremiFile
 
 TRAIN_INPUT = 'train-input'
 TRAIN_LABELS = 'train-labels'
@@ -22,15 +23,23 @@ TEST_INPUT = 'test-input'
 TEST_LABELS = 'test-labels'
 TEST_AFFINITIES = 'test-affinities'
 
+TRAIN_A = 'training_A'
+TRAIN_B = 'training_B'
+TRAIN_C = 'training_C'
+TEST_A = 'test_A'
+TEST_B = 'test_B'
+TEST_C = 'test_C'
+
 ZIP = '.zip'
 TIF = '.tif'
 H5 = '.h5'
+HDF = '.hdf'
 
 SNEMI3D = 'snemi3d'
 ISBI = 'isbi'
+CREMI = 'cremi'
 
-DATASET_NAMES = [SNEMI3D, ISBI]
-
+DATASET_NAMES = [SNEMI3D, ISBI, CREMI]
 
 def __maybe_download(base_url, remote_filename, dest_folder, dest_filename):
     full_url = base_url + remote_filename
@@ -47,10 +56,19 @@ def __maybe_create_hdf5_from_tif(folder, base_fn):
     if not os.path.exists(full_path):
         with tif.TiffFile(folder + base_fn + TIF) as file:
             arr = file.asarray()
-            with h5py.File(folder + base_fn + H5) as f:
+            with h5py.File(full_path) as f:
                 print('created ' + base_fn + H5)
                 f.create_dataset('main', data=arr)
 
+def __maybe_create_tif_from_hdf5(folder, base_fn):
+    full_path = folder + base_fn + TIF
+
+    if not os.path.exists(full_path):
+        with CremiFile(folder + base_fn + HDF, 'r') as file:
+            arr = file.read_raw().data
+            with TIFF.open(full_path) as f:
+                print('created ' + base_fn + TF)
+                f.write_image(arr)
 
 def __maybe_unzip(folder, base_fn):
     full_path = folder + base_fn + ZIP
@@ -143,10 +161,28 @@ def __maybe_create_snemi3d(dest_folder, train_frac):
     __maybe_create_hdf5_from_tif(dest_folder, VALIDATION_LABELS)
     __maybe_create_hdf5_from_tif(dest_folder, TEST_INPUT)
 
+def __maybe_create_cremi(dest_folder, train_frac):
+    base_url = 'https://cremi.org/static/data/'
+    train_A_sc = 'sample_A_20160501.hdf'
+    train_B_sc = 'sample_B_20160501.hdf'
+    train_C_sc = 'sample_C_20160501.hdf'
+    test_A_sc = 'sample_A%2B_20160601.hdf'
+    test_B_sc = 'sample_B%2B_20160601.hdf'
+    test_C_sc = 'sample_C%2B_20160601.hdf'
+
+    __maybe_download(base_url, train_A_sc, dest_folder, TRAIN_A + HDF)
+    __maybe_download(base_url, train_B_sc, dest_folder, TRAIN_B + HDF)
+    __maybe_download(base_url, train_C_sc, dest_folder, TRAIN_C + HDF)
+    __maybe_download(base_url, test_A_sc, dest_folder, TEST_A + HDF)
+    __maybe_download(base_url, test_B_sc, dest_folder, TEST_B + HDF)
+    __maybe_download(base_url, test_C_sc, dest_folder, TEST_C + HDF)
+
+    __maybe_create_tif_from_hdf5(dest_folder, TRAIN_A)
 
 def maybe_create_all_datasets(trace_folder, train_frac):
     __maybe_create_snemi3d(trace_folder + SNEMI3D + '/', train_frac)
     __maybe_create_isbi(trace_folder + ISBI + '/', train_frac)
+    __maybe_create_cremi(trace_folder + CREMI + '/', train_frac)
 
 
 if __name__ == '__main__':
