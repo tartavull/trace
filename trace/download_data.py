@@ -64,11 +64,12 @@ def __maybe_create_tif_from_hdf5(folder, base_fn):
     full_path = folder + base_fn + TIF
 
     if not os.path.exists(full_path):
-        with CremiFile(folder + base_fn + HDF, 'r') as file:
-            arr = file.read_raw().data
-            with TIFF.open(full_path) as f:
-                print('created ' + base_fn + TF)
-                f.write_image(arr)
+        print(folder + base_fn + HDF)
+        file = CremiFile(folder + base_fn + HDF, 'r')
+        arr = file.read_raw().data
+        with TIFF.open(full_path) as f:
+            print('created ' + base_fn + TF)
+            f.write_image(arr)
 
 def __maybe_unzip(folder, base_fn):
     full_path = folder + base_fn + ZIP
