@@ -32,7 +32,7 @@ TEST_C = 'test_C'
 
 ZIP = '.zip'
 TIF = '.tif'
-TIFF = '.tiff'
+TIF2 = '.tiff'
 H5 = '.h5'
 HDF = '.hdf'
 
@@ -62,14 +62,14 @@ def __maybe_create_hdf5_from_tif(folder, base_fn):
                 f.create_dataset('main', data=arr)
 
 def __maybe_create_tif_from_hdf5(folder, base_fn):
-    full_path = folder + base_fn + TIFF
+    full_path = folder + base_fn + TIF2
 
     if not os.path.exists(full_path):
         print(folder + base_fn + HDF)
         file = CremiFile(folder + base_fn + HDF, 'r')
         arr = file.read_raw().data
         with TIFF.open(full_path) as f:
-            print('created ' + base_fn + TIF)
+            print('created ' + base_fn + TIF2)
             f.write_image(arr)
 
 def __maybe_unzip(folder, base_fn):
