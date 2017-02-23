@@ -277,8 +277,8 @@ class Learner:
 
         # Create enqueue op
 
-        with tf.device('/cpu:0'):
-            enqueue_op = dset.generate_random_samples(model)
+        #with tf.device('/cpu:0'):
+        enqueue_op = dset.generate_random_samples(model)
 
         # Create Queuerunner to handle queueing of training examples
         qr = tf.train.QueueRunner(model.queue, [enqueue_op] * 5)
