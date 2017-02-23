@@ -52,7 +52,7 @@ class EMDataset(object):
                 return rearranged[:, :, :, 0:2]
 
             train_labels = aff_and_reshape_2d(train_labels)
-            self.validation_labels = aff_and_reshape_2d(validation_labels)
+            # self.validation_labels = aff_and_reshape_2d(validation_labels)
 
         elif output_mode == AFFINITIES_3D_MODE:
             # Affinitize in 3 dimensions
