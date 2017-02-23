@@ -221,9 +221,6 @@ class EMDatasetSampler(object):
         if label_output_type == BOUNDARIES:
             # Expand dimensions from [None, None, None] -> [None, None, None, 1]
             self.dim = 2
-
-            train_labels = np.expand_dims(train_labels, 3) // 255.0
-            self.validation_labels = np.expand_dims(validation_labels, 3) // 255.0
         elif label_output_type == AFFINITIES_2D:
             # Affinitize in 2 dimensions
             self.dim = 2
@@ -268,8 +265,9 @@ class EMDatasetSampler(object):
             sample = tf.random_crop(dataset_constant, size=[batch_size] + patch_size_dims + [train_stacked.shape[3]])
 
             # Perform random flips
-            flipped_sample = tf.map_fn(lambda img: tf.image.random_flip_left_right(img), sample)
-            flipped_sample = tf.map_fn(lambda img: tf.image.random_flip_up_down(img), flipped_sample)
+            #flipped_sample = tf.map_fn(lambda img: tf.image.random_flip_left_right(img), sample)
+            #flipped_sample = tf.map_fn(lambda img: tf.image.random_flip_up_down(img), flipped_sample)
+            flipped_sample = sample
 
             # Apply a random rotation
             # angle = tf.random_uniform(shape=(), minval=0, maxval=6.28)
@@ -281,12 +279,18 @@ class EMDatasetSampler(object):
             elastically_deformed_sample = rotated_sample
 
             # Separate the image from the labels
-            deformed_image = elastically_deformed_sample[:, :, :, :1]
-            deformed_labels = elastically_deformed_sample[:, :, :, 1:]
+            if self.dim == 2:
+                deformed_image = elastically_deformed_sample[:, :, :, :1]
+                deformed_labels = elastically_deformed_sample[:, :, :, 1:]
+            elif self.dim == 3:
+                deformed_image = elastically_deformed_sample[:, :, :, :, :1]
+                deformed_labels = elastically_deformed_sample[:, :, :, :, 1:]
+
 
             # Mess with the levels
-            leveled_image = tf.image.random_brightness(deformed_image, max_delta=0.15)
-            leveled_image = tf.image.random_contrast(leveled_image, lower=0.5, upper=1.5)
+            #leveled_image = tf.image.random_brightness(deformed_image, max_delta=0.15)
+            #leveled_image = tf.image.random_contrast(leveled_image, lower=0.5, upper=1.5)
+            leveled_image = deformed_image
 
             # Crop the image, for some reason that only ffjiang knows
             if self.dim == 2:
@@ -308,40 +312,6 @@ class EMDatasetSampler(object):
     def get_test_set(self):
         return self.test_inputs
 
-<<<<<<< HEAD
-    def generate_random_samples(self, model):
-        # Create op for generation and enqueueing of random samples.
-
-        # The distortion causes weird things at the boundaries, so we pad our sample and crop to get desired patch size
-
-
-        #sigma = np.random.randint(low=35, high=100)
-
-        # Apply elastic deformation
-
-        # TODO(beisner): Move affinitization after elastic deformation, or think about it...
-        #el_image, el_labels = aug.elastic_transform(separated_image, separated_labels, alpha=2000, sigma=sigma)
-
-        with tf.device('/cpu:0'):
-            crop_padding = self.crop_padding
-            z_crop_padding = self.z_crop_padding
-            if self.dim == 2:
-                cropped_image = self.distorted_image[crop_padding // 2:-(crop_padding // 2),
-                        crop_padding // 2:-(crop_padding // 2), :1]
-                cropped_labels = self.elastically_deformed_image[crop_padding // 2:-(crop_padding // 2),
-                        crop_padding // 2:-(crop_padding // 2), 1:]
-            elif self.dim == 3:
-                cropped_image = self.distorted_image[crop_padding // 2:-(crop_padding // 2),
-                        crop_padding // 2:-(crop_padding // 2), z_crop_padding // 2:-(z_crop_padding // 2), :1]
-                cropped_labels = self.elastically_deformed_image[crop_padding // 2:-(crop_padding // 2),
-                        crop_padding // 2:-(crop_padding // 2), z_crop_padding // 2:-(z_crop_padding // 2), 1:]
-
-            training_example = tf.concat(3, [tf.expand_dims(cropped_image, 0), tf.expand_dims(cropped_labels, 0)])
-
-            enqueue_op = model.queue.enqueue(training_example)
-
-        return enqueue_op
-=======
 DATASET_DICT = {
     down.CREMI_A: CREMIDataset,
     down.CREMI_B: CREMIDataset,
@@ -349,4 +319,3 @@ DATASET_DICT = {
     down.ISBI: ISBIDataset,
     down.SNEMI3D: SNEMI3DDataset,
 }
->>>>>>> tartavull/beisner
