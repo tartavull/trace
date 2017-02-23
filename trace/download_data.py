@@ -109,7 +109,7 @@ def __maybe_split(folder,
                 tif.imsave(folder + val_fn, validation_set)
 
 def __maybe_split_with_suffix(folder, train_fraction, suffix):
-    __maybe_split(dest_folder, train_frac, 
+    __maybe_split(folder, train_frac, 
                 input=TRAIN_INPUT + suffix, 
                 input_labels=TRAIN_LABELS + suffix, 
                 valid=VALIDATION_INPUT + suffix, 
@@ -190,34 +190,34 @@ def __maybe_create_cremi(dest_folder, train_frac):
     test_C_sc = 'sample_C%2B_20160601.hdf'
 
     __maybe_download(base_url, train_A_sc, dest_folder, TRAIN_INPUT + '_A' + HDF)
-    __maybe_download(base_url, train_B_sc, dest_folder, TRAIN_INPUT + '_B' + HDF)
-    __maybe_download(base_url, train_C_sc, dest_folder, TRAIN_INPUT + '_C' + HDF)
+    # __maybe_download(base_url, train_B_sc, dest_folder, TRAIN_INPUT + '_B' + HDF)
+    # __maybe_download(base_url, train_C_sc, dest_folder, TRAIN_INPUT + '_C' + HDF)
     __maybe_download(base_url, test_A_sc, dest_folder, TEST_INPUT + '_A' + HDF)
-    __maybe_download(base_url, test_B_sc, dest_folder, TEST_INPUT + '_B' + HDF)
-    __maybe_download(base_url, test_C_sc, dest_folder, TEST_INPUT + '_C' + HDF)
+    # __maybe_download(base_url, test_B_sc, dest_folder, TEST_INPUT + '_B' + HDF)
+    # __maybe_download(base_url, test_C_sc, dest_folder, TEST_INPUT + '_C' + HDF)
 
     __maybe_create_tif_from_hdf5(dest_folder, TRAIN_INPUT + '_A')
-    __maybe_create_tif_from_hdf5(dest_folder, TRAIN_INPUT + '_B')
-    __maybe_create_tif_from_hdf5(dest_folder, TRAIN_INPUT + '_C')
+    # __maybe_create_tif_from_hdf5(dest_folder, TRAIN_INPUT + '_B')
+    # __maybe_create_tif_from_hdf5(dest_folder, TRAIN_INPUT + '_C')
     __maybe_create_tif_from_hdf5(dest_folder, TEST_INPUT + '_A')
-    __maybe_create_tif_from_hdf5(dest_folder, TEST_INPUT + '_B')
-    __maybe_create_tif_from_hdf5(dest_folder, TEST_INPUT + '_C')
+    # __maybe_create_tif_from_hdf5(dest_folder, TEST_INPUT + '_B')
+    # __maybe_create_tif_from_hdf5(dest_folder, TEST_INPUT + '_C')
 
     __maybe_extract_cremi_labels(dest_folder, TRAIN_LABELS + '_A', TRAIN_INPUT + '_A')
-    __maybe_extract_cremi_labels(dest_folder, TRAIN_LABELS + '_B', TRAIN_INPUT + '_B')
-    __maybe_extract_cremi_labels(dest_folder, TRAIN_LABELS + '_C', TRAIN_INPUT + '_C')
+    # __maybe_extract_cremi_labels(dest_folder, TRAIN_LABELS + '_B', TRAIN_INPUT + '_B')
+    # __maybe_extract_cremi_labels(dest_folder, TRAIN_LABELS + '_C', TRAIN_INPUT + '_C')
 
     __maybe_split_with_suffix(dest_folder, train_frac, '_A')
-    __maybe_split_with_suffix(dest_folder, train_frac, '_B')
-    __maybe_split_with_suffix(dest_folder, train_frac, '_C')
+    # __maybe_split_with_suffix(dest_folder, train_frac, '_B')
+    # __maybe_split_with_suffix(dest_folder, train_frac, '_C')
 
     __maybe_create_hdf5_from_tif_batch(dest_folder, '_A')
-    __maybe_create_hdf5_from_tif_batch(dest_folder, '_B')
-    __maybe_create_hdf5_from_tif_batch(dest_folder, '_C')
+    # __maybe_create_hdf5_from_tif_batch(dest_folder, '_B')
+    # __maybe_create_hdf5_from_tif_batch(dest_folder, '_C')
 
 def maybe_create_all_datasets(trace_folder, train_frac):
-    __maybe_create_snemi3d(trace_folder + SNEMI3D + '/', train_frac)
-    __maybe_create_isbi(trace_folder + ISBI + '/', train_frac)
+    # __maybe_create_snemi3d(trace_folder + SNEMI3D + '/', train_frac)
+    # __maybe_create_isbi(trace_folder + ISBI + '/', train_frac)
     __maybe_create_cremi(trace_folder + CREMI + '/', train_frac)
 
 
