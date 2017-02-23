@@ -9,3 +9,5 @@ tqdm
 scikit-image
 opencv-python
 cremi==0.7
+git+https://github.com/cremi/cremi_python.git
+munkres
