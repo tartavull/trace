@@ -11,9 +11,8 @@ BOUNDARIES_MODE = 'boundaries'
 AFFINITIES_2D_MODE = 'affinities-2d'
 AFFINITIES_3D_MODE = 'affinities-3d'
 
-
 class EMDataset(object):
-    def __init__(self, data_folder, output_mode='boundaries'):
+    def __init__(self, data_folder, output_mode='boundaries', suffix=''):
        # with tf.device('/cpu:0'):
         self.data_folder = data_folder
         self.output_mode = output_mode

@@ -45,7 +45,7 @@ def visualize(dataset, split, aff, ip, port):
     """
     import neuroglancer
 
-    config = config_dict(dataset)
+    # config = config_dict(dataset)
 
     neuroglancer.set_static_content_source(url='https://neuroglancer-demo.appspot.com')
     neuroglancer.set_server_bind_address(bind_address=ip, bind_port=port)
@@ -140,12 +140,15 @@ def watershed(dataset, split, high, low, dust):
 @click.argument('model_type', type=click.Choice(MODEL_DICT.keys()))
 @click.argument('params_type', type=click.Choice(PARAMS_DICT.keys()))
 @click.argument('dataset', type=click.Choice(download_data.DATASET_NAMES))
+@click.argument('suffix', type=str, default='')
 @click.argument('n_iter', type=int, default=10000)
 @click.argument('run_name', type=str, default='1')
 def train(model_type, params_type, dataset, n_iter, run_name):
     """
     Train an N4 models to predict affinities
     """
+    dataset = dataset + suffix
+
     data_folder = os.path.dirname(os.path.abspath(__file__)) + '/' + dataset + '/'
 
     model_constructor = MODEL_DICT[model_type]
