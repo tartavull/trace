@@ -268,8 +268,9 @@ class Learner:
     def train(self, training_params, dset, hooks):
         sess = self.sess
         model = self.model
-
+        print('START')
         # We will write our summaries here
+        print(self.ckpt_folder + '/events')
         summary_writer = tf.summary.FileWriter(self.ckpt_folder + '/events', graph=sess.graph)
 
         # Definte an optimizer
