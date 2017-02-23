@@ -297,7 +297,7 @@ class Learner:
         for step in range(training_params.n_iter):
             if coord.should_stop():
                 break
-            print step
+            print(step)
             # Run the optimizer
             sess.run(optimize_step)
 
