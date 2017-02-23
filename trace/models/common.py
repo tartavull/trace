@@ -167,7 +167,8 @@ class BNLayer(Layer):
 
 
 class Architecture(object):
-    def __init__(self, model_name, output_mode):
+    def __init__(self, model_name, output_mode, architecture_type='2D'):
+        self.architecture_type = architecture_type
         self.output_mode = output_mode
         self.model_name = model_name
 

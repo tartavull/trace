@@ -1,9 +1,13 @@
+import numpy as np
+
 # LABEL MODES
 BOUNDARIES = 'boundaries'
 AFFINITIES_2D = 'affinities-2d'
 AFFINITIES_3D = 'affinities-3d'
 SEGMENTATION_2D = 'segmentation-2d'
 SEGMENTATION_3D = 'segmentation-3d'
+
+SPLIT = ['train', 'validation', 'test']
 
 
 def convert_between_label_types(input_type, output_type, original_labels):
@@ -29,9 +33,13 @@ def convert_between_label_types(input_type, output_type, original_labels):
             raise Exception('Invalid output_type')
     elif input_type == AFFINITIES_2D:
         if output_type == BOUNDARIES:
-            raise NotImplementedError('Aff2d->Boundaries not implemented')
+            # Take the average of each affinity in the x and y direction
+            return np.mean(original_labels, axis=3)
         if output_type == AFFINITIES_3D:
-            raise NotImplementedError('Aff2d->Aff3d not implemented')
+            # There are no z-direction affinities, so just make the z-affinity 0
+            sha = original_labels.shape
+            dtype = original_labels.dtype
+            return np.concatenate((original_labels, np.zeros([sha[0], sha[1], sha[2], 1], dtype=dtype)), axis=3)
         if output_type == SEGMENTATION_2D:
             raise NotImplementedError('Aff2d->Seg2d not implemented')
         if output_type == SEGMENTATION_3D:
@@ -40,9 +48,11 @@ def convert_between_label_types(input_type, output_type, original_labels):
             raise Exception('Invalid output_type')
     elif input_type == AFFINITIES_3D:
         if output_type == BOUNDARIES:
-            raise NotImplementedError('Aff3d->Boundaries not implemented')
+            # Take the average of each affinity in the x, y, and z direction
+            return np.mean(original_labels, axis=3)
         if output_type == AFFINITIES_2D:
-            raise NotImplementedError('Aff3d->Aff2d not implemented')
+            # Discard the affinities in the z direction
+            return original_labels[:, :, :, 0:2]
         if output_type == SEGMENTATION_2D:
             raise NotImplementedError('Aff3d->Seg2d not implemented')
         if output_type == SEGMENTATION_3D:

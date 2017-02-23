@@ -207,7 +207,7 @@ class CREMIDataset(Dataset):
 class EMDatasetSampler(object):
     def __init__(self, dataset, input_size, batch_size=1, label_output_type=BOUNDARIES):
         """Helper for sampling an EM dataset. The field self.training_example_op is the only field that should be
-        accessed outside this class.
+        accessed outside this class for training.
 
         :param input_size: The size of the field of view
         :param batch_size: The number of images to stack together in a batch
@@ -217,8 +217,8 @@ class EMDatasetSampler(object):
         """
 
         # Extract the inputs and labels from the dataset
-        train_inputs = dataset.train_inputs
-        train_labels = convert_between_label_types(dataset.label_type, label_output_type, dataset.train_labels)
+        self.train_inputs = dataset.train_inputs
+        self.train_labels = convert_between_label_types(dataset.label_type, label_output_type, dataset.train_labels)
 
         self.validation_inputs = dataset.validation_inputs
         self.validation_labels = convert_between_label_types(dataset.label_type, label_output_type,
@@ -227,8 +227,8 @@ class EMDatasetSampler(object):
         self.test_inputs = dataset.test_inputs
 
         # Stack the inputs and labels, so when we sample we sample corresponding labels and inputs
-        train_stacked = np.concatenate((np.expand_dims(train_inputs, axis=3), np.expand_dims(train_labels, axis=3)),
-                                       axis=3)
+        train_stacked = np.concatenate((np.expand_dims(self.train_inputs, axis=3),
+                                        np.expand_dims(self.train_labels, axis=3)), axis=3)
 
         # Define inputs to the graph
         crop_pad = input_size // 4
@@ -271,8 +271,19 @@ class EMDatasetSampler(object):
             # Re-stack the image and labels
             self.training_example_op = tf.concat_v2([cropped_image, cropped_labels], axis=3)
 
+    def get_full_training_set(self):
+        return self.train_inputs, self.train_labels
+
     def get_validation_set(self):
         return self.validation_inputs, self.validation_labels
 
     def get_test_set(self):
         return self.test_inputs
+
+DATASET_DICT = {
+    down.CREMI_A: CREMIDataset,
+    down.CREMI_B: CREMIDataset,
+    down.CREMI_C: CREMIDataset,
+    down.ISBI: ISBIDataset,
+    down.SNEMI3D: SNEMI3DDataset,
+}

@@ -12,14 +12,16 @@ import tensorflow as tf
 
 import em_dataset as em
 
+from utils import *
+
 import download_data
 import ensemble as ens
 import learner
 from dp_transformer import DPTransformer
+
+from em_dataset import DATASET_DICT
 from models import MODEL_DICT, PARAMS_DICT
 from ensemble import ENSEMBLE_METHOD_DICT, ENSEMBLE_PARAMS_DICT
-
-SPLIT = ['train', 'validation', 'test']
 
 
 @click.group()
@@ -35,7 +37,7 @@ def download():
 
 @cli.command()
 @click.argument('split', type=click.Choice(SPLIT))
-@click.argument('dataset', type=click.Choice(download_data.DATASET_NAMES))
+@click.argument('dataset', type=click.Choice(DATASET_DICT.keys()))
 @click.option('--aff/--no-aff', default=False, help="Display only the affinities.")
 @click.option('--ip', default='172.17.0.2', help="IP address for serving")
 @click.option('--port', default=4125, help="Port for serving")
@@ -118,7 +120,7 @@ def add_affinities(folder, filename, viewer):
 
 @cli.command()
 @click.argument('split', type=click.Choice(SPLIT))
-@click.argument('dataset', type=click.Choice(download_data.DATASET_NAMES))
+@click.argument('dataset', type=click.Choice(DATASET_DICT.keys()))
 @click.option('--high', type=float, default=0.9)
 @click.option('--low', type=float, default=0.3)
 @click.option('--dust', type=int, default=250)
@@ -139,28 +141,38 @@ def watershed(dataset, split, high, low, dust):
 @cli.command()
 @click.argument('model_type', type=click.Choice(MODEL_DICT.keys()))
 @click.argument('params_type', type=click.Choice(PARAMS_DICT.keys()))
-@click.argument('dataset', type=click.Choice(download_data.DATASET_NAMES))
+@click.argument('dataset', type=click.Choice(DATASET_DICT.keys()))
 @click.argument('n_iter', type=int, default=10000)
 @click.argument('run_name', type=str, default='1')
-def train(model_type, params_type, dataset, n_iter, run_name):
+def train(model_type, params_type, dataset_name, n_iter, run_name):
     """
     Train an N4 models to predict affinities
     """
-    data_folder = os.path.dirname(os.path.abspath(__file__)) + '/' + dataset + '/'
+    data_folder = os.path.dirname(os.path.abspath(__file__)) + '/' + dataset_name + '/'
 
     model_constructor = MODEL_DICT[model_type]
     params = PARAMS_DICT[params_type]
     model = model_constructor(params, is_training=True)
+
+    batch_size = 1
+    if model.architecture.architecture_type == '3D':
+        batch_size = 10
 
     training_params = learner.TrainingParams(
         optimizer=tf.train.AdamOptimizer,
         learning_rate=0.0001,
         n_iter=n_iter,
         output_size=192,
+        batch_size=batch_size
     )
 
+    # Determine the input size to be sampled from the dataset
     input_size = training_params.output_size + model.fov - 1
-    dset = em.EMDataset(data_folder, input_size, output_mode=params.output_mode)
+
+    # Construct the dataset sampler
+    dset_constructor = DATASET_DICT[dataset_name]
+    dataset = dset_constructor(data_folder)
+    dset_sampler = em.EMDatasetSampler(dataset, input_size, batch_size=batch_size, label_output_type=params.output_mode)
 
     ckpt_folder = data_folder + 'results/' + model.model_name + '/run-' + run_name + '/'
 
@@ -169,38 +181,48 @@ def train(model_type, params_type, dataset, n_iter, run_name):
     hooks = [
         learner.LossHook(50, model),
         learner.ModelSaverHook(1000, ckpt_folder),
-        #learner.ValidationHook(500, dset, model, data_folder, params.output_mode),
+        # learner.ValidationHook(500, dset, model, data_folder, params.output_mode),
         learner.ImageVisualizationHook(500, model),
-        #learner.HistogramHook(100, model),
-        #learner.LayerVisualizationHook(500, model),
+        # learner.HistogramHook(100, model),
+        # learner.LayerVisualizationHook(500, model),
     ]
-
 
     # Train the model
     print('Training for %d iterations' % n_iter)
-    classifier.train(training_params, dset, hooks)
+    classifier.train(training_params, dset_sampler, hooks)
 
 
 @cli.command()
 @click.argument('model_type', type=click.Choice(MODEL_DICT.keys()))
 @click.argument('params_type', type=click.Choice(PARAMS_DICT.keys()))
-@click.argument('dataset', type=click.Choice(download_data.DATASET_NAMES))
+@click.argument('dataset', type=click.Choice(DATASET_DICT.keys()))
 @click.argument('split', type=click.Choice(SPLIT))
 @click.argument('run_name', type=str, default='1')
-def predict(model_type, params_type, dataset, split, run_name):
+def predict(model_type, params_type, dataset_name, split, run_name):
     """
     Realods a model previously trained
     """
-    data_folder = os.path.dirname(os.path.abspath(__file__)) + '/' + dataset + '/'
-    data_provider = DPTransformer(data_folder, 'train.spec')
+    data_folder = os.path.dirname(os.path.abspath(__file__)) + '/' + dataset_name + '/'
 
     # Create the model
     model_constructor = MODEL_DICT[model_type]
     params = PARAMS_DICT[params_type]
     model = model_constructor(params, is_training=False)
 
-    # Inputs we will use
-    inputs, _ = data_provider.dataset_from_h5py(split)
+    input_size = model.fov
+
+    dset_constructor = DATASET_DICT[dataset_name]
+    dataset = dset_constructor(data_folder)
+
+    # Input size doesn't matter for us; neither does batch size
+    dset_sampler = em.EMDatasetSampler(dataset, input_size=model.fov + 1, label_output_type=params.output_mode)
+
+    if split == 'train':
+        inputs, _ = dset_sampler.get_full_training_set()
+    elif split == 'validation':
+        inputs, _ = dset_sampler.get_validation_set()
+    else:
+        inputs = dset_sampler.get_test_set()
 
     # Define results folder
     ckpt_folder = data_folder + 'results/' + model.model_name + '/run-' + run_name + '/'
@@ -212,14 +234,14 @@ def predict(model_type, params_type, dataset, split, run_name):
     # Predict on the classifier
     predictions = classifier.predict(inputs)
 
-    # Save the outputs
-    utils.generate_files_from_predictions(ckpt_folder, split, predictions)
+    # Prepare the predictions for submission for this particular dataset
+    dataset.prepare_predictions_for_submission(ckpt_folder, split, predictions, params.output_mode)
 
 
 @cli.command()
 @click.argument('ensemble_method', type=click.Choice(ENSEMBLE_METHOD_DICT.keys()))
 @click.argument('ensemble_params', type=click.Choice(ENSEMBLE_PARAMS_DICT.keys()))
-@click.argument('dataset', type=click.Choice(download_data.DATASET_NAMES))
+@click.argument('dataset', type=click.Choice(DATASET_DICT.keys()))
 @click.argument('run_name', type=str, default='1')
 def ens_train(ensemble_method, ensemble_params, dataset, run_name):
     data_folder = os.path.dirname(os.path.abspath(__file__)) + '/' + dataset + '/'
@@ -238,7 +260,7 @@ def ens_train(ensemble_method, ensemble_params, dataset, run_name):
 @cli.command()
 @click.argument('ensemble_method', type=click.Choice(ENSEMBLE_METHOD_DICT.keys()))
 @click.argument('ensemble_params', type=click.Choice(ENSEMBLE_PARAMS_DICT.keys()))
-@click.argument('dataset', type=click.Choice(download_data.DATASET_NAMES))
+@click.argument('dataset', type=click.Choice(DATASET_DICT.keys()))
 @click.argument('split', type=click.Choice(SPLIT))
 @click.argument('run_name', type=str, default='1')
 def ens_predict(ensemble_method, ensemble_params, dataset, split, run_name):

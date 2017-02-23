@@ -30,9 +30,9 @@ H5 = '.h5'
 
 SNEMI3D = 'snemi3d'
 ISBI = 'isbi'
-CREMI = 'cremi'
-
-DATASET_NAMES = [SNEMI3D, ISBI]
+CREMI_A = 'cremi/a'
+CREMI_B = 'cremi/b'
+CREMI_C = 'cremi/c'
 
 
 def __maybe_download(base_url, remote_filename, dest_folder, dest_filename):
