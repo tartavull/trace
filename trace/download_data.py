@@ -63,6 +63,12 @@ def __maybe_create_tif_from_hdf5(folder, base_fn):
         print('created ' + base_fn + TIF)
         tif.imsave(full_path, arr)
 
+def __maybe_create_hdf5_from_tif_batch(folder, suffix):
+    __maybe_create_hdf5_from_tif(dest_folder, TRAIN_INPUT + suffix)
+    __maybe_create_hdf5_from_tif(dest_folder, TRAIN_LABELS + suffix)
+    __maybe_create_hdf5_from_tif(dest_folder, VALIDATION_INPUT + suffix)
+    __maybe_create_hdf5_from_tif(dest_folder, VALIDATION_LABELS + suffix)
+    __maybe_create_hdf5_from_tif(dest_folder, TEST_INPUT + suffix)
 
 def __maybe_unzip(folder, base_fn):
     full_path = folder + base_fn + ZIP
@@ -102,6 +108,12 @@ def __maybe_split(folder,
                 tif.imsave(folder + train_fn, train_set)
                 tif.imsave(folder + val_fn, validation_set)
 
+def __maybe_split_with_suffix(folder, train_fraction, suffix):
+    __maybe_split(dest_folder, train_frac, 
+                input=TRAIN_INPUT + suffix, 
+                input_labels=TRAIN_LABELS + suffix, 
+                valid=VALIDATION_INPUT + suffix, 
+                valid_labels=VALIDATION_LABELS + suffix)
 
 def __maybe_create_isbi(dest_folder, train_frac):
     base_url = 'http://brainiac2.mit.edu/isbi_challenge/sites/default/files/'
@@ -126,6 +138,7 @@ def __maybe_create_isbi(dest_folder, train_frac):
                                      (VALIDATION_LABELS + H5, VALIDATION_AFFINITIES + H5)]:
         with h5py.File(dest_folder + labels_fn, 'r') as file:
             data = file['main'][:]
+            print data
             aff = transform.affinitize(data)
             aff[2] = 0
 
@@ -195,22 +208,13 @@ def __maybe_create_cremi(dest_folder, train_frac):
     __maybe_extract_cremi_labels(dest_folder, TRAIN_LABELS + '_B', TRAIN_INPUT + '_B')
     __maybe_extract_cremi_labels(dest_folder, TRAIN_LABELS + '_C', TRAIN_INPUT + '_C')
 
-    __maybe_split(dest_folder, train_frac, 
-                input=TRAIN_INPUT + '_A', 
-                input_labels=TRAIN_LABELS + '_A', 
-                valid=VALIDATION_INPUT + '_A', 
-                valid_labels=VALIDATION_LABELS + '_A')
-    __maybe_split(dest_folder, train_frac, 
-                input=TRAIN_INPUT + '_B', 
-                input_labels=TRAIN_LABELS + '_B', 
-                valid=VALIDATION_INPUT + '_B', 
-                valid_labels=VALIDATION_LABELS + '_B')
-    __maybe_split(dest_folder, train_frac, 
-                input=TRAIN_INPUT + '_C', 
-                input_labels=TRAIN_LABELS + '_C', 
-                valid=VALIDATION_INPUT + '_C', 
-                valid_labels=VALIDATION_LABELS + '_C')
+    __maybe_split_with_suffix(dest_folder, train_frac, '_A')
+    __maybe_split_with_suffix(dest_folder, train_frac, '_B')
+    __maybe_split_with_suffix(dest_folder, train_frac, '_C')
 
+    __maybe_create_hdf5_from_tif_batch(dest_folder, '_A')
+    __maybe_create_hdf5_from_tif_batch(dest_folder, '_B')
+    __maybe_create_hdf5_from_tif_batch(dest_folder, '_C')
 
 def maybe_create_all_datasets(trace_folder, train_frac):
     __maybe_create_snemi3d(trace_folder + SNEMI3D + '/', train_frac)

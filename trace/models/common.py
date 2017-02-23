@@ -78,7 +78,8 @@ class Layer(object):
         self.filter_size = filter_size
         self.n_feature_maps = n_feature_maps
         self.activation_fn = activation_fn
-
+        self.strides = strides 
+        
     def connect(self, prev_layer, prev_n_feature_maps, dilation_rate, is_training):
         raise NotImplementedError("Abstract Class!")
 
