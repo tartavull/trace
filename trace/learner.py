@@ -268,10 +268,9 @@ class Learner:
     def train(self, training_params, dset, hooks):
         sess = self.sess
         model = self.model
-        print('START')
+
         # We will write our summaries here
-        print(self.ckpt_folder + '/events')
-        summary_writer = tf.summary.FileWriter(self.ckpt_folder + '/events', graph=sess.graph)
+        summary_writer = tf.summary.FileWriter(self.ckpt_folder + 'events', graph=sess.graph)
 
         # Definte an optimizer
         optimize_step = training_params.optimizer(training_params.learning_rate).minimize(model.cross_entropy)
@@ -298,7 +297,7 @@ class Learner:
         for step in range(training_params.n_iter):
             if coord.should_stop():
                 break
-
+            print step
             # Run the optimizer
             sess.run(optimize_step)
 

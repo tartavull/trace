@@ -211,7 +211,7 @@ def __maybe_create_cremi(dest_folder, train_frac):
     # __maybe_split_with_suffix(dest_folder, train_frac, '_B')
     # __maybe_split_with_suffix(dest_folder, train_frac, '_C')
 
-    __maybe_create_hdf5_from_tif_batch(dest_folder, '_A')
+    # __maybe_create_hdf5_from_tif_batch(dest_folder, '_A')
     # __maybe_create_hdf5_from_tif_batch(dest_folder, '_B')
     # __maybe_create_hdf5_from_tif_batch(dest_folder, '_C')
 
