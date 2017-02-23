@@ -73,11 +73,11 @@ def __maybe_unzip(folder, base_fn):
         zip_ref.close()
 
 def __maybe_split(folder,
-                train_fraction,
-                input=TRAIN_INPUT,
-                input_labels=TRAIN_LABELS,
-                valid=VALIDATION_INPUT,
-                valid_labels=VALIDATION_LABELS):
+                  train_fraction,
+                  input=TRAIN_INPUT,
+                  input_labels=TRAIN_LABELS,
+                  valid=VALIDATION_INPUT,
+                  valid_labels=VALIDATION_LABELS):
     train_input_tif = input + TIF
     train_labels_tif = input_labels + TIF
     val_input_tif = valid + TIF
@@ -159,7 +159,7 @@ def __maybe_create_snemi3d(dest_folder, train_frac):
     __maybe_create_hdf5_from_tif(dest_folder, VALIDATION_LABELS)
     __maybe_create_hdf5_from_tif(dest_folder, TEST_INPUT)
 
-def __maybe_extract_cremi_labels(dest_folder, base_fn, source_fn):
+def __maybe_extract_cremi_labels(folder, base_fn, source_fn):
     full_path = folder + base_fn + TIF
      
     if not os.path.exists(full_path):
