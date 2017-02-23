@@ -108,7 +108,7 @@ def __maybe_split(folder,
                 tif.imsave(folder + train_fn, train_set)
                 tif.imsave(folder + val_fn, validation_set)
 
-def __maybe_split_with_suffix(folder, train_fraction, suffix):
+def __maybe_split_with_suffix(folder, train_frac, suffix):
     __maybe_split(folder, train_frac, 
                 input=TRAIN_INPUT + suffix, 
                 input_labels=TRAIN_LABELS + suffix, 
