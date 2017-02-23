@@ -152,7 +152,15 @@ def train(model_type, params_type, dataset, n_iter, run_name):
     params = PARAMS_DICT[params_type]
     model = model_constructor(params, is_training=True)
 
-    dset = em.EMDataset(data_folder=data_folder, output_mode=params.output_mode)
+    training_params = learner.TrainingParams(
+        optimizer=tf.train.AdamOptimizer,
+        learning_rate=0.0001,
+        n_iter=n_iter,
+        output_size=192,
+    )
+
+    input_size = training_params.output_size + model.fov - 1
+    dset = em.EMDataset(data_folder, input_size, output_mode=params.output_mode)
 
     ckpt_folder = data_folder + 'results/' + model.model_name + '/run-' + run_name + '/'
 
@@ -161,18 +169,12 @@ def train(model_type, params_type, dataset, n_iter, run_name):
     hooks = [
         learner.LossHook(50, model),
         learner.ModelSaverHook(1000, ckpt_folder),
-        learner.ValidationHook(500, dset, model, data_folder, params.output_mode),
+        #learner.ValidationHook(500, dset, model, data_folder, params.output_mode),
         learner.ImageVisualizationHook(500, model),
-        learner.HistogramHook(100, model),
-        learner.LayerVisualizationHook(500, model),
+        #learner.HistogramHook(100, model),
+        #learner.LayerVisualizationHook(500, model),
     ]
 
-    training_params = learner.TrainingParams(
-        optimizer=tf.train.AdamOptimizer,
-        learning_rate=0.0001,
-        n_iter=n_iter,
-        output_size=101,
-    )
 
     # Train the model
     print('Training for %d iterations' % n_iter)

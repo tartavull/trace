@@ -3,11 +3,9 @@ import em_dataset as em
 from .common import *
 
 
-class ConvArchitecture:
+class ConvArchitecture(Architecture):
     def __init__(self, model_name, output_mode, layers):
-        self.output_mode = output_mode
-        self.model_name = model_name
-        self.layers = layers
+        super(ConvArchitecture, self).__init__(model_name, output_mode)
 
         if output_mode == em.BOUNDARY_OUTPUT:
             self.n_outputs = 1
@@ -15,6 +13,8 @@ class ConvArchitecture:
             self.n_outputs = 2
         elif output_mode == em.AFFINITIES_3D_OUTPUT:
             self.n_outputs = 3
+
+        self.layers = layers
 
         n_poolings = 0
         self.receptive_field = 1
@@ -199,25 +199,9 @@ BN_VD2D_RELU = ConvArchitecture(
 
 
 
-class ConvNet:
+class ConvNet(Model):
     def __init__(self, architecture, is_training=False):
-
-        # Save the architecture
-        self.architecture = architecture
-        self.model_name = self.architecture.model_name
-        self.fov = architecture.receptive_field
-
-        # Define the inputs
-       # with tf.device('/cpu:0'):
-
-        # Create a queue
-        self.queue = tf.FIFOQueue(50, tf.float32)
-
-        # Draw example from the queue and separate
-        self.example = tf.placeholder_with_default(self.queue.dequeue(), shape=[None, None, None, architecture.n_outputs + 1])
-        self.image = self.example[:, :, :, :1]
-        # Crop the labels to the appropriate field of view
-        self.target = self.example[:, self.fov // 2:-(self.fov // 2), self.fov // 2:-(self.fov // 2), 1:]
+        super(ConvNet, self).__init__(architecture)
 
         # Standardize each input image, using map because per_image_standardization takes one image at a time
         standardized_image = tf.map_fn(lambda img: tf.image.per_image_standardization(img), self.image)
@@ -227,7 +211,7 @@ class ConvNet:
         prev_layer = standardized_image
         prev_n_feature_maps = 1
 
-        for layer_num, layer in enumerate(architecture.layers):
+        for layer_num, layer in enumerate(self.architecture.layers):
 
             # Double the dilation rate for a given layer every time we pool.
             dilation_rate = 2 ** n_poolings
