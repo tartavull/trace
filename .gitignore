@@ -68,3 +68,5 @@ trace/thirdparty/DataProvider
 .idea/
 
 /trace/.ipynb_checkpoints/
+
+/trace/Experimentation.ipynb
