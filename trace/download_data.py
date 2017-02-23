@@ -138,7 +138,6 @@ def __maybe_create_isbi(dest_folder, train_frac):
                                      (VALIDATION_LABELS + H5, VALIDATION_AFFINITIES + H5)]:
         with h5py.File(dest_folder + labels_fn, 'r') as file:
             data = file['main'][:]
-            print(data)
             aff = transform.affinitize(data)
             aff[2] = 0
 
