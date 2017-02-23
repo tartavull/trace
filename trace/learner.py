@@ -307,6 +307,7 @@ class Learner:
         coord = tf.train.Coordinator()
         enqueue_threads = qr.create_threads(sess, coord=coord, daemon=True, start=True)
 
+        '''
         def train_function():
             step = 0
             while True:
@@ -323,12 +324,12 @@ class Learner:
             th.start()
         for th in train_threads:
             th.join()
+        '''
 
         # Iterate through the dataset
-        for step in range(1, training_params.n_iter):
+        for step in range(training_params.n_iter):
             if coord.should_stop():
                 break
-            break
 
             # Run the optimizer
             sess.run(optimize_step)

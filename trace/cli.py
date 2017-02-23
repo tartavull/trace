@@ -156,11 +156,13 @@ def train(model_type, params_type, dataset, n_iter, run_name):
         optimizer=tf.train.AdamOptimizer,
         learning_rate=0.0001,
         n_iter=n_iter,
-        output_size=192,
+        output_size=101,
+        z_output_size = 51,
     )
 
     input_size = training_params.output_size + model.fov - 1
-    dset = em.EMDataset(data_folder, input_size, output_mode=params.output_mode)
+    z_input_size = training_params.output_size + model.z_fov - 1
+    dset = em.EMDataset(data_folder, input_size, z_input_size, output_mode=params.output_mode)
 
     ckpt_folder = data_folder + 'results/' + model.model_name + '/run-' + run_name + '/'
 

@@ -8,6 +8,7 @@ MODEL_DICT = {
 
 PARAMS_DICT = {
     'n4': N4,
+    'n4_3d': N4_3D,
     'n4_widened': N4_WIDENED,
     'n4_deeper': N4_DEEPER,
     'vd2d': VD2D,

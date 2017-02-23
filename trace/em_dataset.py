@@ -13,7 +13,7 @@ AFFINITIES_3D_MODE = 'affinities-3d'
 
 
 class EMDataset(object):
-    def __init__(self, data_folder, input_size, output_mode='boundaries'):
+    def __init__(self, data_folder, input_size, z_input_size, output_mode='boundaries'):
         self.data_folder = data_folder
         self.output_mode = output_mode
 
@@ -34,11 +34,14 @@ class EMDataset(object):
         # Transform the labels based on the mode we are using
         if output_mode == BOUNDARIES_MODE:
             # Expand dimensions from [None, None, None] -> [None, None, None, 1]
+            self.dim = 2
+
             train_labels = np.expand_dims(train_labels, 3) // 255.0
             self.validation_labels = np.expand_dims(validation_labels, 3) // 255.0
 
         elif output_mode == AFFINITIES_2D_MODE:
             # Affinitize in 2 dimensions
+            self.dim = 2
 
             def aff_and_reshape_2d(dset):
 
@@ -56,14 +59,15 @@ class EMDataset(object):
 
         elif output_mode == AFFINITIES_3D_MODE:
             # Affinitize in 3 dimensions
+            self.dim = 3
 
             def aff_and_reshape_3d(dset):
 
                 # Affinitize
                 aff_dset = trans.affinitize(dset)
 
-                # Reshape [3, None, None, None] -> [None, None, None, 3]
-                return np.einsum('abcd->bcda', aff_dset)
+                # Reshape [3, None, None, None, None] -> [None, None, None, None, 3]
+                return np.einsum('abcd->bcda', aff_dset)[np.newaxis, :]
 
             train_labels = aff_and_reshape_3d(train_labels)
             self.validation_labels = aff_and_reshape_3d(validation_labels)
@@ -76,16 +80,21 @@ class EMDataset(object):
 
         # Define inputs to the graph
         self.crop_padding = input_size // 4
+        self.z_crop_padding = z_input_size // 2
         self.patch_size = input_size + self.crop_padding
+        self.patch_z_size = z_input_size + self.z_crop_padding
 
         # Create dataset, and pad the dataset with mirroring
         pad = self.patch_size // 2
-        padded_dataset = np.pad(train_stacked, [[0, 0], [pad, pad], [pad, pad], [0, 0]], mode='reflect')
+        padded_dataset = np.pad(train_stacked, [[0, 0]] + [[pad, pad]] * self.dim + [[0, 0]], mode='reflect')
         dataset = tf.constant(padded_dataset, dtype=tf.float32)
 
         with tf.device('/cpu:0'):
             # Sample and squeeze the dataset, squeezing so that we can perform the distortions
-            sample = tf.random_crop(padded_dataset, size=[1, self.patch_size, self.patch_size, train_stacked.shape[3]])
+            patch_size_dims = [self.patch_size, self.patch_size]
+            if self.dim == 3:
+                patch_size_dims += [self.patch_z_size]
+            sample = tf.random_crop(padded_dataset, size=[1] + patch_size_dims + [train_stacked.shape[3]])
             squeezed_sample = tf.squeeze(sample)
 
             # Perform the first transformation
@@ -132,10 +141,17 @@ class EMDataset(object):
 
         with tf.device('/cpu:0'):
             crop_padding = self.crop_padding
-            cropped_image = self.distorted_image[crop_padding // 2:-crop_padding // 2,
-                    crop_padding // 2:-crop_padding // 2, :1]
-            cropped_labels = self.elastically_deformed_image[crop_padding // 2:-crop_padding // 2,
-                    crop_padding // 2:-crop_padding // 2, 1:]
+            z_crop_padding = self.z_crop_padding
+            if self.dim == 2:
+                cropped_image = self.distorted_image[crop_padding // 2:-(crop_padding // 2),
+                        crop_padding // 2:-(crop_padding // 2), :1]
+                cropped_labels = self.elastically_deformed_image[crop_padding // 2:-(crop_padding // 2),
+                        crop_padding // 2:-(crop_padding // 2), 1:]
+            elif selfdim == 3:
+                cropped_image = self.distorted_image[crop_padding // 2:-(crop_padding // 2),
+                        crop_padding // 2:-(crop_padding // 2), z_crop_padding // 2:-(z_crop_padding // 2), :1]
+                cropped_labels = self.elastically_deformed_image[crop_padding // 2:-(crop_padding // 2),
+                        crop_padding // 2:-(crop_padding // 2), z_crop_padding // 2:-(z_crop_padding // 2), 1:]
 
             training_example = tf.concat(3, [tf.expand_dims(cropped_image, 0), tf.expand_dims(cropped_labels, 0)])
 

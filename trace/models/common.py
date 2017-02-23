@@ -90,7 +90,8 @@ def batch_norm_layer(inputs, is_training, decay=0.9):
 
 class Layer(object):
     depth = 0
-    def __init__(self, filter_size, n_feature_maps, activation_fn=lambda x: x):
+    def __init__(self, dim, filter_size, n_feature_maps, activation_fn=lambda x: x):
+        self.dim = dim
         self.filter_size = filter_size
         self.n_feature_maps = n_feature_maps
         self.activation_fn = activation_fn
@@ -99,17 +100,19 @@ class Layer(object):
         raise NotImplementedError("Abstract Class!")
 
 
-class Conv2DLayer(Layer):
-    layer_type = 'conv2d'
-
+class ConvLayer(Layer):
     def __init__(self, *args, **kwargs):
         self.is_valid = kwargs['is_valid']
         del kwargs['is_valid']
-        super(self.__class__, self).__init__(*args, **kwargs)
+        super(ConvLayer, self).__init__(*args, **kwargs)
+        self.layer_type = 'conv' + str(self.dim) + 'd'
 
     def connect(self, prev_layer, prev_n_feature_maps, dilation_rate, is_training):
         # Create the tensorflow variables
-        filters_shape = [self.filter_size, self.filter_size, prev_n_feature_maps, self.n_feature_maps]
+        filter_dims = [self.filter_size, self.filter_size]
+        if self.dim == 3:
+            filter_dims += [self.z_filter_size]
+        filters_shape = filter_dims + [prev_n_feature_maps, self.n_feature_maps]
         self.weights = tf.Variable(tf.truncated_normal(filters_shape, stddev=0.1))
         self.biases = tf.Variable(tf.constant(0.1, shape=[self.n_feature_maps]))
 
@@ -119,8 +122,8 @@ class Conv2DLayer(Layer):
             validity = 'VALID'
         else:
             validity = 'SAME'
-        convolution = tf.nn.convolution(prev_layer, self.weights, strides=[1, 1], padding=validity,
-                                        dilation_rate=[dilation_rate, dilation_rate])
+        convolution = tf.nn.convolution(prev_layer, self.weights, strides=[1] * self.dim, padding=validity,
+                                        dilation_rate=[dilation_rate] * self.dim)
 
         # Apply the activation function
         self.activations = self.activation_fn(convolution + self.biases)
@@ -129,11 +132,31 @@ class Conv2DLayer(Layer):
         return self.activations, self.n_feature_maps
 
 
+class Conv2DLayer(ConvLayer):
+    def __init__(self, *args, **kwargs):
+        kwargs['dim'] = 2
+        super(Conv2DLayer, self).__init__(*args, **kwargs)
+
+    def connect(self, *args, **kwargs):
+        return super(Conv2DLayer, self).connect(*args, **kwargs)
+
+
+class Conv3DLayer(ConvLayer):
+    def __init__(self, *args, **kwargs):
+        kwargs['dim'] = 3
+        self.z_filter_size = kwargs['z_filter_size']
+        del kwargs['z_filter_size']
+        super(Conv3DLayer, self).__init__(*args, **kwargs)
+
+    def connect(self, *args, **kwargs):
+        return super(Conv3DLayer, self).connect(*args, **kwargs)
+
+
 class PoolLayer(Layer):
     layer_type = 'pool'
 
-    def __init__(self, filter_size):
-        super(PoolLayer, self).__init__(filter_size, 0)
+    def __init__(self, dim, filter_size):
+        super(PoolLayer, self).__init__(dim, filter_size, 0)
 
     def connect(self, prev_layer, prev_n_feature_maps, dilation_rate, is_training):
         # Max pool
@@ -147,11 +170,27 @@ class PoolLayer(Layer):
         return self.activations, prev_n_feature_maps
 
 
+class Pool2DLayer(PoolLayer):
+    def __init__(self, filter_size):
+        super(Pool2DLayer, self).__init__(2, filter_size)
+
+    def connect(self, *args, **kwargs):
+        return super(Pool2DLayer, self).connect(*args, **kwargs)
+    
+
+class Pool3DLayer(PoolLayer):
+    def __init__(self, filter_size):
+        super(Pool3DLayer, self).__init__(3, filter_size)
+
+    def connect(self, *args, **kwargs):
+        return super(Pool2DLayer, self).connect(*args, **kwargs)
+
+
 class BNLayer(Layer):
     layer_type = 'bn_conv2d'
 
     def __init__(self, activation_fn=lambda x: x):
-        super(BNLayer, self).__init__(1, 0, activation_fn)
+        super(BNLayer, self).__init__(2, 1, 0, activation_fn)
 
     def connect(self, prev_layer, prev_n_feature_maps, dilation_rate, is_training):
 
@@ -185,13 +224,25 @@ class Model(object):
         self.architecture = architecture
         self.model_name = self.architecture.model_name
         self.fov = architecture.receptive_field
+        self.z_fov = architecture.z_receptive_field
+        
+        if self.architecture.output_mode == em.AFFINITIES_3D_MODE:
+            self.dim = 3
+        else:
+            self.dim = 2
 
         # Create an input queue
         with tf.device('/cpu:0'):
             self.queue = tf.FIFOQueue(50, tf.float32)
 
         # Draw example from the queue and separate
-        self.example = tf.placeholder_with_default(self.queue.dequeue(), shape=[None, None, None, architecture.n_outputs + 1])
-        self.image = self.example[:, :, :, :1]
+        self.example = tf.placeholder_with_default(self.queue.dequeue(), shape=[None] + [None] * self.dim + [architecture.n_outputs + 1])
+        if self.dim == 2:
+            self.image = self.example[:, :, :, :1]
+        elif self.dim == 3:
+            self.image = self.example[:, :, :, :, :1]
         # Crop the labels to the appropriate field of view
-        self.target = self.example[:, self.fov // 2:-(self.fov // 2), self.fov // 2:-(self.fov // 2), 1:]
+        if self.dim == 2:
+            self.target = self.example[:, self.fov // 2:-(self.fov // 2), self.fov // 2:-(self.fov // 2), 1:]
+        elif self.dim == 3:
+            self.target = self.example[:, self.fov // 2:-(self.fov // 2), self.fov // 2:-(self.fov // 2), self.fov // 2:-(self.fov // 2), 1:]
