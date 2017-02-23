@@ -29,7 +29,8 @@ class ConvArchitecture(Architecture):
 
             # Calculate the receptive field
             self.receptive_field += dilation_rate * (layer.filter_size - 1)
-            self.z_receptive_field += dilation_rate * (layer.z_filter_size - 1)
+            if self.architecture_type == '3D':
+                self.z_receptive_field += dilation_rate * (layer.z_filter_size - 1)
 
     def print_arch(self):
 
@@ -74,18 +75,18 @@ N4 = ConvArchitecture(
 
 N4_3D = ConvArchitecture(
     model_name='n4_3D',
-    output_mode=AFFINITIES_3D_MODE,
+    output_mode=AFFINITIES_3D,
     layers=[
-        Conv3DLayer(filter_size=4, z_filter_size=1 n_feature_maps=48, activation_fn=tf.nn.relu, is_valid=True),
+        Conv3DLayer(filter_size=4, z_filter_size=1, n_feature_maps=48, activation_fn=tf.nn.relu, is_valid=True),
         Pool3DLayer(filter_size=2),
-        Conv3DLayer(filter_size=5, n_feature_maps=48, activation_fn=tf.nn.relu, is_valid=True),
+        Conv3DLayer(filter_size=5, z_filter_size=1, n_feature_maps=48, activation_fn=tf.nn.relu, is_valid=True),
         Pool3DLayer(filter_size=2),
-        Conv3DLayer(filter_size=4, n_feature_maps=48, activation_fn=tf.nn.relu, is_valid=True),
+        Conv3DLayer(filter_size=4, z_filter_size=1, n_feature_maps=48, activation_fn=tf.nn.relu, is_valid=True),
         Pool3DLayer(filter_size=2),
-        Conv3DLayer(filter_size=4, n_feature_maps=48, activation_fn=tf.nn.relu, is_valid=True),
+        Conv3DLayer(filter_size=4, z_filter_size=1, n_feature_maps=48, activation_fn=tf.nn.relu, is_valid=True),
         Pool3DLayer(filter_size=2),
-        Conv3DLayer(filter_size=3, n_feature_maps=200, activation_fn=tf.nn.relu, is_valid=True),
-        Conv3DLayer(filter_size=1, n_feature_maps=3, is_valid=True),
+        Conv3DLayer(filter_size=3, z_filter_size=1, n_feature_maps=200, activation_fn=tf.nn.relu, is_valid=True),
+        Conv3DLayer(filter_size=1, z_filter_size=1, n_feature_maps=3, is_valid=True),
     ]
 )
 
@@ -221,7 +222,8 @@ class ConvNet(Model):
         super(ConvNet, self).__init__(architecture)
 
         # Standardize each input image, using map because per_image_standardization takes one image at a time
-        standardized_image = tf.map_fn(lambda img: tf.image.per_image_standardization(img), self.image)
+        #standardized_image = tf.map_fn(lambda img: tf.image.per_image_standardization(img), self.image)
+        standardized_image = self.image
 
         n_poolings = 0
 

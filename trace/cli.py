@@ -106,7 +106,6 @@ def train(model_type, params_type, dataset_name, n_iter, run_name):
         n_iter=n_iter,
         output_size=101,
         z_output_size = 51,
-        output_size=192,
         batch_size=batch_size
     )
 
@@ -117,7 +116,7 @@ def train(model_type, params_type, dataset_name, n_iter, run_name):
     # Construct the dataset sampler
     dset_constructor = DATASET_DICT[dataset_name]
     dataset = dset_constructor(data_folder)
-    dset_sampler = em.EMDatasetSampler(dataset, input_size, batch_size=batch_size, label_output_type=params.output_mode)
+    dset_sampler = em.EMDatasetSampler(dataset, input_size, z_input_size, batch_size=batch_size, label_output_type=params.output_mode)
 
     ckpt_folder = data_folder + 'results/' + model.model_name + '/run-' + run_name + '/'
 

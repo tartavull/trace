@@ -22,9 +22,10 @@ import evaluation
 
 
 class TrainingParams:
-    def __init__(self, optimizer, learning_rate, n_iter, output_size, batch_size=1):
+    def __init__(self, optimizer, learning_rate, n_iter, output_size, z_output_size=1, batch_size=1):
         self.batch_size = batch_size
         self.output_size = output_size
+        self.z_output_size = z_output_size,
         self.optimizer = optimizer
         self.learning_rate = learning_rate
         self.n_iter = n_iter

@@ -159,8 +159,11 @@ class PoolLayer(Layer):
 
     def connect(self, prev_layer, prev_n_feature_maps, dilation_rate, is_training):
         # Max pool
-        self.activations = tf.nn.pool(prev_layer, window_shape=[self.filter_size, self.filter_size],
-                                      dilation_rate=[dilation_rate, dilation_rate], strides=[1, 1],
+        filter_shape = [self.filter_size, self.filter_size]
+        if self.dim == 3:
+            filter_shape += [1]
+        self.activations = tf.nn.pool(prev_layer, window_shape=filter_shape,
+                                      dilation_rate=[dilation_rate] * self.dim, strides=[1] * self.dim,
                                       padding='VALID',
                                       pooling_type='MAX')
 
@@ -226,7 +229,7 @@ class Model(object):
         self.fov = architecture.receptive_field
         self.z_fov = architecture.z_receptive_field
         
-        if self.architecture.output_mode == em.AFFINITIES_3D_MODE:
+        if self.architecture.output_mode == AFFINITIES_3D:
             self.dim = 3
         else:
             self.dim = 2
