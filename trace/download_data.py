@@ -92,8 +92,8 @@ def __maybe_split(folder, train_fraction):
 
 def __maybe_split_cremi(folder, train_fraction):
     if not os.path.exists(folder + 'validation.hdf'):
-        print(str.format('splitting {} into {}% training,  {}% into validation', folder + 'train-full.hdf', 100 * train_fraction,
-                         100 * (1 - train_fraction)))
+        print(str.format('splitting {} into {}% training,  {}% into validation', folder + 'train-full.hdf',
+                         100 * train_fraction, 100 * (1 - train_fraction)))
 
         # Extract the input and labels from the hdf
         o_train_file = cremiio.CremiFile(folder + 'train-full.hdf', 'r')

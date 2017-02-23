@@ -1,4 +1,4 @@
-from models import conv_net
+import models as conv_net
 import tensorflow as tf
 import learner
 import numpy as np

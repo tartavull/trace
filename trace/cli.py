@@ -262,41 +262,5 @@ def ens_predict(ensemble_method, ensemble_params, dataset, split, run_name):
     # Generate output files
     utils.generate_files_from_predictions(classifier.results_folder, split, predictions)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# @cli.command()
-# @click.argument('dataset', type=click.Choice(['snemi3d', 'isbi', 'isbi-boundaries']))
-# def grid(dataset):
-#     # Grid search on N4, that's it right now
-#
-#     params = {
-#         'm1': [48, 64],
-#         'm2': [48, 64],
-#         'm3': [48, 64],
-#         'm4': [48, 64],
-#         'fc': [200, 300],
-#         'lr': [0.001],
-#         'out': [101, 120]
-#     }
-#
-#     trace.grid_search(config_dict(dataset), params)
-
-
 if __name__ == '__main__':
     cli()
