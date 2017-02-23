@@ -147,15 +147,13 @@ def train(model_type, params_type, dataset, suffix, n_iter, run_name):
     """
     Train an N4 models to predict affinities
     """
-    dataset = dataset + suffix
-
     data_folder = os.path.dirname(os.path.abspath(__file__)) + '/' + dataset + '/'
 
     model_constructor = MODEL_DICT[model_type]
     params = PARAMS_DICT[params_type]
     model = model_constructor(params, is_training=True)
 
-    dset = em.EMDataset(data_folder=data_folder, output_mode=params.output_mode)
+    dset = em.EMDataset(data_folder=data_folder, output_mode=params.output_mode, suffix=suffix)
 
     ckpt_folder = data_folder + 'results/' + model.model_name + '/run-' + run_name + '/'
 
