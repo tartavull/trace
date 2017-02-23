@@ -302,7 +302,7 @@ class EMDatasetSampler(object):
                 cropped_image = leveled_image[:, crop_pad // 2:-crop_pad // 2, crop_pad // 2:-crop_pad // 2, z_crop_pad // 2:-z_crop_pad // 2, :]
                 cropped_labels = deformed_labels[:, crop_pad // 2:-crop_pad // 2, crop_pad // 2:-crop_pad // 2, z_crop_pad // 2:-z_crop_pad // 2, :]
 
-            cropped_image = tf.Print(cropped_image, [cropped_image])
+            # cropped_image = tf.Print(cropped_image, [cropped_image])
 
             # Re-stack the image and labels
             self.training_example_op = tf.concat([cropped_image, cropped_labels], axis=3)
