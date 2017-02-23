@@ -133,8 +133,9 @@ class Conv2DLayer(Layer):
             validity = 'VALID'
         else:
             validity = 'SAME'
-        convolution = tf.nn.convolution(prev_layer, self.weights, self.strides, 
-                                        padding=validity,
+        convolution = tf.nn.convolution(prev_layer, self.weights, 
+                                        padding=validity, 
+                                        strides=self.strides, 
                                         dilation_rate=[dilation_rate, dilation_rate])
 
         # Apply the activation function
