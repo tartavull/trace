@@ -60,7 +60,7 @@ def crop(x1, x2, batch_size):
 
 
 def crop_and_concat(x1, x2, batch_size):
-    return tf.concat(3, [crop(x1, x2, batch_size), x2])
+    return tf.concat([crop(x1, x2, batch_size), x2], 3)
 
 
 # Arguments:
@@ -178,7 +178,7 @@ class Pool2DLayer(PoolLayer):
 
     def connect(self, *args, **kwargs):
         return super(Pool2DLayer, self).connect(*args, **kwargs)
-    
+
 
 class Pool3DLayer(PoolLayer):
     def __init__(self, filter_size):
@@ -228,7 +228,7 @@ class Model(object):
         self.model_name = self.architecture.model_name
         self.fov = architecture.receptive_field
         self.z_fov = architecture.z_receptive_field
-        
+
         if self.architecture.output_mode == AFFINITIES_3D:
             self.dim = 3
         else:
@@ -239,8 +239,9 @@ class Model(object):
             self.queue = tf.FIFOQueue(50, tf.float32)
 
         # Draw example from the queue and separate
-        self.example = tf.placeholder_with_default(self.queue.dequeue(), 
+        self.example = tf.placeholder_with_default(self.queue.dequeue(),
                 shape=[None] + [None] * self.dim + [architecture.n_outputs + 1])
+
         if self.dim == 2:
             self.image = self.example[:, :, :, :1]
         elif self.dim == 3:
@@ -250,3 +251,5 @@ class Model(object):
             self.target = self.example[:, self.fov // 2:-(self.fov // 2), self.fov // 2:-(self.fov // 2), 1:]
         elif self.dim == 3:
             self.target = self.example[:, self.fov // 2:-(self.fov // 2), self.fov // 2:-(self.fov // 2), self.fov // 2:-(self.fov // 2), 1:]
+
+        #self.image = tf.Print(self.image, [tf.shape(self.image)])

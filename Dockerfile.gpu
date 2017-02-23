@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         liblcms2-dev \
         libgmp-dev \
         libwebp-dev \
+        libffi-dev \
         tcl8.6-dev \
         tk8.6-dev \
         python-tk \
