@@ -22,7 +22,8 @@ import evaluation
 
 
 class TrainingParams:
-    def __init__(self, optimizer, learning_rate, n_iter, output_size):
+    def __init__(self, optimizer, learning_rate, n_iter, output_size, batch_size=1):
+        self.batch_size = batch_size
         self.output_size = output_size
         self.optimizer = optimizer
         self.learning_rate = learning_rate
@@ -268,7 +269,7 @@ class Learner:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.sess.close()
 
-    def train(self, training_params, dset, hooks):
+    def train(self, training_params, dset_sampler, hooks):
         sess = self.sess
         model = self.model
 
@@ -278,12 +279,8 @@ class Learner:
         # Definte an optimizer
         optimize_step = training_params.optimizer(training_params.learning_rate).minimize(model.cross_entropy)
 
-        # Create enqueue op
-
-        #with tf.device('/cpu:0'):
-        enqueue_op = dset.generate_random_samples(model)
-
-        # Create Queuerunner to handle queueing of training examples
+        # Create enqueue op and a QueueRunner to handle queueing of training examples
+        enqueue_op = model.queue.enqueue(dset_sampler.training_example_op)
         qr = tf.train.QueueRunner(model.queue, [enqueue_op] * 4)
 
         # Initialize the variables

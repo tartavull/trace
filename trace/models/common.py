@@ -1,39 +1,38 @@
 import tensorflow as tf
-
-import em_dataset as em
+from utils import *
 
 
 def weight_variable(shape):
-  """
-  Xavier initialization
-  """
-  return tf.Variable(shape=shape, initializer=tf.contrib.layers.xavier_initializer(uniform=False))
+    """
+    Xavier initialization
+    """
+    return tf.Variable(shape=shape, initializer=tf.contrib.layers.xavier_initializer(uniform=False))
 
 
 def get_weight_variable(name, shape):
-  return tf.get_variable(name, shape=shape, initializer=tf.contrib.layers.xavier_initializer(uniform=False))
+    return tf.get_variable(name, shape=shape, initializer=tf.contrib.layers.xavier_initializer(uniform=False))
 
 
 def bias_variable(shape):
-  initial = tf.constant(0.0, shape=shape)
-  return tf.Variable(initial)
+    initial = tf.constant(0.0, shape=shape)
+    return tf.Variable(initial)
 
 
 def get_bias_variable(name, shape):
-  initial = tf.constant(0.0, shape=shape)
-  return tf.get_variable(name, initializer=initial)
+    initial = tf.constant(0.0, shape=shape)
+    return tf.get_variable(name, initializer=initial)
 
 
 def conv2d(x, W, dilation=1):
-  return tf.nn.convolution(x, W, strides=[1, 1], padding='VALID', dilation_rate=[dilation, dilation])
+    return tf.nn.convolution(x, W, strides=[1, 1], padding='VALID', dilation_rate=[dilation, dilation])
 
 
 def same_conv2d(x, W, dilation=1):
-  return tf.nn.convolution(x, W, strides=[1, 1], padding='SAME', dilation_rate= [dilation, dilation])
+    return tf.nn.convolution(x, W, strides=[1, 1], padding='SAME', dilation_rate=[dilation, dilation])
 
 
 def down_conv2d(x, W, dilation=1):
-  return tf.nn.convolution(x, W, strides=[2, 2], padding='SAME', dilation_rate= [dilation, dilation])
+    return tf.nn.convolution(x, W, strides=[2, 2], padding='SAME', dilation_rate=[dilation, dilation])
 
 
 def conv2d_transpose(x, W, stride):
@@ -43,8 +42,8 @@ def conv2d_transpose(x, W, stride):
 
 
 def max_pool(x, dilation=1, strides=[2, 2], window_shape=[2, 2]):
-  return tf.nn.pool(x, window_shape=window_shape, dilation_rate= [dilation, dilation],
-                       strides=strides, padding='VALID', pooling_type='MAX')
+    return tf.nn.pool(x, window_shape=window_shape, dilation_rate=[dilation, dilation],
+                      strides=strides, padding='VALID', pooling_type='MAX')
 
 
 def dropout(x, keep_prob):
@@ -161,9 +160,9 @@ class PoolLayer(Layer):
     def connect(self, prev_layer, prev_n_feature_maps, dilation_rate, is_training):
         # Max pool
         self.activations = tf.nn.pool(prev_layer, window_shape=[self.filter_size, self.filter_size],
-                                  dilation_rate=[dilation_rate, dilation_rate], strides=[1, 1],
-                                  padding='VALID',
-                                  pooling_type='MAX')
+                                      dilation_rate=[dilation_rate, dilation_rate], strides=[1, 1],
+                                      padding='VALID',
+                                      pooling_type='MAX')
 
         self.n_feature_maps = prev_n_feature_maps
 
@@ -193,7 +192,6 @@ class BNLayer(Layer):
         super(BNLayer, self).__init__(2, 1, 0, activation_fn)
 
     def connect(self, prev_layer, prev_n_feature_maps, dilation_rate, is_training):
-
         # Apply batch normalization
         bn_conv = tf.contrib.layers.batch_norm(prev_layer, center=True, scale=True, is_training=is_training, scope='bn')
 
@@ -205,16 +203,18 @@ class BNLayer(Layer):
         # Prepare the next values in the loop
         return self.activations, prev_n_feature_maps
 
+
 class Architecture(object):
-    def __init__(self, model_name, output_mode):
+    def __init__(self, model_name, output_mode, architecture_type='2D'):
+        self.architecture_type = architecture_type
         self.output_mode = output_mode
         self.model_name = model_name
 
-        if output_mode == em.BOUNDARIES_MODE:
+        if output_mode == BOUNDARIES:
             self.n_outputs = 1
-        elif output_mode == em.AFFINITIES_2D_MODE:
+        elif output_mode == AFFINITIES_2D:
             self.n_outputs = 2
-        elif output_mode == em.AFFINITIES_3D_MODE:
+        elif output_mode == AFFINITIES_3D:
             self.n_outputs = 3
 
 
@@ -236,7 +236,8 @@ class Model(object):
             self.queue = tf.FIFOQueue(50, tf.float32)
 
         # Draw example from the queue and separate
-        self.example = tf.placeholder_with_default(self.queue.dequeue(), shape=[None] + [None] * self.dim + [architecture.n_outputs + 1])
+        self.example = tf.placeholder_with_default(self.queue.dequeue(), 
+                shape=[None] + [None] * self.dim + [architecture.n_outputs + 1])
         if self.dim == 2:
             self.image = self.example[:, :, :, :1]
         elif self.dim == 3:

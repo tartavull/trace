@@ -43,6 +43,9 @@ RUN pip --no-cache-dir install \
         requests \
         tqdm
 
+# Install the cremi dataworks
+RUN pip install git+https://github.com/cremi/cremi_python.git
+
 # Get the code for trace
 ADD ./ /home/trace
 WORKDIR /home/trace

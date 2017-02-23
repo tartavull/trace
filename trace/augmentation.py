@@ -31,6 +31,12 @@ def elastic_transform(image, labels, alpha, sigma, random_state=None):
     dy = gaussian_filter((random_state.rand(*shape) * 2 - 1), sigma, mode="constant", cval=0) * alpha
 
     x, y = np.meshgrid(np.arange(shape[0]), np.arange(shape[1]), indexing='ij')
+
+
+    # Missing section augmentation
+    # Data blurring
+    # Misalignment (learning linear transformation)
+    
     indices = np.reshape(x + dx, (-1, 1)), np.reshape(y + dy, (-1, 1))
 
     # print(image.shape)

@@ -8,3 +8,4 @@ tensorflow
 tqdm
 scikit-image
 opencv-python
+munkres

@@ -43,19 +43,16 @@ RUN pip --no-cache-dir install \
         requests \
         tqdm
 
+# Install the cremi dataworks
+RUN pip install git+https://github.com/cremi/cremi_python.git
+
 # Get the code for trace
-<<<<<<< HEAD
 RUN git clone --depth=50 https://github.com/tartavull/trace.git /home/trace/
-WORKDIR /home/trace
-RUN git submodule update --init --recursive && \
-    pip install -r requirements.txt && \
-=======
 ADD ./ /home/trace
 WORKDIR /home/trace
 RUN git submodule update --init --recursive && \
     pip install -r requirements.txt && \
     pip install -r requirements_dev.txt && \
->>>>>>> 9f3182ff1522bfcac506ca3ec6dd284872b6f817
     make submodules
 
 # Make sure we can get all remote branches

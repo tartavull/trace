@@ -2,9 +2,12 @@ import tensorflow as tf
 from .common import *
 from collections import OrderedDict
 
+from utils import *
+
 FOV = 189
 OUTPT = 192
 INPT = 380
+
 
 class UNetArchitecture(Architecture):
     def __init__(self, model_name, output_mode):
@@ -14,13 +17,14 @@ class UNetArchitecture(Architecture):
 
 RES_VNET = UNetArchitecture(
     model_name='res_vnet',
-    output_mode=em.AFFINITIES_2D_MODE
+    output_mode=AFFINITIES_2D
 )
+
 
 class UNet(Model):
     '''
     Creates a new U-Net for the given parametrization.
-    
+
     :param x: input tensor variable, shape [?, ny, nx, channels]
     :param keep_prob: dropout probability tensor
     :param layers: number of layers in the unet
@@ -33,7 +37,7 @@ class UNet(Model):
         super(UNet, self).__init__(architecture)
 
         in_node = self.image
-        batch_size = tf.shape(in_node)[0] 
+        batch_size = tf.shape(in_node)[0]
         in_size = tf.shape(in_node)[1]
         size = in_size
 
@@ -54,11 +58,11 @@ class UNet(Model):
 
             # Input layer maps a 1-channel image to num_feature_maps channels
             if layer == 0:
-                w1 = get_weight_variable(layer_str + '_w1', [kernel_size, kernel_size, 1, num_feature_maps]) 
+                w1 = get_weight_variable(layer_str + '_w1', [kernel_size, kernel_size, 1, num_feature_maps])
             else:
-                w1 = get_weight_variable(layer_str + '_w1', [kernel_size, kernel_size, num_feature_maps, num_feature_maps]) 
-            w2 = get_weight_variable(layer_str + '_w2', [kernel_size, kernel_size, num_feature_maps, num_feature_maps]) 
-            w3 = get_weight_variable(layer_str + '_w3', [kernel_size, kernel_size, num_feature_maps, num_feature_maps]) 
+                w1 = get_weight_variable(layer_str + '_w1', [kernel_size, kernel_size, num_feature_maps, num_feature_maps])
+            w2 = get_weight_variable(layer_str + '_w2', [kernel_size, kernel_size, num_feature_maps, num_feature_maps])
+            w3 = get_weight_variable(layer_str + '_w3', [kernel_size, kernel_size, num_feature_maps, num_feature_maps])
             b1 = get_bias_variable(layer_str + '_b1', [num_feature_maps])
             b2 = get_bias_variable(layer_str + '_b2', [num_feature_maps])
             b3 = get_bias_variable(layer_str + '_b3', [num_feature_maps])
@@ -159,7 +163,7 @@ class UNet(Model):
 
         # Predictions
         self.prediction = tf.nn.sigmoid(last_layer)
-        self.binary_prediction = tf.round(self.prediction) 
+        self.binary_prediction = tf.round(self.prediction)
 
         # Loss
         self.cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(last_layer, self.target))
