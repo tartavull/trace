@@ -18,13 +18,13 @@ class EMDataset(object):
         self.output_mode = output_mode
 
         # Read in the datasets
-        train_inputs = tiff.imread(data_folder + down.TRAIN_INPUT + down.TIF)
-        train_labels = tiff.imread(data_folder + down.TRAIN_LABELS + down.TIF)
+        train_inputs = tiff.imread(data_folder + down.TRAIN_INPUT + suffix + down.TIF)
+        train_labels = tiff.imread(data_folder + down.TRAIN_LABELS + suffix + down.TIF)
 
-        validation_inputs = tiff.imread(data_folder + down.VALIDATION_INPUT + down.TIF)
-        validation_labels = tiff.imread(data_folder + down.VALIDATION_LABELS + down.TIF)
+        validation_inputs = tiff.imread(data_folder + down.VALIDATION_INPUT + suffix + down.TIF)
+        validation_labels = tiff.imread(data_folder + down.VALIDATION_LABELS + suffix + down.TIF)
 
-        test_inputs = tiff.imread(data_folder + down.TEST_INPUT + down.TIF)
+        test_inputs = tiff.imread(data_folder + down.TEST_INPUT + suffix + down.TIF)
 
         # All inputs have one channel
         train_inputs = np.expand_dims(train_inputs, 3)
