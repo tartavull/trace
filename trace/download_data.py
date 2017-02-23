@@ -64,11 +64,11 @@ def __maybe_create_tif_from_hdf5(folder, base_fn):
         tif.imsave(full_path, arr)
 
 def __maybe_create_hdf5_from_tif_batch(folder, suffix):
-    __maybe_create_hdf5_from_tif(dest_folder, TRAIN_INPUT + suffix)
-    __maybe_create_hdf5_from_tif(dest_folder, TRAIN_LABELS + suffix)
-    __maybe_create_hdf5_from_tif(dest_folder, VALIDATION_INPUT + suffix)
-    __maybe_create_hdf5_from_tif(dest_folder, VALIDATION_LABELS + suffix)
-    __maybe_create_hdf5_from_tif(dest_folder, TEST_INPUT + suffix)
+    __maybe_create_hdf5_from_tif(folder, TRAIN_INPUT + suffix)
+    __maybe_create_hdf5_from_tif(folder, TRAIN_LABELS + suffix)
+    __maybe_create_hdf5_from_tif(folder, VALIDATION_INPUT + suffix)
+    __maybe_create_hdf5_from_tif(folder, VALIDATION_LABELS + suffix)
+    __maybe_create_hdf5_from_tif(folder, TEST_INPUT + suffix)
 
 def __maybe_unzip(folder, base_fn):
     full_path = folder + base_fn + ZIP
