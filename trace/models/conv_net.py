@@ -70,7 +70,7 @@ N4 = ConvArchitecture(
 )
 
 N4_3D = ConvArchitecture(
-    model_name='N4_3D',
+    model_name='n4_3d',
     output_mode=em.AFFINITIES_3D_MODE,
     layers=[
         Conv3DLayer(filter_size=4, depth=4, n_feature_maps=48, strides=[1,1,1], activation_fn=tf.nn.relu, is_valid=True),
@@ -224,7 +224,7 @@ class ConvNet:
        # with tf.device('/cpu:0'):
 
         # Create a queue
-        self.queue = tf.FIFOQueue(50, tf.float32)
+        self.queue = tf.FIFOQueue(1, tf.float32)
 
         # Draw example from the queue and separate
         self.example = tf.placeholder_with_default(self.queue.dequeue(), shape=[None, None, None, architecture.n_outputs + 1])

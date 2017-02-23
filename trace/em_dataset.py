@@ -80,7 +80,7 @@ class EMDataset(object):
         self.patch_size = tf.Variable(self.patch_size_placeholder, name='patch_size') + self.crop_padding
 
         # Create dataset, and pad the dataset with mirroring
-        dataset = tf.constant(train_stacked[:train_stacked.shape[0]/2, :train_stacked.shape[1]/2, :train_stacked.shape[2]/2], dtype=tf.float32)
+        dataset = tf.constant(train_stacked, dtype=tf.float32)
 
         pad = tf.floordiv(self.patch_size, 2)
         padded_dataset = tf.pad(dataset, [[0, 0], tf.stack([pad, pad]), tf.stack([pad, pad]), [0, 0]], mode="REFLECT")
