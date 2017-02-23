@@ -140,10 +140,10 @@ def watershed(dataset, split, high, low, dust):
 @click.argument('model_type', type=click.Choice(MODEL_DICT.keys()))
 @click.argument('params_type', type=click.Choice(PARAMS_DICT.keys()))
 @click.argument('dataset', type=click.Choice(download_data.DATASET_NAMES))
+@click.argument('suffix', type=str, default='')
 @click.argument('n_iter', type=int, default=10000)
 @click.argument('run_name', type=str, default='1')
-@click.argument('suffix', type=str, default='')
-def train(model_type, params_type, dataset, n_iter, run_name, suffix):
+def train(model_type, params_type, dataset, suffix, n_iter, run_name):
     """
     Train an N4 models to predict affinities
     """
