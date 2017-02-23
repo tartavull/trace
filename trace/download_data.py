@@ -10,7 +10,6 @@ import h5py
 import tifffile as tif
 import dataprovider.transform as transform
 import subprocess
-from libtiff import TIFF
 from cremi.io import CremiFile
 
 TRAIN_INPUT = 'train-input'
@@ -22,13 +21,6 @@ VALIDATION_AFFINITIES = 'validation-affinities'
 TEST_INPUT = 'test-input'
 TEST_LABELS = 'test-labels'
 TEST_AFFINITIES = 'test-affinities'
-
-TRAIN_A = 'training_A'
-TRAIN_B = 'training_B'
-TRAIN_C = 'training_C'
-TEST_A = 'test_A'
-TEST_B = 'test_B'
-TEST_C = 'test_C'
 
 ZIP = '.zip'
 TIF = '.tif'
@@ -60,6 +52,7 @@ def __maybe_create_hdf5_from_tif(folder, base_fn):
                 print('created ' + base_fn + H5)
                 f.create_dataset('main', data=arr)
 
+# TODO: Modify so that it works for non-cremi files
 def __maybe_create_tif_from_hdf5(folder, base_fn):
     full_path = folder + base_fn + TIF
      
@@ -67,9 +60,9 @@ def __maybe_create_tif_from_hdf5(folder, base_fn):
         print(folder + base_fn + HDF)
         file = CremiFile(folder + base_fn + HDF, 'r')
         arr = file.read_raw().data
-        tiff = TIFF.open(full_path, mode='w')
         print('created ' + base_fn + TIF)
-        tiff.write_image(arr)
+        tif.imsave(full_path, arr)
+
 
 def __maybe_unzip(folder, base_fn):
     full_path = folder + base_fn + ZIP
@@ -79,12 +72,16 @@ def __maybe_unzip(folder, base_fn):
         zip_ref.extractall(folder)
         zip_ref.close()
 
-
-def __maybe_split(folder, train_fraction):
-    train_input_tif = TRAIN_INPUT + TIF
-    train_labels_tif = TRAIN_LABELS + TIF
-    val_input_tif = VALIDATION_INPUT + TIF
-    val_labels_tif = VALIDATION_LABELS + TIF
+def __maybe_split(folder,
+                train_fraction,
+                input=TRAIN_INPUT,
+                input_labels=TRAIN_LABELS,
+                valid=VALIDATION_INPUT,
+                valid_labels=VALIDATION_LABELS):
+    train_input_tif = input + TIF
+    train_labels_tif = input_labels + TIF
+    val_input_tif = valid + TIF
+    val_labels_tif = valid_labels + TIF
 
     if not os.path.exists(folder + val_input_tif):
         print(str.format('splitting {} into {}% training,  {}% into validation', train_input_tif, 100 * train_fraction,
@@ -162,6 +159,15 @@ def __maybe_create_snemi3d(dest_folder, train_frac):
     __maybe_create_hdf5_from_tif(dest_folder, VALIDATION_LABELS)
     __maybe_create_hdf5_from_tif(dest_folder, TEST_INPUT)
 
+def __maybe_extract_cremi_labels(dest_folder, base_fn, source_fn):
+    full_path = folder + base_fn + TIF
+     
+    if not os.path.exists(full_path):
+        file = CremiFile(folder + source_fn + HDF, 'r')
+        arr = file.read_neuron_ids().data
+        print('created ' + base_fn + TIF)
+        tif.imsave(full_path, arr)
+
 def __maybe_create_cremi(dest_folder, train_frac):
     base_url = 'https://cremi.org/static/data/'
     train_A_sc = 'sample_A_20160501.hdf'
@@ -171,14 +177,40 @@ def __maybe_create_cremi(dest_folder, train_frac):
     test_B_sc = 'sample_B%2B_20160601.hdf'
     test_C_sc = 'sample_C%2B_20160601.hdf'
 
-    __maybe_download(base_url, train_A_sc, dest_folder, TRAIN_A + HDF)
-    __maybe_download(base_url, train_B_sc, dest_folder, TRAIN_B + HDF)
-    __maybe_download(base_url, train_C_sc, dest_folder, TRAIN_C + HDF)
-    __maybe_download(base_url, test_A_sc, dest_folder, TEST_A + HDF)
-    __maybe_download(base_url, test_B_sc, dest_folder, TEST_B + HDF)
-    __maybe_download(base_url, test_C_sc, dest_folder, TEST_C + HDF)
+    __maybe_download(base_url, train_A_sc, dest_folder, TRAIN_INPUT + '_A' + HDF)
+    __maybe_download(base_url, train_B_sc, dest_folder, TRAIN_INPUT + '_B' + HDF)
+    __maybe_download(base_url, train_C_sc, dest_folder, TRAIN_INPUT + '_C' + HDF)
+    __maybe_download(base_url, test_A_sc, dest_folder, TEST_INPUT + '_A' + HDF)
+    __maybe_download(base_url, test_B_sc, dest_folder, TEST_INPUT + '_B' + HDF)
+    __maybe_download(base_url, test_C_sc, dest_folder, TEST_INPUT + '_C' + HDF)
 
-    __maybe_create_tif_from_hdf5(dest_folder, TRAIN_A)
+    __maybe_create_tif_from_hdf5(dest_folder, TRAIN_INPUT + '_A')
+    __maybe_create_tif_from_hdf5(dest_folder, TRAIN_INPUT + '_B')
+    __maybe_create_tif_from_hdf5(dest_folder, TRAIN_INPUT + '_C')
+    __maybe_create_tif_from_hdf5(dest_folder, TEST_INPUT + '_A')
+    __maybe_create_tif_from_hdf5(dest_folder, TEST_INPUT + '_B')
+    __maybe_create_tif_from_hdf5(dest_folder, TEST_INPUT + '_C')
+
+    __maybe_extract_cremi_labels(dest_folder, TRAIN_LABELS + '_A', TRAIN_INPUT + '_A')
+    __maybe_extract_cremi_labels(dest_folder, TRAIN_LABELS + '_B', TRAIN_INPUT + '_B')
+    __maybe_extract_cremi_labels(dest_folder, TRAIN_LABELS + '_C', TRAIN_INPUT + '_C')
+
+    __maybe_split(dest_folder, train_frac, 
+                input=TRAIN_INPUT + '_A', 
+                input_labels=TRAIN_LABELS + '_A', 
+                valid=VALIDATION_INPUT + '_A', 
+                valid_labels=VALIDATION_LABELS + '_A')
+    __maybe_split(dest_folder, train_frac, 
+                input=TRAIN_INPUT + '_B', 
+                input_labels=TRAIN_LABELS + '_B', 
+                valid=VALIDATION_INPUT + '_B', 
+                valid_labels=VALIDATION_LABELS + '_B')
+    __maybe_split(dest_folder, train_frac, 
+                input=TRAIN_INPUT + '_C', 
+                input_labels=TRAIN_LABELS + '_C', 
+                valid=VALIDATION_INPUT + '_C', 
+                valid_labels=VALIDATION_LABELS + '_C')
+
 
 def maybe_create_all_datasets(trace_folder, train_frac):
     __maybe_create_snemi3d(trace_folder + SNEMI3D + '/', train_frac)

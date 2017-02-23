@@ -9,4 +9,3 @@ tqdm
 scikit-image
 opencv-python
 cremi==0.7
-libtiff==0.4.0
