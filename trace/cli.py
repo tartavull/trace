@@ -97,8 +97,6 @@ def train(model_type, params_type, dataset_name, n_iter, run_name):
     model = model_constructor(params, is_training=True)
 
     batch_size = 1
-    if model.architecture.architecture_type == '3D':
-        batch_size = 1
 
     training_params = learner.TrainingParams(
         optimizer=tf.train.AdamOptimizer,
