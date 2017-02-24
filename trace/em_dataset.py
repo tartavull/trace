@@ -230,7 +230,7 @@ class EMDatasetSampler(object):
         self.train_inputs = np.expand_dims(self.train_inputs, axis=3)
         if label_output_type == BOUNDARIES:
             self.dim = 2
-            self.train_labels = np.expand_dims(self.train_inputs, axis=3)
+            self.train_labels = np.expand_dims(self.train_labels, axis=3)
         elif label_output_type == AFFINITIES_2D:
             self.dim = 2
             self.train_labels = np.einsum('dzyx->zyxd', self.train_labels[:2])
@@ -261,7 +261,7 @@ class EMDatasetSampler(object):
         # because a tf.constant cannot hold a dataset that is over 2GB.
         image_ph = tf.placeholder(dtype=tf.float32, shape=self.padded_dataset.shape, name='image_ph')
         #dataset_constant = tf.Variable(image_ph, trainable=False, collections=[])
-        dataset_constant = tf.constant(self.padded_dataset[:, :self.padded_dataset.shape[0] // 2, :self.padded_dataset.shape[1] // 2, :self.padded_dataset.shape[2] // 2])
+        dataset_constant = tf.constant(self.padded_dataset[:, :self.padded_dataset.shape[0] // 2, :self.padded_dataset.shape[1] // 2, :self.padded_dataset.shape[2] // 2], dtype=tf.float32)
 
         with tf.device('/cpu:0'):
             # Sample and squeeze the dataset, squeezing so that we can perform the distortions
