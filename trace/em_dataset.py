@@ -217,16 +217,6 @@ class EMDatasetSampler(object):
         on values 'boundaries', 'affinities-2d', etc.
         """
 
-        # Transform the labels based on the mode we are using
-        if label_output_type == BOUNDARIES:
-            # Expand dimensions from [None, None, None] -> [None, None, None, 1]
-            self.dim = 2
-        elif label_output_type == AFFINITIES_2D:
-            # Affinitize in 2 dimensions
-            self.dim = 2
-        elif label_output_type == AFFINITIES_3D:
-            # Affinitize in 3 dimensions
-            self.dim = 3
 
         # Extract the inputs and labels from the dataset
         self.train_inputs = dataset.train_inputs
@@ -235,12 +225,23 @@ class EMDatasetSampler(object):
         self.validation_inputs = dataset.validation_inputs
         self.validation_labels = convert_between_label_types(dataset.label_type, label_output_type,
                                                              dataset.validation_labels)
-
         self.test_inputs = dataset.test_inputs
 
+        self.train_inputs = np.expand_dims(self.train_inputs, axis=3)
+        if label_output_type == BOUNDARIES:
+            self.dim = 2
+            self.train_labels = np.expand_dims(self.train_inputs, axis=3)
+        elif label_output_type == AFFINITIES_2D:
+            self.dim = 2
+            self.train_labels = np.einsum('dzyx->zyxd', self.train_labels[:2])
+        elif label_output_type == AFFINITIES_3D:
+            self.dim = 3
+            self.train_labels = np.einsum('dzyx->zyxd', self.train_labels)
+
         # Stack the inputs and labels, so when we sample we sample corresponding labels and inputs
-        train_stacked = np.concatenate((np.expand_dims(self.train_inputs, axis=3),
-                                        np.expand_dims(self.train_labels, axis=3)), axis=3)
+        train_stacked = np.concatenate((self.train_inputs, self.train_labels), axis=3)
+        if self.dim == 3:
+            train_stacked = np.expand_dims(train_stacked, axis=0)
 
         # Define inputs to the graph
         crop_pad = input_size // 4
@@ -254,15 +255,20 @@ class EMDatasetSampler(object):
         pad_dims = [[pad, pad], [pad, pad]]
         if self.dim == 3:
             pad_dims += [[z_pad, z_pad]]
-        padded_dataset = np.pad(train_stacked, [[0, 0]] + pad_dims + [[0, 0]], mode='reflect')
-        dataset_constant = tf.constant(padded_dataset, dtype=tf.float32)
+        self.padded_dataset = np.pad(train_stacked, [[0, 0]] + pad_dims + [[0, 0]], mode='reflect')
+
+        # The dataset is loaded into a constant variable from a placeholder
+        # because a tf.constant cannot hold a dataset that is over 2GB.
+        image_ph = tf.placeholder(dtype=tf.float32, shape=self.padded_dataset.shape, name='image_ph')
+        #dataset_constant = tf.Variable(image_ph, trainable=False, collections=[])
+        dataset_constant = tf.constant(self.padded_dataset[:, :self.padded_dataset.shape[0] // 2, :self.padded_dataset.shape[1] // 2, :self.padded_dataset.shape[2] // 2])
 
         with tf.device('/cpu:0'):
             # Sample and squeeze the dataset, squeezing so that we can perform the distortions
             patch_size_dims = [patch_size, patch_size]
             if self.dim == 3:
-                patch_size_dims += [patch_z_size]
-            sample = tf.random_crop(dataset_constant, size=[batch_size] + patch_size_dims + [train_stacked.shape[3]])
+                patch_size_dims += [z_patch_size]
+            sample = tf.random_crop(dataset_constant, size=[batch_size] + patch_size_dims + [train_stacked.shape[self.dim + 1]])
 
             # Perform random flips
             #flipped_sample = tf.map_fn(lambda img: tf.image.random_flip_left_right(img), sample)
@@ -305,7 +311,7 @@ class EMDatasetSampler(object):
             # cropped_image = tf.Print(cropped_image, [cropped_image])
 
             # Re-stack the image and labels
-            self.training_example_op = tf.concat([cropped_image, cropped_labels], axis=3)
+            self.training_example_op = tf.concat([cropped_image, cropped_labels], axis=self.dim + 1)
 
     def get_full_training_set(self):
         return self.train_inputs, self.train_labels

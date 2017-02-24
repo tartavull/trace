@@ -286,7 +286,9 @@ class Learner:
         qr = tf.train.QueueRunner(model.queue, [enqueue_op] * 4)
 
         # Initialize the variables
-        sess.run(tf.global_variables_initializer())
+        sess.run(tf.global_variables_initializer(), feed_dict={'image_ph:0': dset_sampler.padded_dataset})
+        del dset_sampler.padded_dataset
+
 
         '''
         sess.run(enqueue_op)
@@ -335,7 +337,6 @@ class Learner:
 
             for hook in hooks:
                 hook.eval(step, model, sess, summary_writer)
-
 
         #with tf.device('/cpu:0'):
         coord.request_stop()

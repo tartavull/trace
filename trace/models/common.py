@@ -185,7 +185,7 @@ class Pool3DLayer(PoolLayer):
         super(Pool3DLayer, self).__init__(3, filter_size)
 
     def connect(self, *args, **kwargs):
-        return super(Pool2DLayer, self).connect(*args, **kwargs)
+        return super(Pool3DLayer, self).connect(*args, **kwargs)
 
 
 class BNLayer(Layer):
