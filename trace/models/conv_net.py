@@ -3,8 +3,8 @@ from utils import *
 
 
 class ConvArchitecture(Architecture):
-    def __init__(self, model_name, output_mode, layers):
-        super(ConvArchitecture, self).__init__(model_name, output_mode)
+    def __init__(self, model_name, output_mode, layers, architecture_type='2D'):
+        super(ConvArchitecture, self).__init__(model_name, output_mode, architecture_type)
 
         if output_mode == BOUNDARIES:
             self.n_outputs = 1
@@ -19,6 +19,9 @@ class ConvArchitecture(Architecture):
         self.receptive_field = 1
         self.z_receptive_field = 1
 
+        dilation_rate = 1
+        z_dilation_rate = 1
+
         for layer in self.layers:
 
             # Double the dilation rate for a given layer every time we pool.
@@ -30,7 +33,7 @@ class ConvArchitecture(Architecture):
             # Calculate the receptive field
             self.receptive_field += dilation_rate * (layer.filter_size - 1)
             if self.architecture_type == '3D':
-                self.z_receptive_field += dilation_rate * (layer.z_filter_size - 1)
+                self.z_receptive_field += z_dilation_rate * (layer.z_filter_size - 1)
 
     def print_arch(self):
 
@@ -77,17 +80,18 @@ N4_3D = ConvArchitecture(
     model_name='n4_3D',
     output_mode=AFFINITIES_3D,
     layers=[
-        Conv3DLayer(filter_size=4, z_filter_size=1, n_feature_maps=48, activation_fn=tf.nn.relu, is_valid=True),
+        Conv3DLayer(filter_size=4, z_filter_size=3, n_feature_maps=48, activation_fn=tf.nn.relu, is_valid=True),
         Pool3DLayer(filter_size=2),
-        Conv3DLayer(filter_size=5, z_filter_size=1, n_feature_maps=48, activation_fn=tf.nn.relu, is_valid=True),
+        Conv3DLayer(filter_size=5, z_filter_size=3, n_feature_maps=48, activation_fn=tf.nn.relu, is_valid=True),
         Pool3DLayer(filter_size=2),
-        Conv3DLayer(filter_size=4, z_filter_size=1, n_feature_maps=48, activation_fn=tf.nn.relu, is_valid=True),
+        Conv3DLayer(filter_size=4, z_filter_size=3, n_feature_maps=48, activation_fn=tf.nn.relu, is_valid=True),
         Pool3DLayer(filter_size=2),
-        Conv3DLayer(filter_size=4, z_filter_size=1, n_feature_maps=48, activation_fn=tf.nn.relu, is_valid=True),
+        Conv3DLayer(filter_size=4, z_filter_size=3, n_feature_maps=48, activation_fn=tf.nn.relu, is_valid=True),
         Pool3DLayer(filter_size=2),
-        Conv3DLayer(filter_size=3, z_filter_size=1, n_feature_maps=200, activation_fn=tf.nn.relu, is_valid=True),
+        Conv3DLayer(filter_size=3, z_filter_size=3, n_feature_maps=200, activation_fn=tf.nn.relu, is_valid=True),
         Conv3DLayer(filter_size=1, z_filter_size=1, n_feature_maps=3, is_valid=True),
-    ]
+    ],
+    architecture_type='3D'
 )
 
 N4_WIDENED = ConvArchitecture(

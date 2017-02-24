@@ -250,24 +250,26 @@ class EMDatasetSampler(object):
         z_patch_size = z_input_size + z_crop_pad
 
         # Create dataset, and pad the dataset with mirroring
-        pad = patch_size // 2
-        z_pad = z_patch_size // 2
+        pad = input_size // 2
+        z_pad = z_input_size // 2
         pad_dims = [[pad, pad], [pad, pad]]
         if self.dim == 3:
-            pad_dims += [[z_pad, z_pad]]
+            pad_dims = [[z_pad, z_pad]] + pad_dims
         self.padded_dataset = np.pad(train_stacked, [[0, 0]] + pad_dims + [[0, 0]], mode='reflect')
 
         # The dataset is loaded into a constant variable from a placeholder
         # because a tf.constant cannot hold a dataset that is over 2GB.
         image_ph = tf.placeholder(dtype=tf.float32, shape=self.padded_dataset.shape, name='image_ph')
         #dataset_constant = tf.Variable(image_ph, trainable=False, collections=[])
-        dataset_constant = tf.constant(self.padded_dataset[:, :self.padded_dataset.shape[0] // 2, :self.padded_dataset.shape[1] // 2, :self.padded_dataset.shape[2] // 2], dtype=tf.float32)
+        print(self.padded_dataset.shape)
+        print(self.padded_dataset[:, :self.padded_dataset.shape[1] // 2, :self.padded_dataset.shape[2] // 2, :self.padded_dataset.shape[3] // 2].shape)
+        dataset_constant = tf.constant(self.padded_dataset[:, :self.padded_dataset.shape[1] // 2, :self.padded_dataset.shape[2] // 2, :self.padded_dataset.shape[3] // 2], dtype=tf.float32)
 
         with tf.device('/cpu:0'):
             # Sample and squeeze the dataset, squeezing so that we can perform the distortions
             patch_size_dims = [patch_size, patch_size]
             if self.dim == 3:
-                patch_size_dims += [z_patch_size]
+                patch_size_dims = [z_patch_size] + patch_size_dims
             sample = tf.random_crop(dataset_constant, size=[batch_size] + patch_size_dims + [train_stacked.shape[self.dim + 1]])
 
             # Perform random flips
@@ -305,10 +307,10 @@ class EMDatasetSampler(object):
                 cropped_image = leveled_image[:, crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
                 cropped_labels = deformed_labels[:, crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
             elif self.dim == 3:
-                cropped_image = leveled_image[:, crop_pad // 2:-crop_pad // 2, crop_pad // 2:-crop_pad // 2, z_crop_pad // 2:-z_crop_pad // 2, :]
-                cropped_labels = deformed_labels[:, crop_pad // 2:-crop_pad // 2, crop_pad // 2:-crop_pad // 2, z_crop_pad // 2:-z_crop_pad // 2, :]
+                cropped_image = leveled_image[:, z_crop_pad // 2:-z_crop_pad // 2, crop_pad // 2:-crop_pad // 2, crop_pad // 2:-crop_pad // 2, :]
+                cropped_labels = deformed_labels[:, z_crop_pad // 2:-z_crop_pad // 2, crop_pad // 2:-crop_pad // 2, crop_pad // 2:-crop_pad // 2, :]
 
-            # cropped_image = tf.Print(cropped_image, [cropped_image])
+            cropped_image = tf.Print(cropped_image, [cropped_image])
 
             # Re-stack the image and labels
             self.training_example_op = tf.concat([cropped_image, cropped_labels], axis=self.dim + 1)

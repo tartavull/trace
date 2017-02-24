@@ -110,7 +110,7 @@ class ConvLayer(Layer):
         # Create the tensorflow variables
         filter_dims = [self.filter_size, self.filter_size]
         if self.dim == 3:
-            filter_dims += [self.z_filter_size]
+            filter_dims = filter_dims + [self.z_filter_size]
         filters_shape = filter_dims + [prev_n_feature_maps, self.n_feature_maps]
         self.weights = tf.Variable(tf.truncated_normal(filters_shape, stddev=0.1))
         self.biases = tf.Variable(tf.constant(0.1, shape=[self.n_feature_maps]))
@@ -161,9 +161,10 @@ class PoolLayer(Layer):
         # Max pool
         filter_shape = [self.filter_size, self.filter_size]
         if self.dim == 3:
-            filter_shape += [1]
+            filter_shape = [1] + filter_shape
         self.activations = tf.nn.pool(prev_layer, window_shape=filter_shape,
-                                      dilation_rate=[dilation_rate] * self.dim, strides=[1] * self.dim,
+                                      dilation_rate=[dilation_rate] * self.dim,
+                                      strides=[1] * self.dim,
                                       padding='VALID',
                                       pooling_type='MAX')
 
@@ -182,6 +183,7 @@ class Pool2DLayer(PoolLayer):
 
 class Pool3DLayer(PoolLayer):
     def __init__(self, filter_size):
+        self.z_filter_size = 1
         super(Pool3DLayer, self).__init__(3, filter_size)
 
     def connect(self, *args, **kwargs):
@@ -208,7 +210,7 @@ class BNLayer(Layer):
 
 
 class Architecture(object):
-    def __init__(self, model_name, output_mode, architecture_type='2D'):
+    def __init__(self, model_name, output_mode, architecture_type):
         self.architecture_type = architecture_type
         self.output_mode = output_mode
         self.model_name = model_name

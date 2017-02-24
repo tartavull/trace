@@ -105,13 +105,13 @@ def train(model_type, params_type, dataset_name, n_iter, run_name):
         learning_rate=0.0001,
         n_iter=n_iter,
         output_size=101,
-        z_output_size = 51,
+        z_output_size=13,
         batch_size=batch_size
     )
 
     # Determine the input size to be sampled from the dataset
     input_size = training_params.output_size + model.fov - 1
-    z_input_size = training_params.output_size + model.z_fov - 1
+    z_input_size = training_params.z_output_size + model.z_fov - 1
 
     # Construct the dataset sampler
     dset_constructor = DATASET_DICT[dataset_name]
