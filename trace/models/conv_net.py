@@ -234,6 +234,8 @@ class ConvNet(Model):
         prev_layer = standardized_image
         prev_n_feature_maps = 1
 
+        z_dilation_rate = 1
+
         for layer_num, layer in enumerate(self.architecture.layers):
 
             # Double the dilation rate for a given layer every time we pool.
@@ -242,7 +244,7 @@ class ConvNet(Model):
             with tf.variable_scope('layer' + str(layer_num)):
                 layer.depth = layer_num
                 prev_layer, prev_n_feature_maps = layer.connect(prev_layer, prev_n_feature_maps, dilation_rate,
-                                                                is_training)
+                                                                is_training, z_dilation_rate=z_dilation_rate)
 
                 if issubclass(type(layer), PoolLayer):
                     n_poolings += 1

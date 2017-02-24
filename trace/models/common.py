@@ -106,11 +106,13 @@ class ConvLayer(Layer):
         super(ConvLayer, self).__init__(*args, **kwargs)
         self.layer_type = 'conv' + str(self.dim) + 'd'
 
-    def connect(self, prev_layer, prev_n_feature_maps, dilation_rate, is_training):
+    def connect(self, prev_layer, prev_n_feature_maps, dilation_rate, is_training, z_dilation_rate=1):
         # Create the tensorflow variables
         filter_dims = [self.filter_size, self.filter_size]
+        dilation_shape = [dilation_rate, dilation_rate]
         if self.dim == 3:
-            filter_dims = filter_dims + [self.z_filter_size]
+            filter_dims = [self.z_filter_size] + filter_dims
+            dilation_shape = [z_dilation_rate] + dilation_shape
         filters_shape = filter_dims + [prev_n_feature_maps, self.n_feature_maps]
         self.weights = tf.Variable(tf.truncated_normal(filters_shape, stddev=0.1))
         self.biases = tf.Variable(tf.constant(0.1, shape=[self.n_feature_maps]))
@@ -122,10 +124,12 @@ class ConvLayer(Layer):
         else:
             validity = 'SAME'
         convolution = tf.nn.convolution(prev_layer, self.weights, strides=[1] * self.dim, padding=validity,
-                                        dilation_rate=[dilation_rate] * self.dim)
+                                        dilation_rate=dilation_shape)
 
         # Apply the activation function
         self.activations = self.activation_fn(convolution + self.biases)
+
+        #self.activations = tf.Print(self.activations, [tf.shape(self.activations)])
 
         # Prepare the next values in the loop
         return self.activations, self.n_feature_maps
@@ -157,16 +161,20 @@ class PoolLayer(Layer):
     def __init__(self, dim, filter_size):
         super(PoolLayer, self).__init__(dim, filter_size, 0)
 
-    def connect(self, prev_layer, prev_n_feature_maps, dilation_rate, is_training):
+    def connect(self, prev_layer, prev_n_feature_maps, dilation_rate, is_training, z_dilation_rate=1):
         # Max pool
         filter_shape = [self.filter_size, self.filter_size]
+        dilation_shape = [dilation_rate, dilation_rate]
         if self.dim == 3:
             filter_shape = [1] + filter_shape
+            dilation_shape = [z_dilation_rate] + dilation_shape
         self.activations = tf.nn.pool(prev_layer, window_shape=filter_shape,
-                                      dilation_rate=[dilation_rate] * self.dim,
+                                      dilation_rate=dilation_shape,
                                       strides=[1] * self.dim,
                                       padding='VALID',
                                       pooling_type='MAX')
+
+        #self.activations = tf.Print(self.activations, [tf.shape(self.activations)])
 
         self.n_feature_maps = prev_n_feature_maps
 
@@ -252,6 +260,6 @@ class Model(object):
         if self.dim == 2:
             self.target = self.example[:, self.fov // 2:-(self.fov // 2), self.fov // 2:-(self.fov // 2), 1:]
         elif self.dim == 3:
-            self.target = self.example[:, self.z_fov // 2:-self.z_fov // 2, self.fov // 2:-self.fov // 2, self.fov // 2:-self.fov // 2, 1:]
+            self.target = self.example[:, self.z_fov // 2:-(self.z_fov // 2), self.fov // 2:-(self.fov // 2), self.fov // 2:-(self.fov // 2), 1:]
             
-        #self.image = tf.Print(self.image, [tf.shape(self.image)])
+        #self.target = tf.Print(self.target, [tf.shape(self.target)])

@@ -154,13 +154,13 @@ class ImageVisualizationHook(Hook):
         self.frequency = frequency
         with tf.variable_scope('images'):
             self.training_summaries = tf.summary.merge([
-                tf.summary.image('input_image', model.image),
-                tf.summary.image('output_patch', model.image[:,
+                tf.summary.image('input_image', model.image[0]),
+                tf.summary.image('output_patch', model.image[0, :,
                                                  model.fov // 2:-model.fov // 2,
                                                  model.fov // 2:-model.fov // 2,
                                                  :]),
-                tf.summary.image('output_target', model.target[:, :, :, :1]),
-                tf.summary.image('predictions', model.prediction[:, :, :, :1]),
+                tf.summary.image('output_target', model.target[0, :, :, :, :1]),
+                tf.summary.image('predictions', model.prediction[0, :, :, :, :1]),
             ])
 
     def eval(self, step, model, session, summary_writer):
@@ -331,6 +331,7 @@ class Learner:
         for step in range(training_params.n_iter):
             if coord.should_stop():
                 break
+            print(step)
 
             # Run the optimizer
             sess.run(optimize_step)
