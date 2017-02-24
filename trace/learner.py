@@ -66,6 +66,7 @@ class ValidationHook(Hook):
         self.boundary_mode = boundary_mode
         self.frequency = frequency
         self.data_folder = data_folder
+        self.dset = dset
 
         # Get the inputs and mirror them
         self.reshaped_val_inputs, self.reshaped_val_labels = dset.get_validation_set()

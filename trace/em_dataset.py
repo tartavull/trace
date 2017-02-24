@@ -85,10 +85,10 @@ class ISBIDataset(Dataset):
         self.data_folder = data_folder
 
         self.train_inputs = tiff.imread(data_folder + down.TRAIN_INPUT + down.TIF)
-        self.train_labels = tiff.imread(data_folder + down.TRAIN_LABELS + down.TIF)
+        self.train_labels = tiff.imread(data_folder + down.TRAIN_LABELS + down.TIF) / 255.0
 
         self.validation_inputs = tiff.imread(data_folder + down.VALIDATION_INPUT + down.TIF)
-        self.validation_labels = tiff.imread(data_folder + down.VALIDATION_LABELS + down.TIF)
+        self.validation_labels = tiff.imread(data_folder + down.VALIDATION_LABELS + down.TIF) / 255.0
 
         self.test_inputs = tiff.imread(data_folder + down.TEST_INPUT + down.TIF)
 
@@ -292,13 +292,17 @@ class EMDatasetSampler(object):
             #leveled_image = tf.image.random_contrast(leveled_image, lower=0.5, upper=1.5)
             leveled_image = deformed_image
 
+            # leveled_image = tf.Print(leveled_image, [tf.shape(leveled_image)])
+
             # Crop the image, for some reason that only ffjiang knows
             if self.dim == 2:
-                cropped_image = leveled_image[crop_pad // 2:-crop_pad // 2, crop_pad // 2:-crop_pad // 2, :]
-                cropped_labels = deformed_labels[crop_pad // 2:-crop_pad // 2, crop_pad // 2:-crop_pad // 2, :]
+                cropped_image = leveled_image[:, crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
+                cropped_labels = deformed_labels[:, crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
             elif self.dim == 3:
-                cropped_image = leveled_image[crop_pad // 2:-crop_pad // 2, crop_pad // 2:-crop_pad // 2, z_crop_pad // 2:-z_crop_pad // 2, :]
-                cropped_labels = deformed_labels[crop_pad // 2:-crop_pad // 2, crop_pad // 2:-crop_pad // 2, z_crop_pad // 2:-z_crop_pad // 2, :]
+                cropped_image = leveled_image[:, crop_pad // 2:-crop_pad // 2, crop_pad // 2:-crop_pad // 2, z_crop_pad // 2:-z_crop_pad // 2, :]
+                cropped_labels = deformed_labels[:, crop_pad // 2:-crop_pad // 2, crop_pad // 2:-crop_pad // 2, z_crop_pad // 2:-z_crop_pad // 2, :]
+
+            # cropped_image = tf.Print(cropped_image, [cropped_image])
 
             # Re-stack the image and labels
             self.training_example_op = tf.concat([cropped_image, cropped_labels], axis=3)
