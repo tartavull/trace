@@ -252,6 +252,6 @@ class Model(object):
         if self.dim == 2:
             self.target = self.example[:, self.fov // 2:-(self.fov // 2), self.fov // 2:-(self.fov // 2), 1:]
         elif self.dim == 3:
-            self.target = self.example[:, self.fov // 2:-(self.fov // 2), self.fov // 2:-(self.fov // 2), self.fov // 2:-(self.fov // 2), 1:]
+            self.target = self.example[:, self.z_fov // 2:-self.z_fov // 2, self.fov // 2:-self.fov // 2, self.fov // 2:-self.fov // 2, 1:]
 
         #self.image = tf.Print(self.image, [tf.shape(self.image)])

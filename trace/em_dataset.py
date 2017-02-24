@@ -302,7 +302,8 @@ class EMDatasetSampler(object):
 
             # leveled_image = tf.Print(leveled_image, [tf.shape(leveled_image)])
 
-            # Crop the image, for some reason that only ffjiang knows
+            # Crop the image, to remove the padding that was added to allow safe
+            # augmentation.
             if self.dim == 2:
                 cropped_image = leveled_image[:, crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
                 cropped_labels = deformed_labels[:, crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
@@ -311,6 +312,8 @@ class EMDatasetSampler(object):
                 cropped_labels = deformed_labels[:, z_crop_pad // 2:-z_crop_pad // 2, crop_pad // 2:-crop_pad // 2, crop_pad // 2:-crop_pad // 2, :]
 
             cropped_image = tf.Print(cropped_image, [cropped_image])
+            print(cropped_image.get_shape())
+            print(cropped_labels.get_shape())
 
             # Re-stack the image and labels
             self.training_example_op = tf.concat([cropped_image, cropped_labels], axis=self.dim + 1)
