@@ -42,12 +42,7 @@ def visualize(dataset_name, split, aff, ip, port, remote):
     Opens a tab in your webbrowser showing the chosen dataset
     """
     import neuroglancer
-
-<<<<<<< HEAD
-    # config = config_dict(dataset)
-=======
     data_folder = os.path.dirname(os.path.abspath(__file__)) + '/' + dataset_name + '/'
->>>>>>> cf094a5aa64bd5743d0e65aedcbc04c0f20f5b49
 
     neuroglancer.set_static_content_source(url='https://neuroglancer-demo.appspot.com')
     neuroglancer.set_server_bind_address(bind_address=ip, bind_port=port)
