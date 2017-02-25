@@ -6,6 +6,9 @@ from __future__ import division
 import math
 import tensorflow as tf
 import augmentation as aug
+import threading
+
+from tensorflow.python.client import timeline
 
 try:
     from thirdparty.segascorus import io_utils
@@ -19,8 +22,10 @@ import evaluation
 
 
 class TrainingParams:
-    def __init__(self, optimizer, learning_rate, n_iter, output_size):
+    def __init__(self, optimizer, learning_rate, n_iter, output_size, z_output_size=1, batch_size=1):
+        self.batch_size = batch_size
         self.output_size = output_size
+        self.z_output_size = z_output_size
         self.optimizer = optimizer
         self.learning_rate = learning_rate
         self.n_iter = n_iter
@@ -61,6 +66,7 @@ class ValidationHook(Hook):
         self.boundary_mode = boundary_mode
         self.frequency = frequency
         self.data_folder = data_folder
+        self.dset = dset
 
         # Get the inputs and mirror them
         self.reshaped_val_inputs, self.reshaped_val_labels = dset.get_validation_set()
@@ -148,13 +154,13 @@ class ImageVisualizationHook(Hook):
         self.frequency = frequency
         with tf.variable_scope('images'):
             self.training_summaries = tf.summary.merge([
-                tf.summary.image('input_image', model.image),
-                tf.summary.image('output_patch', model.image[:,
+                tf.summary.image('input_image', model.image[0]),
+                tf.summary.image('output_patch', model.image[0, :,
                                                  model.fov // 2:-model.fov // 2,
                                                  model.fov // 2:-model.fov // 2,
                                                  :]),
-                tf.summary.image('output_target', model.target[:, :, :, :1]),
-                tf.summary.image('predictions', model.prediction[:, :, :, :1]),
+                tf.summary.image('output_target', model.target[0, :, :, :, :1]),
+                tf.summary.image('predictions', model.prediction[0, :, :, :, :1]),
             ])
 
     def eval(self, step, model, session, summary_writer):
@@ -265,7 +271,7 @@ class Learner:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.sess.close()
 
-    def train(self, training_params, dset, hooks):
+    def train(self, training_params, dset_sampler, hooks):
         sess = self.sess
         model = self.model
 
@@ -275,29 +281,58 @@ class Learner:
         # Definte an optimizer
         optimize_step = training_params.optimizer(training_params.learning_rate).minimize(model.cross_entropy)
 
-        # Create enqueue op
-
-        #with tf.device('/cpu:0'):
-        enqueue_op = dset.generate_random_samples(model)
-
-        # Create Queuerunner to handle queueing of training examples
-        qr = tf.train.QueueRunner(model.queue, [enqueue_op] * 5)
-
-        output_size = training_params.output_size
-        input_size = output_size + model.fov - 1
+        # Create enqueue op and a QueueRunner to handle queueing of training examples
+        enqueue_op = model.queue.enqueue(dset_sampler.training_example_op)
+        qr = tf.train.QueueRunner(model.queue, [enqueue_op] * 4)
 
         # Initialize the variables
-        sess.run(tf.global_variables_initializer(), feed_dict={'FOV:0': input_size})
+        sess.run(tf.global_variables_initializer())#, feed_dict={'image_ph:0': dset_sampler.padded_dataset})
+        #del dset_sampler.padded_dataset
+
+
+        '''
+        sess.run(enqueue_op)
+        sess.run(enqueue_op)
+        sess.run(optimize_step)
+        run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
+        run_metadata = tf.RunMetadata()
+        sess.run(optimize_step, options=run_options, run_metadata=run_metadata)
+        tl = timeline.Timeline(run_metadata.step_stats)
+        ctf = tl.generate_chrome_trace_format()
+        with open('timeline.json', 'w') as f:
+            f.write(ctf)
+        print('done')
+        '''
 
         # Create a Coordinator, launch the Queuerunner threads
         coord = tf.train.Coordinator()
         enqueue_threads = qr.create_threads(sess, coord=coord, daemon=True, start=True)
+
+        '''
+        def train_function():
+            step = 0
+            while True:
+                print(step)
+                sess.run(optimize_step)
+                step += 1
+
+        train_threads = []
+        for _ in range(8):
+            th = threading.Thread(target=train_function)
+            th.daemon = True
+            train_threads.append(th)
+        for th in train_threads:
+            th.start()
+        for th in train_threads:
+            th.join()
+        '''
 
         # Iterate through the dataset
         for step in range(training_params.n_iter):
             if coord.should_stop():
                 break
             print(step)
+
             # Run the optimizer
             sess.run(optimize_step)
 

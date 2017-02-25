@@ -1,34 +1,39 @@
-import em_dataset as em
-
 from .common import *
+from utils import *
 
 
-class ConvArchitecture:
-    def __init__(self, model_name, output_mode, layers):
-        self.output_mode = output_mode
-        self.model_name = model_name
-        self.layers = layers
+class ConvArchitecture(Architecture):
+    def __init__(self, model_name, output_mode, layers, architecture_type='2D'):
+        super(ConvArchitecture, self).__init__(model_name, output_mode, architecture_type)
 
-        if output_mode == em.BOUNDARIES_MODE:
+        if output_mode == BOUNDARIES:
             self.n_outputs = 1
-        elif output_mode == em.AFFINITIES_2D_MODE:
+        elif output_mode == AFFINITIES_2D:
             self.n_outputs = 2
-        elif output_mode == em.AFFINITIES_3D_MODE:
+        elif output_mode == AFFINITIES_3D:
             self.n_outputs = 3
+
+        self.layers = layers
 
         n_poolings = 0
         self.receptive_field = 1
+        self.z_receptive_field = 1
+
+        dilation_rate = 1
+        z_dilation_rate = 1
 
         for layer in self.layers:
 
             # Double the dilation rate for a given layer every time we pool.
             dilation_rate = 2 ** n_poolings
 
-            if type(layer) is PoolLayer:
+            if issubclass(type(layer), PoolLayer):
                 n_poolings += 1
 
             # Calculate the receptive field
-            self.receptive_field = (layer.filter_size * self.receptive_field) - (self.receptive_field - dilation_rate) * (layer.filter_size - 1)
+            self.receptive_field += dilation_rate * (layer.filter_size - 1)
+            if self.architecture_type == '3D':
+                self.z_receptive_field += z_dilation_rate * (layer.z_filter_size - 1)
 
     def print_arch(self):
 
@@ -47,57 +52,60 @@ class ConvArchitecture:
                 n_poolings += 1
 
             # Calculate the receptive field
-            receptive_field = (layer.filter_size * receptive_field) - (receptive_field - dilation_rate) * (layer.filter_size - 1)
+            receptive_field = (layer.filter_size * receptive_field) - (receptive_field - dilation_rate) * \
+                                                                      (layer.filter_size - 1)
 
             layer_num += 1
-            print("Layer %d,\ttype: %s,\tfilter: [%d, %d],\tFOV: %d" % (layer_num, layer.layer_type, layer.filter_size, layer.filter_size, receptive_field))
+            print("Layer %d,\ttype: %s,\tfilter: [%d, %d],\tFOV: %d" % (layer_num, layer.layer_type, layer.filter_size,
+                                                                        layer.filter_size, receptive_field))
 
 N4 = ConvArchitecture(
     model_name='n4',
-    output_mode=em.AFFINITIES_2D_MODE,
+    output_mode=AFFINITIES_2D,
     layers=[
         Conv2DLayer(filter_size=4, n_feature_maps=48, activation_fn=tf.nn.relu, is_valid=True),
-        PoolLayer(filter_size=2),
+        Pool2DLayer(filter_size=2),
         Conv2DLayer(filter_size=5, n_feature_maps=48, activation_fn=tf.nn.relu, is_valid=True),
-        PoolLayer(filter_size=2),
+        Pool2DLayer(filter_size=2),
         Conv2DLayer(filter_size=4, n_feature_maps=48, activation_fn=tf.nn.relu, is_valid=True),
-        PoolLayer(filter_size=2),
+        Pool2DLayer(filter_size=2),
         Conv2DLayer(filter_size=4, n_feature_maps=48, activation_fn=tf.nn.relu, is_valid=True),
-        PoolLayer(filter_size=2),
+        Pool2DLayer(filter_size=2),
         Conv2DLayer(filter_size=3, n_feature_maps=200, activation_fn=tf.nn.relu, is_valid=True),
         Conv2DLayer(filter_size=1, n_feature_maps=2, is_valid=True),
     ]
 )
 
 N4_3D = ConvArchitecture(
-    model_name='n4_3d',
-    output_mode=em.AFFINITIES_3D_MODE,
+    model_name='n4_3D',
+    output_mode=AFFINITIES_3D,
     layers=[
-        Conv3DLayer(filter_size=4, depth=4, n_feature_maps=48, strides=[1,1,1], activation_fn=tf.nn.relu, is_valid=True),
-        Pool3DLayer(filter_size=2, depth=2),
-        Conv3DLayer(filter_size=5, depth=5, n_feature_maps=48, strides=[1,1,1], activation_fn=tf.nn.relu, is_valid=True),
-        Pool3DLayer(filter_size=2, depth=2),
-        Conv3DLayer(filter_size=4, depth=4, n_feature_maps=48, strides=[1,1,1], activation_fn=tf.nn.relu, is_valid=True),
-        Pool3DLayer(filter_size=2, depth=2),
-        Conv3DLayer(filter_size=4, depth=4, n_feature_maps=48, strides=[1,1,1], activation_fn=tf.nn.relu, is_valid=True),
-        Pool3DLayer(filter_size=2, depth=2),
-        Conv3DLayer(filter_size=3, depth=3, n_feature_maps=200, strides=[1,1,1], activation_fn=tf.nn.relu, is_valid=True),
-        Conv3DLayer(filter_size=1, depth=1, n_feature_maps=2, strides=[1,1,1], activation_fn=tf.nn.relu, is_valid=True),
-    ]
+        Conv3DLayer(filter_size=4, z_filter_size=3, n_feature_maps=48, activation_fn=tf.nn.relu, is_valid=True),
+        Pool3DLayer(filter_size=2),
+        Conv3DLayer(filter_size=5, z_filter_size=3, n_feature_maps=48, activation_fn=tf.nn.relu, is_valid=True),
+        Pool3DLayer(filter_size=2),
+        Conv3DLayer(filter_size=4, z_filter_size=3, n_feature_maps=48, activation_fn=tf.nn.relu, is_valid=True),
+        Pool3DLayer(filter_size=2),
+        Conv3DLayer(filter_size=4, z_filter_size=3, n_feature_maps=48, activation_fn=tf.nn.relu, is_valid=True),
+        Pool3DLayer(filter_size=2),
+        Conv3DLayer(filter_size=3, z_filter_size=3, n_feature_maps=200, activation_fn=tf.nn.relu, is_valid=True),
+        Conv3DLayer(filter_size=1, z_filter_size=1, n_feature_maps=3, is_valid=True),
+    ],
+    architecture_type='3D'
 )
 
 N4_WIDENED = ConvArchitecture(
     model_name='N4_widened',
-    output_mode=em.AFFINITIES_2D_MODE,
+    output_mode=AFFINITIES_2D,
     layers=[
         Conv2DLayer(filter_size=4, n_feature_maps=48, activation_fn=tf.nn.relu, is_valid=True),
-        PoolLayer(filter_size=2),
+        Pool2DLayer(filter_size=2),
         Conv2DLayer(filter_size=5, n_feature_maps=68, activation_fn=tf.nn.relu, is_valid=True),
-        PoolLayer(filter_size=2),
+        Pool2DLayer(filter_size=2),
         Conv2DLayer(filter_size=4, n_feature_maps=100, activation_fn=tf.nn.relu, is_valid=True),
-        PoolLayer(filter_size=2),
+        Pool2DLayer(filter_size=2),
         Conv2DLayer(filter_size=4, n_feature_maps=128, activation_fn=tf.nn.relu, is_valid=True),
-        PoolLayer(filter_size=2),
+        Pool2DLayer(filter_size=2),
         Conv2DLayer(filter_size=3, n_feature_maps=200, activation_fn=tf.nn.relu, is_valid=True),
         Conv2DLayer(filter_size=1, n_feature_maps=2, is_valid=True),
     ]
@@ -105,19 +113,19 @@ N4_WIDENED = ConvArchitecture(
 
 N4_DEEPER = ConvArchitecture(
     model_name='N4_deeper',
-    output_mode=em.AFFINITIES_2D_MODE,
+    output_mode=AFFINITIES_2D,
     layers=[
         Conv2DLayer(filter_size=4, n_feature_maps=48, activation_fn=tf.nn.relu, is_valid=True),
-        PoolLayer(filter_size=2),
+        Pool2DLayer(filter_size=2),
         Conv2DLayer(filter_size=5, n_feature_maps=68, activation_fn=tf.nn.relu, is_valid=True),
-        PoolLayer(filter_size=2),
+        Pool2DLayer(filter_size=2),
         Conv2DLayer(filter_size=4, n_feature_maps=100, activation_fn=tf.nn.relu, is_valid=True),
-        PoolLayer(filter_size=2),
+        Pool2DLayer(filter_size=2),
         Conv2DLayer(filter_size=3, n_feature_maps=200, activation_fn=tf.nn.relu, is_valid=True),
         Conv2DLayer(filter_size=4, n_feature_maps=250, activation_fn=tf.nn.relu, is_valid=True),
-        PoolLayer(filter_size=2),
+        Pool2DLayer(filter_size=2),
         Conv2DLayer(filter_size=4, n_feature_maps=300, activation_fn=tf.nn.relu, is_valid=True),
-        PoolLayer(filter_size=2),
+        Pool2DLayer(filter_size=2),
         Conv2DLayer(filter_size=3, n_feature_maps=400, activation_fn=tf.nn.relu, is_valid=True),
         Conv2DLayer(filter_size=1, n_feature_maps=2, is_valid=True),
     ]
@@ -126,21 +134,21 @@ N4_DEEPER = ConvArchitecture(
 
 VD2D = ConvArchitecture(
     model_name='VD2D',
-    output_mode=em.AFFINITIES_2D_MODE,
+    output_mode=AFFINITIES_2D,
     layers=[
         Conv2DLayer(filter_size=3, n_feature_maps=24, activation_fn=tf.nn.relu, is_valid=True),
         Conv2DLayer(filter_size=3, n_feature_maps=24, activation_fn=tf.nn.relu, is_valid=True),
         Conv2DLayer(filter_size=2, n_feature_maps=24, activation_fn=tf.nn.tanh, is_valid=True),
-        PoolLayer(filter_size=2),
+        Pool2DLayer(filter_size=2),
         Conv2DLayer(filter_size=3, n_feature_maps=36, activation_fn=tf.nn.relu, is_valid=True),
         Conv2DLayer(filter_size=3, n_feature_maps=36, activation_fn=tf.nn.tanh, is_valid=True),
-        PoolLayer(filter_size=2),
+        Pool2DLayer(filter_size=2),
         Conv2DLayer(filter_size=3, n_feature_maps=48, activation_fn=tf.nn.relu, is_valid=True),
         Conv2DLayer(filter_size=3, n_feature_maps=48, activation_fn=tf.nn.tanh, is_valid=True),
-        PoolLayer(filter_size=2),
+        Pool2DLayer(filter_size=2),
         Conv2DLayer(filter_size=3, n_feature_maps=60, activation_fn=tf.nn.relu, is_valid=True),
         Conv2DLayer(filter_size=3, n_feature_maps=60, activation_fn=tf.nn.tanh, is_valid=True),
-        PoolLayer(filter_size=2),
+        Pool2DLayer(filter_size=2),
         Conv2DLayer(filter_size=3, n_feature_maps=200, activation_fn=tf.nn.relu, is_valid=True),
         Conv2DLayer(filter_size=1, n_feature_maps=2, is_valid=True),
     ]
@@ -148,21 +156,21 @@ VD2D = ConvArchitecture(
 
 VD2D_BOUNDARIES = ConvArchitecture(
     model_name='VD2D_boundaries',
-    output_mode=em.BOUNDARIES_MODE,
+    output_mode=BOUNDARIES,
     layers=[
         Conv2DLayer(filter_size=3, n_feature_maps=24, activation_fn=tf.nn.relu, is_valid=True),
         Conv2DLayer(filter_size=3, n_feature_maps=24, activation_fn=tf.nn.relu, is_valid=True),
         Conv2DLayer(filter_size=2, n_feature_maps=24, activation_fn=tf.nn.tanh, is_valid=True),
-        PoolLayer(filter_size=2),
+        Pool2DLayer(filter_size=2),
         Conv2DLayer(filter_size=3, n_feature_maps=36, activation_fn=tf.nn.relu, is_valid=True),
         Conv2DLayer(filter_size=3, n_feature_maps=36, activation_fn=tf.nn.tanh, is_valid=True),
-        PoolLayer(filter_size=2),
+        Pool2DLayer(filter_size=2),
         Conv2DLayer(filter_size=3, n_feature_maps=48, activation_fn=tf.nn.relu, is_valid=True),
         Conv2DLayer(filter_size=3, n_feature_maps=48, activation_fn=tf.nn.tanh, is_valid=True),
-        PoolLayer(filter_size=2),
+        Pool2DLayer(filter_size=2),
         Conv2DLayer(filter_size=3, n_feature_maps=60, activation_fn=tf.nn.relu, is_valid=True),
         Conv2DLayer(filter_size=3, n_feature_maps=60, activation_fn=tf.nn.tanh, is_valid=True),
-        PoolLayer(filter_size=2),
+        Pool2DLayer(filter_size=2),
         Conv2DLayer(filter_size=3, n_feature_maps=200, activation_fn=tf.nn.relu, is_valid=True),
         Conv2DLayer(filter_size=1, n_feature_maps=1, is_valid=True),
     ]
@@ -170,21 +178,21 @@ VD2D_BOUNDARIES = ConvArchitecture(
 
 BN_VD2D = ConvArchitecture(
     model_name='bn_VD2D',
-    output_mode=em.AFFINITIES_2D_MODE,
+    output_mode=AFFINITIES_2D,
     layers=[
         Conv2DLayer(filter_size=3, n_feature_maps=24, is_valid=True), BNLayer(activation_fn=tf.nn.relu),
         Conv2DLayer(filter_size=3, n_feature_maps=24, is_valid=True), BNLayer(activation_fn=tf.nn.relu),
         Conv2DLayer(filter_size=2, n_feature_maps=24, is_valid=True), BNLayer(activation_fn=tf.nn.tanh),
-        PoolLayer(filter_size=2),
+        Pool2DLayer(filter_size=2),
         Conv2DLayer(filter_size=3, n_feature_maps=36, is_valid=True), BNLayer(activation_fn=tf.nn.relu),
         Conv2DLayer(filter_size=3, n_feature_maps=36, is_valid=True), BNLayer(activation_fn=tf.nn.tanh),
-        PoolLayer(filter_size=2),
+        Pool2DLayer(filter_size=2),
         Conv2DLayer(filter_size=3, n_feature_maps=48, is_valid=True), BNLayer(activation_fn=tf.nn.relu),
         Conv2DLayer(filter_size=3, n_feature_maps=48, is_valid=True), BNLayer(activation_fn=tf.nn.tanh),
-        PoolLayer(filter_size=2),
+        Pool2DLayer(filter_size=2),
         Conv2DLayer(filter_size=3, n_feature_maps=60, is_valid=True), BNLayer(activation_fn=tf.nn.relu),
         Conv2DLayer(filter_size=3, n_feature_maps=60, is_valid=True), BNLayer(activation_fn=tf.nn.tanh),
-        PoolLayer(filter_size=2),
+        Pool2DLayer(filter_size=2),
         Conv2DLayer(filter_size=3, n_feature_maps=200, is_valid=True), BNLayer(activation_fn=tf.nn.relu),
         Conv2DLayer(filter_size=3, n_feature_maps=2, is_valid=True), BNLayer(),
     ]
@@ -192,64 +200,52 @@ BN_VD2D = ConvArchitecture(
 
 BN_VD2D_RELU = ConvArchitecture(
     model_name='bn_VD2D_relu',
-    output_mode=em.AFFINITIES_2D_MODE,
+    output_mode=AFFINITIES_2D,
     layers=[
         Conv2DLayer(filter_size=3, n_feature_maps=24, is_valid=True), BNLayer(activation_fn=tf.nn.relu),
         Conv2DLayer(filter_size=3, n_feature_maps=24, is_valid=True), BNLayer(activation_fn=tf.nn.relu),
         Conv2DLayer(filter_size=2, n_feature_maps=24, is_valid=True), BNLayer(activation_fn=tf.nn.relu),
-        PoolLayer(filter_size=2),
+        Pool2DLayer(filter_size=2),
         Conv2DLayer(filter_size=3, n_feature_maps=36, is_valid=True), BNLayer(activation_fn=tf.nn.relu),
         Conv2DLayer(filter_size=3, n_feature_maps=36, is_valid=True), BNLayer(activation_fn=tf.nn.relu),
-        PoolLayer(filter_size=2),
+        Pool2DLayer(filter_size=2),
         Conv2DLayer(filter_size=3, n_feature_maps=48, is_valid=True), BNLayer(activation_fn=tf.nn.relu),
         Conv2DLayer(filter_size=3, n_feature_maps=48, is_valid=True), BNLayer(activation_fn=tf.nn.relu),
-        PoolLayer(filter_size=2),
+        Pool2DLayer(filter_size=2),
         Conv2DLayer(filter_size=3, n_feature_maps=60, is_valid=True), BNLayer(activation_fn=tf.nn.relu),
         Conv2DLayer(filter_size=3, n_feature_maps=60, is_valid=True), BNLayer(activation_fn=tf.nn.relu),
-        PoolLayer(filter_size=2),
+        Pool2DLayer(filter_size=2),
         Conv2DLayer(filter_size=3, n_feature_maps=200, is_valid=True), BNLayer(activation_fn=tf.nn.relu),
         Conv2DLayer(filter_size=3, n_feature_maps=2, is_valid=True), BNLayer(),
     ]
 )
 
-class ConvNet:
+class ConvNet(Model):
     def __init__(self, architecture, is_training=False):
-
-        # Save the architecture
-        self.architecture = architecture
-        self.model_name = self.architecture.model_name
-        self.fov = architecture.receptive_field
-
-        # Define the inputs
-       # with tf.device('/cpu:0'):
-
-        # Create a queue
-        self.queue = tf.FIFOQueue(1, tf.float32)
-
-        # Draw example from the queue and separate
-        self.example = tf.placeholder_with_default(self.queue.dequeue(), shape=[None, None, None, architecture.n_outputs + 1])
-        self.image = self.example[:, :, :, :1]
-        # Crop the labels to the appropriate field of view
-        self.target = self.example[:, self.fov // 2:-(self.fov // 2), self.fov // 2:-(self.fov // 2), 1:]
+        super(ConvNet, self).__init__(architecture)
 
         # Standardize each input image, using map because per_image_standardization takes one image at a time
-        standardized_image = tf.map_fn(lambda img: tf.image.per_image_standardization(img), self.image)
+        #standardized_image = tf.map_fn(lambda img: tf.image.per_image_standardization(img), self.image)
+        standardized_image = self.image
 
         n_poolings = 0
 
         prev_layer = standardized_image
         prev_n_feature_maps = 1
 
-        for layer_num, layer in enumerate(architecture.layers):
+        z_dilation_rate = 1
+
+        for layer_num, layer in enumerate(self.architecture.layers):
 
             # Double the dilation rate for a given layer every time we pool.
             dilation_rate = 2 ** n_poolings
 
             with tf.variable_scope('layer' + str(layer_num)):
                 layer.depth = layer_num
-                prev_layer, prev_n_feature_maps = layer.connect(prev_layer, prev_n_feature_maps, dilation_rate, is_training)
+                prev_layer, prev_n_feature_maps = layer.connect(prev_layer, prev_n_feature_maps, dilation_rate,
+                                                                is_training, z_dilation_rate=z_dilation_rate)
 
-                if type(layer) is PoolLayer:
+                if issubclass(type(layer), PoolLayer):
                     n_poolings += 1
 
         # Predictions
@@ -257,7 +253,8 @@ class ConvNet:
         self.binary_prediction = tf.round(self.prediction)
 
         # Loss
-        self.cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(prev_layer, self.target))
+        self.cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=prev_layer,
+                                                                                    labels=self.target))
         self.pixel_error = tf.reduce_mean(tf.cast(tf.abs(self.binary_prediction - self.target), tf.float32))
 
         self.saver = tf.train.Saver()

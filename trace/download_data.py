@@ -1,5 +1,5 @@
 """
-Download and decompress SNEMI3D and ISBI
+Download and decompress SNEMI3D, ISBI, and CREMI
 """
 from __future__ import print_function
 import os
@@ -11,6 +11,8 @@ import tifffile as tif
 import dataprovider.transform as transform
 import subprocess
 from cremi.io import CremiFile
+
+import cremi.io as cremiio
 
 TRAIN_INPUT = 'train-input'
 TRAIN_LABELS = 'train-labels'
@@ -29,11 +31,13 @@ H5 = '.h5'
 SNEMI3D = 'snemi3d'
 ISBI = 'isbi'
 CREMI = 'cremi'
+
 CREMI_A = 'cremi/a/'
 CREMI_B = 'cremi/b/'
 CREMI_C = 'cremi/c/'
 
 DATASET_NAMES = [SNEMI3D, ISBI, CREMI]
+
 
 def __maybe_download(base_url, remote_filename, dest_folder, dest_filename):
     full_url = base_url + remote_filename
@@ -223,6 +227,33 @@ def __maybe_create_cremi(dest_folder, train_frac):
     __maybe_split_cremi(dest_folder + 'a/', train_frac)
     __maybe_split_cremi(dest_folder + 'b/', train_frac)
     __maybe_split_cremi(dest_folder + 'c/', train_frac)
+
+def __maybe_create_cremi(dest_folder, train_frac):
+    base_url = 'https://cremi.org/static/data/'
+
+    # For now, only download the un-padded versions
+    a_train_fn = 'sample_A_20160501.hdf'
+    a_test_fn = 'sample_A%2B_20160601.hdf'
+
+    b_train_fn = 'sample_B_20160501.hdf'
+    b_test_fn = 'sample_B%2B_20160601.hdf'
+
+    c_train_fn = 'sample_C_20160501.hdf'
+    c_test_fn = 'sample_C%2B_20160601.hdf'
+
+    __maybe_download(base_url, a_train_fn, dest_folder + 'a/', 'train-full.hdf')
+    __maybe_download(base_url, a_test_fn, dest_folder + 'a/', 'test.hdf')
+
+    __maybe_download(base_url, b_train_fn, dest_folder + 'b/', 'train-full.hdf')
+    __maybe_download(base_url, b_test_fn, dest_folder + 'b/', 'test.hdf')
+
+    __maybe_download(base_url, c_train_fn, dest_folder + 'c/', 'train-full.hdf')
+    __maybe_download(base_url, c_test_fn, dest_folder + 'c/', 'test.hdf')
+
+    __maybe_split_cremi(dest_folder + 'a/', train_frac)
+    __maybe_split_cremi(dest_folder + 'b/', train_frac)
+    __maybe_split_cremi(dest_folder + 'c/', train_frac)
+
 
 def maybe_create_all_datasets(trace_folder, train_frac):
     # __maybe_create_snemi3d(trace_folder + SNEMI3D + '/', train_frac)

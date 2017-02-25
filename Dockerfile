@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         liblcms2-dev \
         libgmp-dev \
         libwebp-dev \
+        libffi-dev \
         tcl8.6-dev \
         tk8.6-dev \
         python-tk \
@@ -42,6 +43,9 @@ RUN pip --no-cache-dir install \
         cython \
         requests \
         tqdm
+
+# Install the cremi dataworks
+RUN pip install git+https://github.com/cremi/cremi_python.git
 
 # Get the code for trace
 ADD ./ /home/trace

@@ -1,8 +1,10 @@
-from models import conv_net
+import models as conv_net
 import tensorflow as tf
 import learner
 import numpy as np
 import utils
+
+import em_dataset as em
 
 
 class ComponentParams:
@@ -193,7 +195,7 @@ class EnsembleLearner:
 
         self.ensemble_method = ensemble_method_constructor(self.ensembler_folder)
 
-    def train(self, data_provider):
+    def train(self, dataset):
 
         # Keep track of every ongoing session
         classifiers = []
@@ -212,18 +214,24 @@ class EnsembleLearner:
             classifier = learner.Learner(model, ckpt_folder)
             classifiers.append(classifier)
 
+            # Determine the input size to be sampled from the dataset
+            input_size = config.training_params.output_size + model.fov - 1
+
+            # Create the sampler
+            dset_sampler = em.EMDatasetSampler(dataset, input_size, batch_size=config.training_params.batch_size,
+                                               label_output_type=model.architecture.output_mode)
             hooks = [
                 learner.LossHook(10, model),
                 learner.ModelSaverHook(1000, ckpt_folder),
-                learner.ValidationHook(500, data_provider, model, self.data_folder),
+                learner.ValidationHook(500, dset_sampler, model, self.data_folder),
             ]
 
-            classifier.train(config.training_params, data_provider, hooks)
+            classifier.train(config.training_params, dset_sampler, hooks)
 
         # Train the ensembler
         self.ensemble_method.train(classifiers)
 
-    def predict(self, images, split='test'):
+    def predict(self, dataset, images, split='test'):
 
         predictions = []
 
@@ -245,7 +253,8 @@ class EnsembleLearner:
 
             print("Saving this model's predictions")
             # Save their prediction for posterity
-            utils.generate_files_from_predictions(ckpt_folder, split, pred)
+            dataset.prepare_predictions_for_submission(ckpt_folder, split, predictions,
+                                                       label_type=config.architecture.output_mode)
 
             predictions.append(pred)
 
