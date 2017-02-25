@@ -173,33 +173,4 @@ class UNet(Model):
         self.pixel_error = tf.reduce_mean(tf.cast(tf.abs(self.binary_prediction - self.target), tf.float32))
 
         self.saver = tf.train.Saver()
->>>>>>> cf094a5aa64bd5743d0e65aedcbc04c0f20f5b49
 
-        self.prediction = tf.nn.sigmoid(l0t)
-        self.binary_prediction = tf.round(self.prediction)
-
-        self.saver = tf.train.Saver()
-
-# sess=tf.Session()
-
-
-
-
-# #Tensorflow convention is to represent volumes as (batch, x, y, z, channel)
-# inpt = tf.ones((1,128,128,32,1))
-
-# #Purely linear network, no skip connections
-# downsampled = c3(c2(c1(inpt)))
-# print "Coarsest layer dimensions:", downsampled._shape_as_list()
-# upsampled = c1t(c2t(c3t(downsampled)))
-# print "Output dimensions:", upsampled._shape_as_list()
-# otpt1=upsampled
-
-# otpt2 = l0t
-
-# sess=tf.Session()
-# sess.run(tf.initialize_all_variables())
-# print "Running linear network"
-# print sess.run(otpt1).shape
-# print "Running u-net"
-# print sess.run(otpt2).shape
