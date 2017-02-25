@@ -31,7 +31,6 @@ H5 = '.h5'
 SNEMI3D = 'snemi3d'
 ISBI = 'isbi'
 CREMI = 'cremi'
-
 CREMI_A = 'cremi/a/'
 CREMI_B = 'cremi/b/'
 CREMI_C = 'cremi/c/'
