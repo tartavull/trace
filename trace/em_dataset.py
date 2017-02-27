@@ -147,18 +147,21 @@ class CREMIDataset(Dataset):
         """
         self.data_folder = data_folder
 
-        train_file = cremiio.CremiFile(data_folder + 'train.hdf', 'r')
-        self.train_inputs = train_file.read_raw().data.value
-        self.train_labels = train_file.read_neuron_ids().data.value
-        train_file.close()
+        train_input_file = cremiio.CremiFile(data_folder + 'train_input.hdf', 'r')
+        train_label_file = cremiio.CremiFile(data_folder + 'train_labels.hdf', 'r')
+        self.train_inputs = train_input_file.read_raw().data.value
+        self.train_labels = train_label_file.read_neuron_ids().data.value
+        train_input_file.close()
+        train_label_file.close()
 
-        validation_file = cremiio.CremiFile(data_folder + 'validation.hdf', 'r')
-        self.validation_inputs = validation_file.read_raw().data.value
-        self.validation_labels = validation_file.read_neuron_ids().data.value
-        validation_file.close()
+        validation_input_file = cremiio.CremiFile(data_folder + 'validation_input.hdf', 'r')
+        validation_label_file = cremiio.CremiFile(data_folder + 'validation_labels.hdf', 'r')
+        self.validation_inputs = validation_input_file.read_raw().data.value
+        self.validation_labels = validation_labels_file.read_neuron_ids().data.value
+        validation_input_file.close()
+        validation_label_file.close()
 
         # TODO(beisner): Decide if we need to load the test file every time (probably don't)
-
         test_file = cremiio.CremiFile(data_folder + 'test.hdf', 'r')
         self.test_inputs = test_file.read_raw().data.value
         test_file.close()
@@ -196,7 +199,6 @@ class EMDatasetSampler(object):
         :param label_output_type: The format in which the dataset labels should be sampled, i.e. for training, taking
         on values 'boundaries', 'affinities-2d', etc.
         """
-
 
         # Extract the inputs and labels from the dataset
         self.train_inputs = dataset.train_inputs

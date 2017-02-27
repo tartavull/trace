@@ -185,19 +185,19 @@ def __maybe_split_cremi(folder, train_fraction):
         train_labels = o_labels[:train_slices, :, :]
         validation_labels = o_labels[train_slices:, :, :]
 
-        train_input_file = cremiio.CremiFile(folder + TRAIN_INPUT, 'w')
+        train_input_file = cremiio.CremiFile(folder + TRAIN_INPUT + H5, 'w')
         train_input_file.write_raw(cremiio.Volume(train_input, resolution=o_input_res))
         train_input_file.close()
 
-        train_labels_file = cremiio.CremiFile(folder + TRAIN_LABELS, 'w')
+        train_labels_file = cremiio.CremiFile(folder + TRAIN_LABELS + H5, 'w')
         train_labels_file.write_neuron_ids(cremiio.Volume(train_labels, resolution=o_labels_res))
         train_labels_file.close()
 
-        validation_input_file = cremiio.CremiFile(folder + VALIDATION_INPUT, 'w')
+        validation_input_file = cremiio.CremiFile(folder + VALIDATION_INPUT + H5, 'w')
         validation_input_file.write_raw(cremiio.Volume(validation_input, resolution=o_input_res))
         validation_input_file.close()
 
-        validation_labels_file = cremiio.CremiFile(folder + VALIDATION_LABELS, 'w')
+        validation_labels_file = cremiio.CremiFile(folder + VALIDATION_LABELS + H5, 'w')
         validation_labels_file.write_neuron_ids(cremiio.Volume(validation_labels, resolution=o_labels_res))
         validation_labels_file.close()
 
