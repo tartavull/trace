@@ -147,15 +147,15 @@ class CREMIDataset(Dataset):
         """
         self.data_folder = data_folder
 
-        train_input_file = cremiio.CremiFile(data_folder + 'train_input.h5', 'r')
-        train_label_file = cremiio.CremiFile(data_folder + 'train_labels.h5', 'r')
+        train_input_file = cremiio.CremiFile(data_folder + 'train-input.h5', 'r')
+        train_label_file = cremiio.CremiFile(data_folder + 'train-labels.h5', 'r')
         self.train_inputs = train_input_file.read_raw().data.value
         self.train_labels = train_label_file.read_neuron_ids().data.value
         train_input_file.close()
         train_label_file.close()
 
-        validation_input_file = cremiio.CremiFile(data_folder + 'validation_input.h5', 'r')
-        validation_label_file = cremiio.CremiFile(data_folder + 'validation_labels.h5', 'r')
+        validation_input_file = cremiio.CremiFile(data_folder + 'validation-input.h5', 'r')
+        validation_label_file = cremiio.CremiFile(data_folder + 'validation-labels.h5', 'r')
         self.validation_inputs = validation_input_file.read_raw().data.value
         self.validation_labels = validation_labels_file.read_neuron_ids().data.value
         validation_input_file.close()
