@@ -328,6 +328,7 @@ class Learner:
         '''
 
         # Iterate through the dataset
+        print("Start")
         for step in range(training_params.n_iter):
             if coord.should_stop():
                 break
