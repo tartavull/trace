@@ -84,6 +84,7 @@ def __maybe_split(folder, train_fraction):
 
                 train_slices = int(num_slices * train_fraction)
 
+                print(train_slices)
                 train_set = file.asarray()[:train_slices, :, :]
                 validation_set = file.asarray()[train_slices:, :, :]
 
