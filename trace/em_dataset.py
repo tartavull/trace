@@ -182,6 +182,7 @@ class CREMIDataset(Dataset):
         self.test_inputs = test_file.read_raw().data.value
         test_file.close()
 
+
     def prepare_predictions_for_submission(self, results_folder, split, predictions, label_type):
         """Prepare a given segmentation prediction for submission to the CREMI competiton
 
