@@ -252,6 +252,7 @@ class Model(object):
         self.example = tf.placeholder_with_default(self.queue.dequeue(),
                 shape=[None] + [None] * self.dim + [architecture.n_outputs + 1])
 
+        #self.example = tf.Print(self.example, [tf.shape(self.example)])
         if self.dim == 2:
             self.image = self.example[:, :, :, :1]
         elif self.dim == 3:
@@ -262,4 +263,5 @@ class Model(object):
         elif self.dim == 3:
             self.target = self.example[:, self.z_fov // 2:-(self.z_fov // 2), self.fov // 2:-(self.fov // 2), self.fov // 2:-(self.fov // 2), 1:]
             
+        #self.image = tf.Print(self.image, [tf.shape(self.image)])
         #self.target = tf.Print(self.target, [tf.shape(self.target)])

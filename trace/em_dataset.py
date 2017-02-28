@@ -246,10 +246,11 @@ class EMDatasetSampler(object):
             train_stacked = np.expand_dims(train_stacked, axis=0)
 
         # Define inputs to the graph
-        crop_pad = input_size // 4
-        z_crop_pad = z_input_size // 2
+        crop_pad = input_size // 6 * 2
+        z_crop_pad = z_input_size // 4 * 2
         patch_size = input_size + crop_pad
         z_patch_size = z_input_size + z_crop_pad
+
 
         # Create dataset, and pad the dataset with mirroring
         pad = input_size // 2
@@ -269,11 +270,11 @@ class EMDatasetSampler(object):
             patch_size_dims = [patch_size, patch_size]
             if self.dim == 3:
                 patch_size_dims = [z_patch_size] + patch_size_dims
-            sample = tf.random_crop(self.dataset_constant, size=[batch_size] + patch_size_dims + [train_stacked.shape[self.dim + 1]])
+            self.sample = tf.random_crop(self.dataset_constant, size=[batch_size] + patch_size_dims + [train_stacked.shape[self.dim + 1]])
 
             # Perform random mirroring
             if self.dim == 2:
-                mirrored_sample = tf.map_fn(lambda img: tf.image.random_flip_left_right(img), sample)
+                mirrored_sample = tf.map_fn(lambda img: tf.image.random_flip_left_right(img), self.sample)
             elif self.dim == 3:
 
                 def mirrorExample(example):
@@ -282,7 +283,7 @@ class EMDatasetSampler(object):
                                    lambda: tf.map_fn(lambda img: tf.image.flip_left_right(img), example), 
                                    lambda: example)
                      
-                mirrored_sample = tf.map_fn(mirrorExample, sample)
+                mirrored_sample = tf.map_fn(mirrorExample, self.sample)
 
 
             # Randomly flip the 3D cube upside down
@@ -303,8 +304,8 @@ class EMDatasetSampler(object):
                 rotated_sample = tf.map_fn(rotateExample, flipped_sample)
 
 
-            print(rotated_sample.get_shape())
             # Apply random gaussian blurring
+            # SHOULD NOT BLUR LABELS
             def blurExample(example):
                 shouldBlur = tf.random_uniform(shape=(), minval=0, maxval=2, dtype=tf.int32)
                 sigma = tf.random_uniform(shape=(), minval=2, maxval=5, dtype=tf.float32)
@@ -318,7 +319,7 @@ class EMDatasetSampler(object):
 
             # IDEALLY, we'd have elastic deformation here, but right now too much overhead to compute
             # elastically_deformed_sample = tf.elastic_deformation(rotated_sample)
-            elastically_deformed_sample = blurred_sample
+            elastically_deformed_sample = self.sample
 
 
             # Separate the image from the labels
