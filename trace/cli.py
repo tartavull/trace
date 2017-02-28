@@ -120,10 +120,10 @@ def train(model_type, params_type, dataset_name, n_iter, run_name):
     classifier = learner.Learner(model, ckpt_folder)
 
     hooks = [
-        learner.LossHook(5, model),
-        learner.ModelSaverHook(100, ckpt_folder),
+        # learner.LossHook(5, model),
+        # learner.ModelSaverHook(100, ckpt_folder),
         # learner.ValidationHook(500, dset, model, data_folder, params.output_mode),
-        learner.ImageVisualizationHook(50, model),
+        # learner.ImageVisualizationHook(50, model),
         # learner.HistogramHook(100, model),
         # learner.LayerVisualizationHook(500, model),
     ]
