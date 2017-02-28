@@ -242,17 +242,17 @@ class EMDatasetSampler(object):
         # The dataset is loaded into a constant variable from a placeholder
         # because a tf.constant cannot hold a dataset that is over 2GB.
         image_ph = tf.placeholder(dtype=tf.float32, shape=self.padded_dataset.shape, name='image_ph')
-        #dataset_constant = tf.Variable(image_ph, trainable=False, collections=[])
+        self.dataset_constant = tf.Variable(image_ph, trainable=False, collections=[])
         print(self.padded_dataset.shape)
         print(self.padded_dataset[:, :self.padded_dataset.shape[1] // 2, :self.padded_dataset.shape[2] // 2, :self.padded_dataset.shape[3] // 2].shape)
-        dataset_constant = tf.constant(self.padded_dataset[:, :self.padded_dataset.shape[1] // 2, :self.padded_dataset.shape[2] // 2, :self.padded_dataset.shape[3] // 2], dtype=tf.float32)
+        # dataset_constant = tf.constant(self.padded_dataset[:, :self.padded_dataset.shape[1] // 2, :self.padded_dataset.shape[2] // 2, :self.padded_dataset.shape[3] // 2], dtype=tf.float32)
 
         with tf.device('/cpu:0'):
             # Sample and squeeze the dataset, squeezing so that we can perform the distortions
             patch_size_dims = [patch_size, patch_size]
             if self.dim == 3:
                 patch_size_dims = [z_patch_size] + patch_size_dims
-            sample = tf.random_crop(dataset_constant, size=[batch_size] + patch_size_dims + [train_stacked.shape[self.dim + 1]])
+            sample = tf.random_crop(self.dataset_constant, size=[batch_size] + patch_size_dims + [train_stacked.shape[self.dim + 1]])
 
             # Perform random flips
             #flipped_sample = tf.map_fn(lambda img: tf.image.random_flip_left_right(img), sample)

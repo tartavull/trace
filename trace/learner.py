@@ -286,8 +286,11 @@ class Learner:
         qr = tf.train.QueueRunner(model.queue, [enqueue_op] * 4)
 
         # Initialize the variables
-        sess.run(tf.global_variables_initializer())#, feed_dict={'image_ph:0': dset_sampler.padded_dataset})
-        #del dset_sampler.padded_dataset
+        sess.run(tf.global_variables_initializer()) 
+        sess.run(dset_sampler.dataset_constant.initializer, 
+            feed_dict={'image_ph:0': dset_sampler.padded_dataset})
+        
+        del dset_sampler.padded_dataset
 
 
         '''
