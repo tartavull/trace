@@ -11,8 +11,10 @@ import h5py
 import tifffile as tif
 import dataprovider.transform as transform
 import subprocess
+import numpy as np
 
 import cremi.io as cremiio
+import cremi.evaluation as cremival
 
 TRAIN_INPUT = 'train-input'
 TRAIN_LABELS = 'train-labels'
@@ -93,8 +95,8 @@ def __maybe_split(folder, train_fraction):
 
 def __maybe_split_cremi(folder, train_fraction):
     if not os.path.exists(folder + 'validation.hdf'):
-        print(str.format('splitting {} into {}% training,  {}% into validation', folder + 'train-full.hdf',
-                         100 * train_fraction, 100 * (1 - train_fraction)))
+        print(str.format('splitting {} into {}% training,  {}% into validation, and adding borders',
+                         folder + 'train-full.hdf', 100 * train_fraction, 100 * (1 - train_fraction)))
 
         # Extract the input and labels from the hdf
         o_train_file = cremiio.CremiFile(folder + 'train-full.hdf', 'r')
@@ -106,6 +108,10 @@ def __maybe_split_cremi(folder, train_fraction):
         o_labels = o_labels_volume.data.value
         o_labels_res = o_input_volume.resolution
 
+        # Add a boundary to original labels (with id 0), so that we can train well on affinities
+        o_bounded_labels = np.zeros(o_labels.shape, dtype=np.int32)
+        cremival.create_border_mask(input_data=o_labels, target=o_bounded_labels, max_dist=2, background_label=0)
+
         o_train_file.close()
 
         # Split
@@ -115,8 +121,8 @@ def __maybe_split_cremi(folder, train_fraction):
         train_input = o_input[:train_slices, :, :]
         validation_input = o_input[train_slices:, :, :]
 
-        train_labels = o_labels[:train_slices, :, :]
-        validation_labels = o_labels[train_slices:, :, :]
+        train_labels = o_bounded_labels[:train_slices, :, :]
+        validation_labels = o_bounded_labels[train_slices:, :, :]
 
         train_file = cremiio.CremiFile(folder + 'train.hdf', 'w')
         train_file.write_raw(cremiio.Volume(train_input, resolution=o_input_res))
@@ -211,6 +217,8 @@ def __maybe_create_cremi(dest_folder, train_frac):
     __maybe_split_cremi(dest_folder + 'a/', train_frac)
     __maybe_split_cremi(dest_folder + 'b/', train_frac)
     __maybe_split_cremi(dest_folder + 'c/', train_frac)
+
+
 
 
 def maybe_create_all_datasets(trace_folder, train_frac):
