@@ -36,7 +36,7 @@ def elastic_transform(image, labels, alpha, sigma, random_state=None):
     # Missing section augmentation
     # Data blurring
     # Misalignment (learning linear transformation)
-    
+
     indices = np.reshape(x + dx, (-1, 1)), np.reshape(y + dy, (-1, 1))
 
     # print(image.shape)
@@ -58,9 +58,15 @@ def elastic_transform(image, labels, alpha, sigma, random_state=None):
     return el_image, el_label
 
 
-def mirror_across_borders(data, fov):
-    mirrored_data = np.pad(data, [(0, 0), (fov // 2, fov // 2), (fov // 2, fov // 2), (0, 0)], mode='reflect')
-    return mirrored_data
+def mirror_across_borders_3d(data, fov, z_fov):
+    half = fov // 2
+    z_half = z_fov // 2
+    return np.pad(data, [(0, 0), (z_half, z_half), (half, half), (half, half), (0, 0)], mode='reflect')
+
+
+def mirror_across_borders_2d(data, fov):
+    half = fov // 2
+    return np.pad(data, [(0, 0), (half, half), (half, half), (0, 0)], mode='reflect')
 
 
 def maybe_create_affinities(dataset_prefix, num_examples):

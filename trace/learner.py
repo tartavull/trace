@@ -284,7 +284,7 @@ class Learner:
 
         # Initialize the variables
         sess.run(tf.global_variables_initializer())
-        sess.run(dset_sampler.dataset_constant.initializer, 
+        sess.run(dset_sampler.dataset_constant.initializer,
                         feed_dict={'image_ph:0': dset_sampler.padded_dataset})
         del dset_sampler.padded_dataset
 
@@ -351,16 +351,20 @@ class Learner:
         print("Model restored.")
 
     def predict(self, inputs):
-        # Mirror the inputs
-        mirrored_inputs = aug.mirror_across_borders(inputs, self.model.fov)
+        # Mirror the inputs, depending on the dimension
+        if self.model.dim == 2:
+            mirrored_inputs = aug.mirror_across_borders_2d(inputs, self.model.fov)
+        elif self.model.dim == 3:
+            # Mirror, and expand on the first axis to indicate one batch
+            mirrored_inputs = aug.mirror_across_borders_3d(inputs, self.model.fov, self.model.z_fov)
+            mirrored_inputs = np.expand_dims(mirrored_inputs, axis=0)
 
         preds = []
 
-        # Break into slices because otherwise tensorflow runs out of memory
-        num_slices = mirrored_inputs.shape[0]
-        for l in range(num_slices):
-            reshaped_slice = np.expand_dims(mirrored_inputs[l], axis=0)
-            pred = self.sess.run(self.model.prediction, feed_dict={self.model.image: reshaped_slice})
+        # Break into slices because otherwise tensorflow runs out of memory,
+        for l in range(len(mirrored_inputs), step=10):
+            print('Predicting slices %d:%d' % l, l+9)
+            pred = self.sess.run(self.model.prediction, feed_dict={self.model.image: mirrored_inputs[l:l+10]})
             preds.append(pred)
 
-        return np.squeeze(np.asarray(preds), axis=1)
+        return np.asarray(preds)
