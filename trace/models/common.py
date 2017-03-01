@@ -43,7 +43,7 @@ def down_conv2d(x, W, dilation=1):
     return tf.nn.convolution(x, W, strides=[2, 2], padding='SAME', dilation_rate=[dilation, dilation])
 
 
-def down_conv2d(x, W, dilation=1, z_dilation_rate):
+def down_conv2d(x, W, dilation=1, z_dilation_rate=1):
     return tf.nn.convolution(x, W, strides=[2, 2, 2], padding='SAME', dilation_rate=[z_dilation, dilation, dilation])
 
 
@@ -112,9 +112,10 @@ def batch_norm_layer(inputs, is_training, decay=0.9):
 
 class Layer(object):
     depth = 0
-    def __init__(self, dim, filter_size, n_feature_maps, activation_fn=lambda x: x):
+    def __init__(self, dim, filter_size, n_feature_maps, activation_fn=lambda x: x, z_filter_size=1):
         self.dim = dim
         self.filter_size = filter_size
+        #self.z_filter_size = z_filter_size
         self.n_feature_maps = n_feature_maps
         self.activation_fn = activation_fn
 
@@ -128,9 +129,6 @@ class UNet3DLayer(Layer):
         self.is_valid = kwargs['is_valid']
         self.is_residual = kwargs['is_residual']
         self.uses_max_pool = kwargs['uses_max_pool']
-        self.kernel_size = kwargs['kernel_size']
-        self.z_kernel_size = kwargs['z_kernel_size']
-        self.n_feature_maps = kwargs['n_feature_maps']
         self.num_convs = kwargs['num_convs']
         self.is_contracting = kwargs['is_contracting']
         self.is_expanding = kwargs['is_expanding']
@@ -139,13 +137,12 @@ class UNet3DLayer(Layer):
         del kwargs['is_valid']
         del kwargs['is_residual']
         del kwargs['uses_max_pool']
-        del kwargs['kernel_size']
-        del kwargs['z_kernel_size']
-        del kwargs['n_feature_maps']
         del kwargs['num_convs']
         del kwargs['is_contracting']
         del kwargs['is_expanding']
         del kwargs['is_training']
+        
+        kwargs['dim'] = 3
 
         super(UNet3DLayer, self).__init__(*args, **kwargs)
 
@@ -164,7 +161,7 @@ class UNet3DLayer(Layer):
                     w_i = get_weight_variable(layer_name + '_w0', [self.kernel_size, self.kernel_size, self.z_kernel_size, prev_n_feature_maps, self.n_feature_maps])
                 else:
                     w_i = get_weight_variable(layer_name + '_w' + str(i), [self.kernel_size, self.kernel_size, self.z_kernel_size, self.n_feature_maps, self.n_feature_maps])
-                b_i = get_bias_variable(layer_str + '_b' + str(i), [self.n_feature_maps]
+                b_i = get_bias_variable(layer_str + '_b' + str(i), [self.n_feature_maps])
                 weights.append(w_i)
                 biases.append(b_i)
 
@@ -181,7 +178,7 @@ class UNet3DLayer(Layer):
                 if self.is_valid:
                     residual = crop(prev_layer, cur_node, batch_size)
                 if prev_n_feature_maps != self.n_feature_maps:
-                    residual = tf.tile(residual, (1, 1, 1, self.n_feature_maps // prev_n_feature_maps)
+                    residual = tf.tile(residual, (1, 1, 1, self.n_feature_maps // prev_n_feature_maps))
                 final_node = cur_node + residual
 
 
@@ -382,11 +379,13 @@ class Model(object):
             self.image = self.example[:, :, :, :1]
         elif self.dim == 3:
             self.image = self.example[:, :, :, :, :1]
+
         # Standardize each input image, using map because per_image_standardization takes one image at a time
         if self.dim == 2:
-            standardized_image = tf.map_fn(lambda img: tf.image.per_image_standardization(img), self.image)
+            self.standardized_image = tf.map_fn(lambda img: tf.image.per_image_standardization(img), self.image)
         elif self.dim == 3:
-            standardized_image = self.image
+            mean, var = tf.nn.moments(self.image, axes=[0,1,2,3,4], keep_dims=False)
+            self.standardized_image = (self.image - mean) / tf.sqrt(var)
 
 
         # Crop the labels to the appropriate field of view

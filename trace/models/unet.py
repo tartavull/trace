@@ -19,7 +19,7 @@ class UNetArchitecture(Architecture):
         self.fov = 1
         self.z_fov = 1
         for layer in layers:
-            sel += 4
+            self.fov += 4
           #CALCULATE THE FOV  
 
 
@@ -27,7 +27,8 @@ class UNetArchitecture(Architecture):
 
 RES_VNET = UNetArchitecture(
     model_name='res_vnet',
-    output_mode=AFFINITIES_2D
+    output_mode=AFFINITIES_2D,
+    layers=[],
 )
 
 
@@ -36,31 +37,31 @@ UNET_3D = UNetArchitecture(
     output_mode=AFFINITIES_3D,
     layers=[
         UNet3DLayer(layer_name='layer d1', is_valid=False, is_residual=True, 
-                    uses_max_pool=True, kernel_size=3, z_kernel_size=3,
+                    uses_max_pool=True, filter_size=3, z_filter_size=3,
                     n_feature_maps=64, num_convs=1, is_contracting=True, 
                     is_expanding=False, is_training=False),
         UNet3DLayer(layer_name='layer d2', is_valid=False, is_residual=True, 
-                    uses_max_pool=True, kernel_size=3, z_kernel_size=3,
+                    uses_max_pool=True, filter_size=3, z_filter_size=3,
                     n_feature_maps=128, num_convs=1, is_contracting=True, 
                     is_expanding=False, is_training=False),
         UNet3DLayer(layer_name='layer d3', is_valid=False, is_residual=True, 
-                    uses_max_pool=True, kernel_size=3, z_kernel_size=3,
+                    uses_max_pool=True, filter_size=3, z_filter_size=3,
                     n_feature_maps=256, num_convs=1, is_contracting=True, 
                     is_expanding=False, is_training=False),
         UNet3DLayer(layer_name='layer d4', is_valid=False, is_residual=True, 
-                    uses_max_pool=True, kernel_size=3, z_kernel_size=3,
+                    uses_max_pool=True, filter_size=3, z_filter_size=3,
                     n_feature_maps=512, num_convs=1, is_contracting=False, 
                     is_expanding=True, is_training=False),
         UNet3DLayer(layer_name='layer u3', is_valid=False, is_residual=True, 
-                    uses_max_pool=True, kernel_size=3, z_kernel_size=3,
+                    uses_max_pool=True, filter_size=3, z_filter_size=3,
                     n_feature_maps=256, num_convs=1, is_contracting=False, 
                     is_expanding=True, is_training=False),
         UNet3DLayer(layer_name='layer u2', is_valid=False, is_residual=True, 
-                    uses_max_pool=True, kernel_size=3, z_kernel_size=3,
+                    uses_max_pool=True, filter_size=3, z_filter_size=3,
                     n_feature_maps=128, num_convs=1, is_contracting=False, 
                     is_expanding=True, is_training=False),
         UNet3DLayer(layer_name='layer u1', is_valid=False, is_residual=True, 
-                    uses_max_pool=True, kernel_size=3, z_kernel_size=3,
+                    uses_max_pool=True, filter_size=3, z_filter_size=3,
                     n_feature_maps=64, num_convs=1, is_contracting=False, 
                     is_expanding=False, is_training=False),
     ]
@@ -107,11 +108,11 @@ class ResVNet(Model):
     :param keep_prob: dropout probability tensor
     :param layers: number of layers in the unet
     :param features_root: number of features in the first layer
-    :param kernel_size: size of the convolutional kernel
+    :param filter_size: size of the convolutional kernel
     :param learning_rate: learning rate for the optimizer
     super(UNet, self).__init__(architecture)
     '''
-    def __init__(self, architecture, is_training=False, num_layers=5, features_root=64, kernel_size=3):
+    def __init__(self, architecture, is_training=False, num_layers=5, features_root=64, filter_size=3):
         super(ResVNet, self).__init__(architecture)
 
         in_node = self.image
@@ -121,7 +122,7 @@ class ResVNet(Model):
 
         weights = []
         biases = []
-        self.kernel_size = kwargs['kernel_size']
+        self.filter_size = kwargs['filter_size']
         convs = []
         pools = OrderedDict()
         upconvs = OrderedDict()
@@ -137,11 +138,11 @@ class ResVNet(Model):
 
             # Input layer maps a 1-channel image to num_feature_maps channels
             if layer == 0:
-                w1 = get_weight_variable(layer_str + '_w1', [kernel_size, kernel_size, 1, num_feature_maps])
+                w1 = get_weight_variable(layer_str + '_w1', [filter_size, filter_size, 1, num_feature_maps])
             else:
-                w1 = get_weight_variable(layer_str + '_w1', [kernel_size, kernel_size, num_feature_maps, num_feature_maps])
-            w2 = get_weight_variable(layer_str + '_w2', [kernel_size, kernel_size, num_feature_maps, num_feature_maps])
-            w3 = get_weight_variable(layer_str + '_w3', [kernel_size, kernel_size, num_feature_maps, num_feature_maps])
+                w1 = get_weight_variable(layer_str + '_w1', [filter_size, filter_size, num_feature_maps, num_feature_maps])
+            w2 = get_weight_variable(layer_str + '_w2', [filter_size, filter_size, num_feature_maps, num_feature_maps])
+            w3 = get_weight_variable(layer_str + '_w3', [filter_size, filter_size, num_feature_maps, num_feature_maps])
             b1 = get_bias_variable(layer_str + '_b1', [num_feature_maps])
             b2 = get_bias_variable(layer_str + '_b2', [num_feature_maps])
             b3 = get_bias_variable(layer_str + '_b3', [num_feature_maps])
@@ -191,15 +192,15 @@ class ResVNet(Model):
             layer_str = 'layer_u' + str(layer)
             num_feature_maps = 2**layer * features_root
 
-            wu = get_weight_variable(layer_str + '_wu', [kernel_size, kernel_size, num_feature_maps, num_feature_maps * 2])
+            wu = get_weight_variable(layer_str + '_wu', [filter_size, filter_size, num_feature_maps, num_feature_maps * 2])
             bu = get_bias_variable(layer_str + '_bu', [num_feature_maps])
             h_upconv = tf.nn.elu(conv2d_transpose(in_node, wu, stride=2) + bu)
             h_upconv_concat = crop_and_concat(dw_h_convs[layer], h_upconv, batch_size)
             upconvs[layer] = h_upconv_concat
 
-            w1 = get_weight_variable(layer_str + '_w1', [kernel_size, kernel_size, num_feature_maps * 2, num_feature_maps])
-            w2 = get_weight_variable(layer_str + '_w2', [kernel_size, kernel_size, num_feature_maps, num_feature_maps])
-            w3 = get_weight_variable(layer_str + '_w3', [kernel_size, kernel_size, num_feature_maps, num_feature_maps])
+            w1 = get_weight_variable(layer_str + '_w1', [filter_size, filter_size, num_feature_maps * 2, num_feature_maps])
+            w2 = get_weight_variable(layer_str + '_w2', [filter_size, filter_size, num_feature_maps, num_feature_maps])
+            w3 = get_weight_variable(layer_str + '_w3', [filter_size, filter_size, num_feature_maps, num_feature_maps])
             b1 = get_bias_variable(layer_str + '_b1', [num_feature_maps])
             b2 = get_bias_variable(layer_str + '_b2', [num_feature_maps])
             b3 = get_bias_variable(layer_str + '_b3', [num_feature_maps])
