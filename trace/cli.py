@@ -155,7 +155,7 @@ def predict(model_type, params_type, dataset_name, split, run_name):
     dataset = dset_constructor(data_folder)
 
     # Input size doesn't matter for us; neither does batch size
-    dset_sampler = em.EMDatasetSampler(dataset, input_size=model.fov + 1, label_output_type=params.output_mode)
+    dset_sampler = em.EMDatasetSampler(dataset, input_size=model.fov + 1, z_input_size=model.z_fov + 1, label_output_type=params.output_mode)
 
     if split == 'train':
         inputs, _ = dset_sampler.get_full_training_set()
@@ -219,7 +219,7 @@ def ens_predict(ensemble_method, ensemble_params, dataset_name, split, run_name)
 
     # Input size doesn't matter for us; neither does batch size
     # TODO(beisner): Generalize ensemble_params so that it's not just an array, but a struct itself
-    dset_sampler = em.EMDatasetSampler(dataset, input_size=100, label_output_type=ensemble_params[0].output_mode)
+    dset_sampler = em.EMDatasetSampler(dataset, input_size=100, z_input_size=model.z_fov + 1, label_output_type=ensemble_params[0].output_mode)
 
     # Inputs we will use
     if split == 'train':
