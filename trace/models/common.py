@@ -27,12 +27,24 @@ def conv2d(x, W, dilation=1):
     return tf.nn.convolution(x, W, strides=[1, 1], padding='VALID', dilation_rate=[dilation, dilation])
 
 
+def conv3d(x, W, dilation=1, z_dilation=1):
+    return tf.nn.convolution(x, W, strides=[1, 1, 1], padding='VALID', dilation_rate=[z_dilation, dilation, dilation])
+
+
 def same_conv2d(x, W, dilation=1):
     return tf.nn.convolution(x, W, strides=[1, 1], padding='SAME', dilation_rate=[dilation, dilation])
 
 
+def same_conv3d(x, W, dilation=1, z_dilation=1):
+    return tf.nn.convolution(x, W, strides=[1, 1, 1], padding='SAME', dilation_rate=[z_dilation_rate, dilation, dilation])
+
+
 def down_conv2d(x, W, dilation=1):
     return tf.nn.convolution(x, W, strides=[2, 2], padding='SAME', dilation_rate=[dilation, dilation])
+
+
+def down_conv2d(x, W, dilation=1, z_dilation_rate):
+    return tf.nn.convolution(x, W, strides=[2, 2, 2], padding='SAME', dilation_rate=[z_dilation, dilation, dilation])
 
 
 def conv2d_transpose(x, W, stride):
@@ -41,8 +53,19 @@ def conv2d_transpose(x, W, stride):
     return tf.nn.conv2d_transpose(x, W, output_shape, strides=[1, stride, stride, 1], padding='SAME')
 
 
+def conv3d_transpose(x, W, stride):
+    x_shape = tf.shape(x)
+    output_shape = tf.pack([x_shape[0], x_shape[1] * 2, x_shape[2] * 2, x_shape[3] * 2, x_shape[4] // 2])
+    return tf.nn.conv2d_transpose(x, W, output_shape, strides=[1, stride, stride, stride, 1], padding='SAME')
+
+
 def max_pool(x, dilation=1, strides=[2, 2], window_shape=[2, 2]):
     return tf.nn.pool(x, window_shape=window_shape, dilation_rate=[dilation, dilation],
+                      strides=strides, padding='VALID', pooling_type='MAX')
+
+
+def max_pool_3d(x, dilation=1, z_dilation=1, strides=[2, 2, 2], window_shape=[2, 2, 2]):
+    return tf.nn.pool(x, window_shape=window_shape, dilation_rate=[z_dilation, dilation, dilation],
                       strides=strides, padding='VALID', pooling_type='MAX')
 
 
@@ -95,9 +118,111 @@ class Layer(object):
         self.n_feature_maps = n_feature_maps
         self.activation_fn = activation_fn
 
-    def connect(self, prev_layer, prev_n_feature_maps, dilation_rate, is_training):
+    def connect(self, prev_layer, prev_n_feature_maps, dilation_rate, is_training, z_dilation_rate=1, skip_connect=None):
         raise NotImplementedError("Abstract Class!")
 
+
+class UNet3DLayer(Layer):
+    def __init__(self, *args, **kwargs):
+        self.layer_name = kwargs['layer_name']
+        self.is_valid = kwargs['is_valid']
+        self.is_residual = kwargs['is_residual']
+        self.uses_max_pool = kwargs['uses_max_pool']
+        self.kernel_size = kwargs['kernel_size']
+        self.z_kernel_size = kwargs['z_kernel_size']
+        self.n_feature_maps = kwargs['n_feature_maps']
+        self.num_convs = kwargs['num_convs']
+        self.is_contracting = kwargs['is_contracting']
+        self.is_expanding = kwargs['is_expanding']
+        self.is_training = kwargs['is_training']
+        del kwargs['layer_name']
+        del kwargs['is_valid']
+        del kwargs['is_residual']
+        del kwargs['uses_max_pool']
+        del kwargs['kernel_size']
+        del kwargs['z_kernel_size']
+        del kwargs['n_feature_maps']
+        del kwargs['num_convs']
+        del kwargs['is_contracting']
+        del kwargs['is_expanding']
+        del kwargs['is_training']
+
+        super(UNet3DLayer, self).__init__(*args, **kwargs)
+
+        def connect(self, prev_layer, prev_n_feature_maps, skip_connect=None):
+            weights = []
+            biases = []
+            convs = []
+
+            cur_node = prev_layer
+            batch_size = tf.shape(cur_node)[0]
+
+            # Set up each convolution in the layer.
+            for i in range(num_convs):
+                # Create the weights and biases.
+                if i == 0:
+                    w_i = get_weight_variable(layer_name + '_w0', [self.kernel_size, self.kernel_size, self.z_kernel_size, prev_n_feature_maps, self.n_feature_maps])
+                else:
+                    w_i = get_weight_variable(layer_name + '_w' + str(i), [self.kernel_size, self.kernel_size, self.z_kernel_size, self.n_feature_maps, self.n_feature_maps])
+                b_i = get_bias_variable(layer_str + '_b' + str(i), [self.n_feature_maps]
+                weights.append(w_i)
+                biases.append(b_i)
+
+                # Perform the convolution
+                if self.is_valid:
+                    convFn = conv3d
+                else:
+                    convFn = same_conv3d
+                cur_node = tf.nn.elu(convFn(cur_node, w_i) + b_i)
+                convs.append(cur_node)
+            
+            # If applicable, add the residual connection.
+            if self.is_residual:
+                if self.is_valid:
+                    residual = crop(prev_layer, cur_node, batch_size)
+                if prev_n_feature_maps != self.n_feature_maps:
+                    residual = tf.tile(residual, (1, 1, 1, self.n_feature_maps // prev_n_feature_maps)
+                final_node = cur_node + residual
+
+
+            # If on the contracting path, down sample using either max-pooling
+            # or down-convolution. 
+            if self.is_contracting:
+                if self.uses_max_pool:
+                    out_node = max_pool_3d(final_node)
+                    out_n_feature_maps = self.n_feature_maps
+                else:
+                    w_d = get_weight_variable(layer_name + '_wd', [2, 2, self.n_feature_maps, 2 * self.n_feature_maps])
+                    b_d = get_bias_variable(layer_name + '_bd', [2 * self.n_feature_maps])
+                    weights.append(w_d)
+                    biases.append(b_d)
+
+                    out_node = tf.nn.elu(down_conv3d(final_node, w_d) + b_d)
+                    out_n_feature_maps = self.n_feature_maps * 2
+                convs.append(out_node)
+
+                return out_node, final_node, out_n_feature_maps
+            elif self.is_expanding:
+                # If on the expanding path, upsample using transposed
+                # convolution.
+                w_u = get_weight_variable(layer_name + '_wu', [self.kernel_size, self.kernel_size, self.n_feature_maps // 2, self.n_feature_maps])
+                b_u = get_bias_variable(layer_name + '_bu', [self.n._feature_maps])
+                weights.append(w_u)
+                biases.append(b_u)
+
+                up_conv = tf.nn.elu(conv3d_transpose(final_node, w_u, stride=2) + bu)
+                convs.append(up_conv)
+
+                # Add skip-connection.
+                out_node = crop_and_concat(skip_connect, up_conv, batch_size)
+                convs.append(out_node)
+                out_n_feature_maps = self.n_feature_maps // 2
+
+                return out_node, out_n_feature_maps
+            else:
+                return final_node
+
+            
 
 class ConvLayer(Layer):
     def __init__(self, *args, **kwargs):
@@ -236,8 +361,8 @@ class Model(object):
         # Save the architecture
         self.architecture = architecture
         self.model_name = self.architecture.model_name
-        self.fov = architecture.receptive_field
-        self.z_fov = architecture.z_receptive_field
+        self.fov = architecture.fov
+        self.z_fov = architecture.z_fov
 
         if self.architecture.output_mode == AFFINITIES_3D:
             self.dim = 3
@@ -257,6 +382,13 @@ class Model(object):
             self.image = self.example[:, :, :, :1]
         elif self.dim == 3:
             self.image = self.example[:, :, :, :, :1]
+        # Standardize each input image, using map because per_image_standardization takes one image at a time
+        if self.dim == 2:
+            standardized_image = tf.map_fn(lambda img: tf.image.per_image_standardization(img), self.image)
+        elif self.dim == 3:
+            standardized_image = self.image
+
+
         # Crop the labels to the appropriate field of view
         if self.dim == 2:
             self.target = self.example[:, self.fov // 2:-(self.fov // 2), self.fov // 2:-(self.fov // 2), 1:]

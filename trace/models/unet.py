@@ -10,9 +10,19 @@ INPT = 380
 
 
 class UNetArchitecture(Architecture):
-    def __init__(self, model_name, output_mode):
+    def __init__(self, model_name, output_mode, layers):
         super(UNetArchitecture, self).__init__(model_name, output_mode, '2D')
         self.receptive_field = FOV
+
+        self.layers = layers
+
+        self.fov = 1
+        self.z_fov = 1
+        for layer in layers:
+            sel += 4
+          #CALCULATE THE FOV  
+
+
 
 
 RES_VNET = UNetArchitecture(
@@ -21,7 +31,75 @@ RES_VNET = UNetArchitecture(
 )
 
 
+UNET_3D = UNetArchitecture(
+    model_name='unet_3d',
+    output_mode=AFFINITIES_3D,
+    layers=[
+        UNet3DLayer(layer_name='layer d1', is_valid=False, is_residual=True, 
+                    uses_max_pool=True, kernel_size=3, z_kernel_size=3,
+                    n_feature_maps=64, num_convs=1, is_contracting=True, 
+                    is_expanding=False, is_training=False),
+        UNet3DLayer(layer_name='layer d2', is_valid=False, is_residual=True, 
+                    uses_max_pool=True, kernel_size=3, z_kernel_size=3,
+                    n_feature_maps=128, num_convs=1, is_contracting=True, 
+                    is_expanding=False, is_training=False),
+        UNet3DLayer(layer_name='layer d3', is_valid=False, is_residual=True, 
+                    uses_max_pool=True, kernel_size=3, z_kernel_size=3,
+                    n_feature_maps=256, num_convs=1, is_contracting=True, 
+                    is_expanding=False, is_training=False),
+        UNet3DLayer(layer_name='layer d4', is_valid=False, is_residual=True, 
+                    uses_max_pool=True, kernel_size=3, z_kernel_size=3,
+                    n_feature_maps=512, num_convs=1, is_contracting=False, 
+                    is_expanding=True, is_training=False),
+        UNet3DLayer(layer_name='layer u3', is_valid=False, is_residual=True, 
+                    uses_max_pool=True, kernel_size=3, z_kernel_size=3,
+                    n_feature_maps=256, num_convs=1, is_contracting=False, 
+                    is_expanding=True, is_training=False),
+        UNet3DLayer(layer_name='layer u2', is_valid=False, is_residual=True, 
+                    uses_max_pool=True, kernel_size=3, z_kernel_size=3,
+                    n_feature_maps=128, num_convs=1, is_contracting=False, 
+                    is_expanding=True, is_training=False),
+        UNet3DLayer(layer_name='layer u1', is_valid=False, is_residual=True, 
+                    uses_max_pool=True, kernel_size=3, z_kernel_size=3,
+                    n_feature_maps=64, num_convs=1, is_contracting=False, 
+                    is_expanding=False, is_training=False),
+    ]
+)
+
+
 class UNet(Model):
+    def __init__(self, architecture, is_training=False):
+        super(UNet, self).__init__(architecture)
+        prev_layer = self.image
+        prev_n_feature_maps = 1
+
+        skip_connections = []
+        
+        num_layers = len(self.architecture.layers)
+        for layer_num, layer in enumerate(self.architecture.layers):
+            with tf.variable_scope('layer' + str(layer_num)):
+                layer.depth = layer_num
+                
+                if layer.is_contracting:
+                    prev_layer, skip_connect, prev_n_feature_maps = layer.connect(prev_layer, prev_n_feature_maps)
+                    skip_connections.append(skip_connect)
+                elif layer.is_expanding:
+                    prev_layer, prev_n_feature_maps = layer.connect(prev_layer, prev_n_feature_maps, skip_connect=skip_connections[layer_num - (num_layers // 2)])
+                else:
+                    self.prediction = layer.connect(prev_layer, prev_n_feature_maps)
+                    break
+
+
+        # Loss
+        self.cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=prev_layer,
+                                                                                    labels=self.target))
+        self.binary_prediction = tf.round(self.prediction)
+        self.pixel_error = tf.reduce_mean(tf.cast(tf.abs(self.binary_prediction - self.target), tf.float32))
+
+        self.saver = tf.train.Saver()
+                
+
+class ResVNet(Model):
     '''
     Creates a new U-Net for the given parametrization.
 
@@ -34,7 +112,7 @@ class UNet(Model):
     super(UNet, self).__init__(architecture)
     '''
     def __init__(self, architecture, is_training=False, num_layers=5, features_root=64, kernel_size=3):
-        super(UNet, self).__init__(architecture)
+        super(ResVNet, self).__init__(architecture)
 
         in_node = self.image
         batch_size = tf.shape(in_node)[0]
@@ -43,6 +121,7 @@ class UNet(Model):
 
         weights = []
         biases = []
+        self.kernel_size = kwargs['kernel_size']
         convs = []
         pools = OrderedDict()
         upconvs = OrderedDict()

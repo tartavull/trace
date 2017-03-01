@@ -6,13 +6,6 @@ class ConvArchitecture(Architecture):
     def __init__(self, model_name, output_mode, layers, architecture_type='2D'):
         super(ConvArchitecture, self).__init__(model_name, output_mode, architecture_type)
 
-        if output_mode == BOUNDARIES:
-            self.n_outputs = 1
-        elif output_mode == AFFINITIES_2D:
-            self.n_outputs = 2
-        elif output_mode == AFFINITIES_3D:
-            self.n_outputs = 3
-
         self.layers = layers
 
         n_poolings = 0
@@ -34,6 +27,9 @@ class ConvArchitecture(Architecture):
             self.receptive_field += dilation_rate * (layer.filter_size - 1)
             if self.architecture_type == '3D':
                 self.z_receptive_field += z_dilation_rate * (layer.z_filter_size - 1)
+
+        self.fov = self.receptive_field
+        self.z_fov = self.z_receptive_field
 
     def print_arch(self):
 
@@ -224,12 +220,6 @@ BN_VD2D_RELU = ConvArchitecture(
 class ConvNet(Model):
     def __init__(self, architecture, is_training=False):
         super(ConvNet, self).__init__(architecture)
-
-        # Standardize each input image, using map because per_image_standardization takes one image at a time
-        if self.dim == 2:
-            standardized_image = tf.map_fn(lambda img: tf.image.per_image_standardization(img), self.image)
-        elif self.dim == 3:
-            standardized_image = self.image
 
         n_poolings = 0
 
