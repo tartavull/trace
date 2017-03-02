@@ -400,16 +400,16 @@ class Model(object):
 
         #self.example = tf.Print(self.example, [tf.shape(self.example)])
         if self.dim == 2:
-            self.image = self.example[:, :, :, :1]
+            self.raw_image = self.example[:, :, :, :1]
         elif self.dim == 3:
-            self.image = self.example[:, :, :, :, :1]
+            self.raw_image = self.example[:, :, :, :, :1]
 
         # Standardize each input image, using map because per_image_standardization takes one image at a time
         if self.dim == 2:
-            self.standardized_image = tf.map_fn(lambda img: tf.image.per_image_standardization(img), self.image)
+            self.image = tf.map_fn(lambda img: tf.image.per_image_standardization(img), self.raw_image)
         elif self.dim == 3:
-            mean, var = tf.nn.moments(self.image, axes=[0,1,2,3,4], keep_dims=False)
-            self.standardized_image = (self.image - mean) / tf.sqrt(var)
+            mean, var = tf.nn.moments(self.raw_image, axes=[0,1,2,3,4], keep_dims=False)
+            self.image = (self.raw_image - mean) / tf.sqrt(var)
 
 
         # Crop the labels to the appropriate field of view

@@ -223,7 +223,7 @@ class ConvNet(Model):
 
         n_poolings = 0
 
-        prev_layer = self.standardized_image
+        prev_layer = self.image
         prev_n_feature_maps = 1
 
         z_dilation_rate = 1

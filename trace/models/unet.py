@@ -100,7 +100,7 @@ class UNet(Model):
         # Loss
         self.cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.prediction,
                                                                                     labels=self.target))
-        self.binary_prediction = tf.round(self.prediction)
+        self.binary_prediction = tf.round(tf.nn.sigmoid(self.prediction))
         self.pixel_error = tf.reduce_mean(tf.cast(tf.abs(self.binary_prediction - self.target), tf.float32))
 
         self.saver = tf.train.Saver()
