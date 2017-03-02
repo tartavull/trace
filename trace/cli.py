@@ -122,7 +122,7 @@ def train(model_type, params_type, dataset_name, n_iter, run_name):
     hooks = [
         learner.LossHook(5, model),
         learner.ModelSaverHook(100, ckpt_folder),
-        learner.ValidationHook(500, dset, model, data_folder, params.output_mode),
+        # learner.ValidationHook(500, dset, model, data_folder, params.output_mode),
         learner.ImageVisualizationHook(50, model),
         # learner.HistogramHook(100, model),
         # learner.LayerVisualizationHook(500, model),
