@@ -282,20 +282,20 @@ class EMDatasetSampler(object):
             print(rotated_sample.get_shape())
 
             # Apply random gaussian blurring
-            def blurExample(example):
-                shouldBlur = tf.random_uniform(shape=(), minval=0, maxval=2, dtype=tf.int32)
-                sigma = tf.random_uniform(shape=(), minval=2, maxval=5, dtype=tf.float32)
-                return tf.cond(tf.equal(1, shouldBlur),
-                        lambda: tf_gaussian_blur(example, sigma, 5),
-                        lambda: example)
-            if self.dim == 2:
-                blurred_sample = tf.map_fn(blurExample, rotated_sample)
-            elif self.dim == 3:
-                blurred_sample = tf.map_fn(lambda example: tf.map_fn(blurExample, example), rotated_sample)
+            # def blurExample(example):
+            #     shouldBlur = tf.random_uniform(shape=(), minval=0, maxval=2, dtype=tf.int32)
+            #     sigma = tf.random_uniform(shape=(), minval=2, maxval=5, dtype=tf.float32)
+            #     return tf.cond(tf.equal(1, shouldBlur),
+            #             lambda: tf_gaussian_blur(example, sigma, 5),
+            #             lambda: example)
+            # if self.dim == 2:
+            #     blurred_sample = tf.map_fn(blurExample, rotated_sample)
+            # elif self.dim == 3:
+            #     blurred_sample = tf.map_fn(lambda example: tf.map_fn(blurExample, example), rotated_sample)
 
             # IDEALLY, we'd have elastic deformation here, but right now too much overhead to compute
             # elastically_deformed_sample = tf.elastic_deformation(rotated_sample)
-            elastically_deformed_sample = blurred_sample
+            elastically_deformed_sample = rotated_sample
 
 
             # Separate the image from the labels
