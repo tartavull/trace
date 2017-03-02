@@ -45,7 +45,6 @@ def max_pool(x, dilation=1, strides=[2, 2], window_shape=[2, 2]):
     return tf.nn.pool(x, window_shape=window_shape, dilation_rate=[dilation, dilation],
                       strides=strides, padding='VALID', pooling_type='MAX')
 
-
 def dropout(x, keep_prob):
     mask = tf.ones(x.get_shape()[3])
     dropoutMask = tf.nn.dropout(mask, keep_prob)

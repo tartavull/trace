@@ -1,5 +1,6 @@
 import tensorflow as tf
 import numpy as np
+import math
 
 # I/O
 import tifffile as tiff
@@ -147,19 +148,15 @@ class CREMIDataset(Dataset):
         """
         self.data_folder = data_folder
 
-        train_input_file = cremiio.CremiFile(data_folder + 'train-input.hdf', 'r')
-        train_label_file = cremiio.CremiFile(data_folder + 'train-labels.hdf', 'r')
-        self.train_inputs = train_input_file.read_raw().data.value
-        self.train_labels = train_label_file.read_neuron_ids().data.value
-        train_input_file.close()
-        train_label_file.close()
+        train_file = cremiio.CremiFile(data_folder + 'train.hdf', 'r')
+        self.train_inputs = train_file.read_raw().data.value
+        self.train_labels = train_file.read_neuron_ids().data.value
+        train_file.close()
 
-        validation_input_file = cremiio.CremiFile(data_folder + 'validation-input.hdf', 'r')
-        validation_label_file = cremiio.CremiFile(data_folder + 'validation-labels.hdf', 'r')
-        self.validation_inputs = validation_input_file.read_raw().data.value
-        self.validation_labels = validation_label_file.read_neuron_ids().data.value
-        validation_input_file.close()
-        validation_label_file.close()
+        validation_file = cremiio.CremiFile(data_folder + 'validation.hdf', 'r')
+        self.validation_inputs = validation_file.read_raw().data.value
+        self.validation_labels = validation_file.read_neuron_ids().data.value
+        validation_file.close()
 
         # TODO(beisner): Decide if we need to load the test file every time (probably don't)
         test_file = cremiio.CremiFile(data_folder + 'test.hdf', 'r')
@@ -245,7 +242,6 @@ class EMDatasetSampler(object):
         self.dataset_constant = tf.Variable(image_ph, trainable=False, collections=[])
         print(self.padded_dataset.shape)
         print(self.padded_dataset[:, :self.padded_dataset.shape[1] // 2, :self.padded_dataset.shape[2] // 2, :self.padded_dataset.shape[3] // 2].shape)
-        # dataset_constant = tf.constant(self.padded_dataset[:, :self.padded_dataset.shape[1] // 2, :self.padded_dataset.shape[2] // 2, :self.padded_dataset.shape[3] // 2], dtype=tf.float32)
 
         with tf.device('/cpu:0'):
             # Sample and squeeze the dataset, squeezing so that we can perform the distortions
@@ -254,19 +250,53 @@ class EMDatasetSampler(object):
                 patch_size_dims = [z_patch_size] + patch_size_dims
             sample = tf.random_crop(self.dataset_constant, size=[batch_size] + patch_size_dims + [train_stacked.shape[self.dim + 1]])
 
-            # Perform random flips
-            #flipped_sample = tf.map_fn(lambda img: tf.image.random_flip_left_right(img), sample)
-            #flipped_sample = tf.map_fn(lambda img: tf.image.random_flip_up_down(img), flipped_sample)
-            flipped_sample = sample
+            # Perform random mirroring
+            if self.dim == 2:
+                mirrored_sample = tf.map_fn(lambda img: tf.image.random_flip_left_right(img), sample)
+            elif self.dim == 3:
+
+                def mirrorExample(example):
+                    shouldMirror = tf.random_uniform(shape=(), minval=0, maxval=2, dtype=tf.int32)
+                    return tf.cond(tf.equal(1, shouldMirror), 
+                                   lambda: tf.map_fn(lambda img: tf.image.flip_left_right(img), example), 
+                                   lambda: example)
+                     
+                mirrored_sample = tf.map_fn(mirrorExample, sample)
+
+            # Randomly flip the 3D cube upside down
+            shouldFlip = tf.random_uniform(shape=(), minval=0, maxval=2, dtype=tf.int32)
+            flipped_sample = tf.cond(tf.equal(1, shouldFlip), 
+                                     lambda: tf.reverse(mirrored_sample, [0]),
+                                     lambda: mirrored_sample)
 
             # Apply a random rotation
-            # angle = tf.random_uniform(shape=(), minval=0, maxval=6.28)
-            # rotated_sample = tf.contrib.image.rotate(flipped_sample, angle)
-            rotated_sample = flipped_sample
+            angle = tf.random_uniform(shape=(), minval=0, maxval=2*math.pi)
+            if self.dim == 2:
+                rotated_sample = tf.map_fn(lambda img: tf.contrib.image.rotate(img, angle), flipped_sample)
+            elif self.dim == 3:
+                def rotateExample(example):
+                    angle_i = tf.random_uniform(shape=(), minval=0, maxval=2*math.pi)
+                    return tf.map_fn(lambda img: tf.contrib.image.rotate(img, angle_i), example)
+                rotated_sample = tf.map_fn(rotateExample, flipped_sample)
+
+            print(rotated_sample.get_shape())
+
+            # Apply random gaussian blurring
+            def blurExample(example):
+                shouldBlur = tf.random_uniform(shape=(), minval=0, maxval=2, dtype=tf.int32)
+                sigma = tf.random_uniform(shape=(), minval=2, maxval=5, dtype=tf.float32)
+                return tf.cond(tf.equal(1, shouldBlur),
+                        lambda: tf_gaussian_blur(example, sigma, 5),
+                        lambda: example)
+            if self.dim == 2:
+                blurred_sample = tf.map_fn(blurExample, rotated_sample)
+            elif self.dim == 3:
+                blurred_sample = tf.map_fn(lambda example: tf.map_fn(blurExample, example), rotated_sample)
 
             # IDEALLY, we'd have elastic deformation here, but right now too much overhead to compute
             # elastically_deformed_sample = tf.elastic_deformation(rotated_sample)
-            elastically_deformed_sample = rotated_sample
+            elastically_deformed_sample = blurred_sample
+
 
             # Separate the image from the labels
             if self.dim == 2:
