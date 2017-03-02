@@ -93,14 +93,16 @@ class UNet(Model):
                         skip_connect = None
                     prev_layer, prev_n_feature_maps = layer.connect(prev_layer, prev_n_feature_maps, dilation_rate=1, is_training=False, skip_connect=skip_connect)
                 else:
-                    self.prediction = layer.connect(prev_layer, prev_n_feature_maps, dilation_rate=1, is_training=False)
+                    last_layer = layer.connect(prev_layer, prev_n_feature_maps, dilation_rate=1, is_training=False)
                     break
 
+        # Predictions
+        self.prediction = tf.nn.sigmoid(last_layer)
+        self.binary_prediction = tf.round(self.prediction)
 
         # Loss
-        self.cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.prediction,
+        self.cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=last_layer,
                                                                                     labels=self.target))
-        self.binary_prediction = tf.round(self.prediction)
         self.pixel_error = tf.reduce_mean(tf.cast(tf.abs(self.binary_prediction - self.target), tf.float32))
 
         self.saver = tf.train.Saver()
