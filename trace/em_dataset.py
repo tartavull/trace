@@ -270,17 +270,16 @@ class EMDatasetSampler(object):
                                      lambda: mirrored_sample)
 
             # Apply a random rotation
-            angle = tf.random_uniform(shape=(), minval=0, maxval=2*math.pi)
-            if self.dim == 2:
-                rotated_sample = tf.map_fn(lambda img: tf.contrib.image.rotate(img, angle), flipped_sample)
-            elif self.dim == 3:
-                def rotateExample(example):
-                    angle_i = tf.random_uniform(shape=(), minval=0, maxval=2*math.pi)
-                    return tf.map_fn(lambda img: tf.contrib.image.rotate(img, angle_i), example)
-                rotated_sample = tf.map_fn(rotateExample, flipped_sample)
+            # angle = tf.random_uniform(shape=(), minval=0, maxval=2*math.pi)
+            # if self.dim == 2:
+            #     rotated_sample = tf.map_fn(lambda img: tf.contrib.image.rotate(img, angle), flipped_sample)
+            # elif self.dim == 3:
+            #     def rotateExample(example):
+            #         angle_i = tf.random_uniform(shape=(), minval=0, maxval=2*math.pi)
+            #         return tf.map_fn(lambda img: tf.contrib.image.rotate(img, angle_i), example)
+            #     rotated_sample = tf.map_fn(rotateExample, flipped_sample)
 
-            print(rotated_sample.get_shape())
-
+            rotated sample = flipped_sample
             # Apply random gaussian blurring
             # def blurExample(example):
             #     shouldBlur = tf.random_uniform(shape=(), minval=0, maxval=2, dtype=tf.int32)

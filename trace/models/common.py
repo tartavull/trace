@@ -1,13 +1,12 @@
 import tensorflow as tf
 from utils import *
-
+shape_dict3d={}
 
 def weight_variable(shape):
     """
     Xavier initialization
     """
     return tf.Variable(shape=shape, initializer=tf.contrib.layers.xavier_initializer(uniform=False))
-
 
 def get_weight_variable(name, shape):
     return tf.get_variable(name, shape=shape, initializer=tf.contrib.layers.xavier_initializer(uniform=False))
@@ -61,7 +60,6 @@ def crop(x1, x2, batch_size):
 def crop_and_concat(x1, x2, batch_size):
     return tf.concat([crop(x1, x2, batch_size), x2], 3)
 
-
 # Arguments:
 #   - inputs: mini-batch of input images
 #   - is_training: flag specifying whether to use mini-batch or population
@@ -85,6 +83,49 @@ def batch_norm_layer(inputs, is_training, decay=0.9):
     else:
         return tf.nn.batch_normalization(inputs, pop_mean, pop_var, offset, scale, epsilon)
 
+class ConvKernel():
+    def transpose(self):
+        return TransposeKernel(self)
+
+class TransposeKernel(ConvKernel):
+    def __init__(self,k):
+        self.kernel=k
+    
+    def __call__(self, x):
+        return self.kernel.transpose_call(x)
+    def transpose(self):
+        return self.kernel
+
+class ConvKernel3d(ConvKernel):
+    def __init__(self, name, size=(4,4,1), strides=(2,2,1), n_lower=1, n_upper=1):
+        self.weights = weight_variable(shape=[size[0],size[1],size[2],n_lower,n_upper])
+        self.size = size
+        self.strides = [1,strides[0],strides[1],strides[2],1]
+        self.n_lower = n_lower
+        self.n_upper = n_upper
+
+        #up_coeff and down_coeff are coefficients meant to keep the magnitude of the output independent of stride and size choices
+        self.up_coeff = 1.0/np.sqrt(reduce(operator.mul,size)*n_lower)
+        self.down_coeff = 1.0/np.sqrt(reduce(operator.mul,size)/(reduce(operator.mul,strides))*n_upper)
+    
+    def transpose(self):
+        return TransposeKernel(self)
+
+    def __call__(self,x):
+        with tf.name_scope('conv3d') as scope:
+            self.in_shape = tf.shape(x)
+            tmp=tf.nn.conv3d(x, self.up_coeff*self.weights, strides=self.strides, padding='VALID')
+            shape_dict3d[(tuple(tmp._shape_as_list()[1:4]), self.size, tuple(self.strides))]=tuple(x._shape_as_list()[1:4])
+        return tmp
+
+    def transpose_call(self,x):
+        with tf.name_scope('conv3d_t') as scope:
+            if not hasattr(self,"in_shape"):
+                self.in_shape=shape_dict3d[(tuple(x._shape_as_list()[1:4]),self.size,tuple(self.strides))]+(self.n_lower,)
+            full_in_shape = (x._shape_as_list()[0],)+self.in_shape
+            ret = tf.nn.conv3d_transpose(x, self.down_coeff*self.weights, output_shape=full_in_shape, strides=self.strides, padding='VALID')
+        return tf.reshape(ret, full_in_shape)
+
 
 class Layer(object):
     depth = 0
@@ -96,7 +137,6 @@ class Layer(object):
 
     def connect(self, prev_layer, prev_n_feature_maps, dilation_rate, is_training):
         raise NotImplementedError("Abstract Class!")
-
 
 class ConvLayer(Layer):
     def __init__(self, *args, **kwargs):

@@ -278,7 +278,7 @@ class Learner:
         # We will write our summaries here
         summary_writer = tf.summary.FileWriter(self.ckpt_folder + 'events', graph=sess.graph)
 
-        # Definte an optimizer
+        # Define an optimizer
         optimize_step = training_params.optimizer(training_params.learning_rate).minimize(model.cross_entropy)
 
         # Create enqueue op and a QueueRunner to handle queueing of training examples
@@ -291,7 +291,6 @@ class Learner:
             feed_dict={'image_ph:0': dset_sampler.padded_dataset})
         
         del dset_sampler.padded_dataset
-
 
         '''
         sess.run(enqueue_op)
@@ -339,7 +338,7 @@ class Learner:
 
             # Run the optimizer
             sess.run(optimize_step)
-
+            print('optimizing')
             for hook in hooks:
                 hook.eval(step, model, sess, summary_writer)
 
