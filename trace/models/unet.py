@@ -18,8 +18,10 @@ class UNetArchitecture(Architecture):
 
         self.fov = 1
         self.z_fov = 1
-        for layer in layers:
-            self.fov += 4
+        
+       # for layer in layers:
+
+       #     self.fov += 4
           #CALCULATE THE FOV  
 
 
@@ -36,31 +38,31 @@ UNET_3D = UNetArchitecture(
     model_name='unet_3d',
     output_mode=AFFINITIES_3D,
     layers=[
-        UNet3DLayer(layer_name='layer d1', is_valid=False, is_residual=True, 
+        UNet3DLayer(layer_name='layer_d1', is_valid=False, is_residual=True, 
                     uses_max_pool=True, filter_size=3, z_filter_size=3,
                     n_feature_maps=64, num_convs=1, is_contracting=True, 
                     is_expanding=False, is_training=False),
-        UNet3DLayer(layer_name='layer d2', is_valid=False, is_residual=True, 
+        UNet3DLayer(layer_name='layer_d2', is_valid=False, is_residual=True, 
                     uses_max_pool=True, filter_size=3, z_filter_size=3,
                     n_feature_maps=128, num_convs=1, is_contracting=True, 
                     is_expanding=False, is_training=False),
-        UNet3DLayer(layer_name='layer d3', is_valid=False, is_residual=True, 
+        UNet3DLayer(layer_name='layer_d3', is_valid=False, is_residual=True, 
                     uses_max_pool=True, filter_size=3, z_filter_size=3,
                     n_feature_maps=256, num_convs=1, is_contracting=True, 
                     is_expanding=False, is_training=False),
-        UNet3DLayer(layer_name='layer d4', is_valid=False, is_residual=True, 
+        UNet3DLayer(layer_name='layer_d4', is_valid=False, is_residual=True, 
                     uses_max_pool=True, filter_size=3, z_filter_size=3,
                     n_feature_maps=512, num_convs=1, is_contracting=False, 
                     is_expanding=True, is_training=False),
-        UNet3DLayer(layer_name='layer u3', is_valid=False, is_residual=True, 
+        UNet3DLayer(layer_name='layer_u3', is_valid=False, is_residual=True, 
                     uses_max_pool=True, filter_size=3, z_filter_size=3,
                     n_feature_maps=256, num_convs=1, is_contracting=False, 
                     is_expanding=True, is_training=False),
-        UNet3DLayer(layer_name='layer u2', is_valid=False, is_residual=True, 
+        UNet3DLayer(layer_name='layer_u2', is_valid=False, is_residual=True, 
                     uses_max_pool=True, filter_size=3, z_filter_size=3,
                     n_feature_maps=128, num_convs=1, is_contracting=False, 
                     is_expanding=True, is_training=False),
-        UNet3DLayer(layer_name='layer u1', is_valid=False, is_residual=True, 
+        UNet3DLayer(layer_name='layer_u1', is_valid=False, is_residual=True, 
                     uses_max_pool=True, filter_size=3, z_filter_size=3,
                     n_feature_maps=64, num_convs=1, is_contracting=False, 
                     is_expanding=False, is_training=False),
@@ -82,17 +84,21 @@ class UNet(Model):
                 layer.depth = layer_num
                 
                 if layer.is_contracting:
-                    prev_layer, skip_connect, prev_n_feature_maps = layer.connect(prev_layer, prev_n_feature_maps)
+                    prev_layer, skip_connect, prev_n_feature_maps = layer.connect(prev_layer, prev_n_feature_maps, dilation_rate=1, is_training=False)
                     skip_connections.append(skip_connect)
                 elif layer.is_expanding:
-                    prev_layer, prev_n_feature_maps = layer.connect(prev_layer, prev_n_feature_maps, skip_connect=skip_connections[layer_num - (num_layers // 2)])
+                    if num_layers - layer_num - 1 < len(skip_connections):
+                        skip_connect = skip_connections[num_layers - layer_num - 1]
+                    else:
+                        skip_connect = None
+                    prev_layer, prev_n_feature_maps = layer.connect(prev_layer, prev_n_feature_maps, dilation_rate=1, is_training=False, skip_connect=skip_connect)
                 else:
-                    self.prediction = layer.connect(prev_layer, prev_n_feature_maps)
+                    self.prediction = layer.connect(prev_layer, prev_n_feature_maps, dilation_rate=1, is_training=False)
                     break
 
 
         # Loss
-        self.cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=prev_layer,
+        self.cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.prediction,
                                                                                     labels=self.target))
         self.binary_prediction = tf.round(self.prediction)
         self.pixel_error = tf.reduce_mean(tf.cast(tf.abs(self.binary_prediction - self.target), tf.float32))

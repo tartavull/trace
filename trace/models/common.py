@@ -36,7 +36,7 @@ def same_conv2d(x, W, dilation=1):
 
 
 def same_conv3d(x, W, dilation=1, z_dilation=1):
-    return tf.nn.convolution(x, W, strides=[1, 1, 1], padding='SAME', dilation_rate=[z_dilation_rate, dilation, dilation])
+    return tf.nn.convolution(x, W, strides=[1, 1, 1], padding='SAME', dilation_rate=[z_dilation, dilation, dilation])
 
 
 def down_conv2d(x, W, dilation=1):
@@ -49,14 +49,14 @@ def down_conv2d(x, W, dilation=1, z_dilation_rate=1):
 
 def conv2d_transpose(x, W, stride):
     x_shape = tf.shape(x)
-    output_shape = tf.pack([x_shape[0], x_shape[1] * 2, x_shape[2] * 2, x_shape[3] // 2])
+    output_shape = tf.stack([x_shape[0], x_shape[1] * 2, x_shape[2] * 2, x_shape[3] // 2])
     return tf.nn.conv2d_transpose(x, W, output_shape, strides=[1, stride, stride, 1], padding='SAME')
 
 
 def conv3d_transpose(x, W, stride):
     x_shape = tf.shape(x)
-    output_shape = tf.pack([x_shape[0], x_shape[1] * 2, x_shape[2] * 2, x_shape[3] * 2, x_shape[4] // 2])
-    return tf.nn.conv2d_transpose(x, W, output_shape, strides=[1, stride, stride, stride, 1], padding='SAME')
+    output_shape = tf.stack([x_shape[0], x_shape[1] * 2, x_shape[2] * 2, x_shape[3] * 2, x_shape[4] // 2])
+    return tf.nn.conv3d_transpose(x, W, output_shape, strides=[1, stride, stride, stride, 1], padding='SAME')
 
 
 def max_pool(x, dilation=1, strides=[2, 2], window_shape=[2, 2]):
@@ -76,14 +76,29 @@ def dropout(x, keep_prob):
 
 
 def crop(x1, x2, batch_size):
-    offsets = tf.zeros(tf.pack([batch_size, 2]), dtype=tf.float32)
+    offsets = tf.zeros(tf.stack([batch_size, 2]), dtype=tf.float32)
     x2_shape = tf.shape(x2)
-    size = tf.pack([x2_shape[1], x2_shape[2]])
+    size = tf.stack([x2_shape[1], x2_shape[2]])
     return tf.image.extract_glimpse(x1, size=size, offsets=offsets, centered=True)
+
+
+def crop_3d(x1, x2, batch_size):
+    x2_shape = tf.shape(x2)
+    x2_shape = tf.Print(x2_shape, [x2_shape, tf.shape(x1)])
+    offsets = tf.zeros(tf.stack([x2_shape[1], 2]), dtype=tf.float32)
+    size = tf.stack([x2_shape[2], x2_shape[3]])
+    
+    z_crop = tf.shape(x1)[1] - x2_shape[1]
+    return tf.map_fn(lambda img: tf.image.extract_glimpse(img, size=size, offsets=offsets, centered=True), x1)[z_crop // 2 : -(z_crop // 2)]
 
 
 def crop_and_concat(x1, x2, batch_size):
     return tf.concat([crop(x1, x2, batch_size), x2], 3)
+
+
+def crop_and_concat_3d(x1, x2, batch_size):
+    return tf.concat([crop_3d(x1, x2, batch_size), x2], 4)
+
 
 
 # Arguments:
@@ -115,7 +130,7 @@ class Layer(object):
     def __init__(self, dim, filter_size, n_feature_maps, activation_fn=lambda x: x, z_filter_size=1):
         self.dim = dim
         self.filter_size = filter_size
-        #self.z_filter_size = z_filter_size
+        self.z_filter_size = z_filter_size
         self.n_feature_maps = n_feature_maps
         self.activation_fn = activation_fn
 
@@ -146,78 +161,89 @@ class UNet3DLayer(Layer):
 
         super(UNet3DLayer, self).__init__(*args, **kwargs)
 
-        def connect(self, prev_layer, prev_n_feature_maps, skip_connect=None):
-            weights = []
-            biases = []
-            convs = []
+    def connect(self, prev_layer, prev_n_feature_maps, dilation_rate, is_training, z_dilation_rate=1, skip_connect=None):
+        weights = []
+        biases = []
+        convs = []
 
-            cur_node = prev_layer
-            batch_size = tf.shape(cur_node)[0]
+        cur_node = prev_layer
+        batch_size = tf.shape(cur_node)[0]
 
-            # Set up each convolution in the layer.
-            for i in range(num_convs):
-                # Create the weights and biases.
-                if i == 0:
-                    w_i = get_weight_variable(layer_name + '_w0', [self.kernel_size, self.kernel_size, self.z_kernel_size, prev_n_feature_maps, self.n_feature_maps])
-                else:
-                    w_i = get_weight_variable(layer_name + '_w' + str(i), [self.kernel_size, self.kernel_size, self.z_kernel_size, self.n_feature_maps, self.n_feature_maps])
-                b_i = get_bias_variable(layer_str + '_b' + str(i), [self.n_feature_maps])
-                weights.append(w_i)
-                biases.append(b_i)
+        in_n_feature_maps = prev_n_feature_maps
 
-                # Perform the convolution
-                if self.is_valid:
-                    convFn = conv3d
-                else:
-                    convFn = same_conv3d
-                cur_node = tf.nn.elu(convFn(cur_node, w_i) + b_i)
-                convs.append(cur_node)
-            
-            # If applicable, add the residual connection.
-            if self.is_residual:
-                if self.is_valid:
-                    residual = crop(prev_layer, cur_node, batch_size)
-                if prev_n_feature_maps != self.n_feature_maps:
-                    residual = tf.tile(residual, (1, 1, 1, self.n_feature_maps // prev_n_feature_maps))
-                final_node = cur_node + residual
+        # Add skip-connection if expanding.
+        if self.is_expanding and skip_connect != None:
+            cur_node = tf.concat([skip_connect, cur_node], 4)
+            convs.append(cur_node)
+            in_n_feature_maps = prev_n_feature_maps * 2
 
 
-            # If on the contracting path, down sample using either max-pooling
-            # or down-convolution. 
-            if self.is_contracting:
-                if self.uses_max_pool:
-                    out_node = max_pool_3d(final_node)
-                    out_n_feature_maps = self.n_feature_maps
-                else:
-                    w_d = get_weight_variable(layer_name + '_wd', [2, 2, self.n_feature_maps, 2 * self.n_feature_maps])
-                    b_d = get_bias_variable(layer_name + '_bd', [2 * self.n_feature_maps])
-                    weights.append(w_d)
-                    biases.append(b_d)
-
-                    out_node = tf.nn.elu(down_conv3d(final_node, w_d) + b_d)
-                    out_n_feature_maps = self.n_feature_maps * 2
-                convs.append(out_node)
-
-                return out_node, final_node, out_n_feature_maps
-            elif self.is_expanding:
-                # If on the expanding path, upsample using transposed
-                # convolution.
-                w_u = get_weight_variable(layer_name + '_wu', [self.kernel_size, self.kernel_size, self.n_feature_maps // 2, self.n_feature_maps])
-                b_u = get_bias_variable(layer_name + '_bu', [self.n._feature_maps])
-                weights.append(w_u)
-                biases.append(b_u)
-
-                up_conv = tf.nn.elu(conv3d_transpose(final_node, w_u, stride=2) + bu)
-                convs.append(up_conv)
-
-                # Add skip-connection.
-                out_node = crop_and_concat(skip_connect, up_conv, batch_size)
-                convs.append(out_node)
-                out_n_feature_maps = self.n_feature_maps // 2
-
-                return out_node, out_n_feature_maps
+        # Set up each convolution in the layer.
+        for i in range(self.num_convs):
+            # Create the weights and biases.
+            if i == 0:
+                w_i = get_weight_variable(self.layer_name + '_w0', [self.z_filter_size, self.filter_size, self.filter_size, in_n_feature_maps, self.n_feature_maps])
             else:
-                return final_node
+                w_i = get_weight_variable(self.layer_name + '_w' + str(i), [self.z_filter_size, self.filter_size, self.filter_size, self.n_feature_maps, self.n_feature_maps])
+            b_i = get_bias_variable(self.layer_name + '_b' + str(i), [self.n_feature_maps])
+            weights.append(w_i)
+            biases.append(b_i)
+
+            # Perform the convolution
+            if self.is_valid:
+                convFn = conv3d
+            else:
+                convFn = same_conv3d
+            cur_node = tf.nn.elu(convFn(cur_node, w_i) + b_i)
+            convs.append(cur_node)
+        
+        # If applicable, add the residual connection.
+        if self.is_residual:
+            if self.is_valid:
+                residual = crop(prev_layer, cur_node, batch_size)
+            else:
+                residual = prev_layer
+            if prev_n_feature_maps != self.n_feature_maps:
+                residual = tf.tile(residual, (1, 1, 1, 1, self.n_feature_maps // prev_n_feature_maps))
+            final_node = cur_node + residual
+
+
+        # If on the contracting path, down sample using either max-pooling
+        # or down-convolution. 
+        if self.is_contracting:
+            if self.uses_max_pool:
+                out_node = max_pool_3d(final_node)
+                out_n_feature_maps = self.n_feature_maps
+            else:
+                w_d = get_weight_variable(layer_name + '_wd', [2, 2, 2, self.n_feature_maps, 2 * self.n_feature_maps])
+                b_d = get_bias_variable(layer_name + '_bd', [2 * self.n_feature_maps])
+                weights.append(w_d)
+                biases.append(b_d)
+
+                out_node = tf.nn.elu(down_conv3d(final_node, w_d) + b_d)
+                out_n_feature_maps = self.n_feature_maps * 2
+            convs.append(out_node)
+
+            return out_node, final_node, out_n_feature_maps
+        elif self.is_expanding:
+            # If on the expanding path, upsample using transposed
+            # convolution.
+            w_u = get_weight_variable(self.layer_name + '_wu', [self.z_filter_size, self.filter_size, self.filter_size, self.n_feature_maps // 2, self.n_feature_maps])
+            b_u = get_bias_variable(self.layer_name + '_bu', [self.n_feature_maps // 2])
+            weights.append(w_u)
+            biases.append(b_u)
+
+            up_conv = tf.nn.elu(conv3d_transpose(final_node, w_u, stride=2) + b_u)
+            convs.append(up_conv)
+            out_n_feature_maps = self.n_feature_maps // 2
+
+            return up_conv, out_n_feature_maps
+        else:
+            # Map back to affinites.
+            w_o = get_weight_variable('w_o', [self.z_filter_size, self.filter_size, self.filter_size, self.n_feature_maps, 3])
+            b_o = get_bias_variable('b_o', [3])
+            out_node = same_conv3d(final_node, w_o) + b_o
+            return out_node
 
             
 
@@ -269,8 +295,6 @@ class Conv2DLayer(ConvLayer):
 class Conv3DLayer(ConvLayer):
     def __init__(self, *args, **kwargs):
         kwargs['dim'] = 3
-        self.z_filter_size = kwargs['z_filter_size']
-        del kwargs['z_filter_size']
         super(Conv3DLayer, self).__init__(*args, **kwargs)
 
     def connect(self, *args, **kwargs):
@@ -392,7 +416,11 @@ class Model(object):
         if self.dim == 2:
             self.target = self.example[:, self.fov // 2:-(self.fov // 2), self.fov // 2:-(self.fov // 2), 1:]
         elif self.dim == 3:
-            self.target = self.example[:, self.z_fov // 2:-(self.z_fov // 2), self.fov // 2:-(self.fov // 2), self.fov // 2:-(self.fov // 2), 1:]
+            if self.fov == 1 and self.z_fov == 1:
+                self.target = self.example[:, :, :, :, 1:]
+            else:
+                self.target = self.example[:, self.z_fov // 2:-(self.z_fov // 2), self.fov // 2:-(self.fov // 2), self.fov // 2:-(self.fov // 2), 1:]
+
             
         #self.image = tf.Print(self.image, [tf.shape(self.image)])
         #self.target = tf.Print(self.target, [tf.shape(self.target)])
