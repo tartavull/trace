@@ -10,6 +10,7 @@ import h5py
 import tifffile as tif
 import dataprovider.transform as transform
 import subprocess
+import numpy as np
 
 import cremi.io as cremiio
 import cremi.evaluation as cremival
@@ -96,6 +97,7 @@ def __maybe_split(folder,
 
                 train_slices = int(num_slices * train_fraction)
 
+                print(train_slices)
                 train_set = file.asarray()[:train_slices, :, :]
                 validation_set = file.asarray()[train_slices:, :, :]
 
@@ -157,7 +159,6 @@ def __maybe_create_snemi3d(dest_folder, train_frac):
     __maybe_create_hdf5_from_tif(dest_folder, VALIDATION_INPUT)
     __maybe_create_hdf5_from_tif(dest_folder, VALIDATION_LABELS)
     __maybe_create_hdf5_from_tif(dest_folder, TEST_INPUT)
-
 
 def __maybe_split_cremi(folder, train_fraction):
     if not os.path.exists(folder + 'validation.hdf'):
@@ -251,7 +252,6 @@ def __maybe_create_cremi(dest_folder, train_frac):
     __maybe_split_cremi(dest_folder + 'a/', train_frac)
     __maybe_split_cremi(dest_folder + 'b/', train_frac)
     __maybe_split_cremi(dest_folder + 'c/', train_frac)
-
 
 def maybe_create_all_datasets(trace_folder, train_frac):
     # __maybe_create_snemi3d(trace_folder + SNEMI3D + '/', train_frac)

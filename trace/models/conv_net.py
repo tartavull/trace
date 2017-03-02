@@ -225,8 +225,10 @@ class ConvNet(Model):
         super(ConvNet, self).__init__(architecture)
 
         # Standardize each input image, using map because per_image_standardization takes one image at a time
-        #standardized_image = tf.map_fn(lambda img: tf.image.per_image_standardization(img), self.image)
-        standardized_image = self.image
+        if self.dim == 2:
+            standardized_image = tf.map_fn(lambda img: tf.image.per_image_standardization(img), self.image)
+        elif self.dim == 3:
+            standardized_image = self.image
 
         n_poolings = 0
 

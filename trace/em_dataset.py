@@ -163,6 +163,7 @@ class CREMIDataset(Dataset):
         self.test_inputs = test_file.read_raw().data.value
         test_file.close()
 
+
     def prepare_predictions_for_submission(self, results_folder, split, predictions, label_type):
         """Prepare a given segmentation prediction for submission to the CREMI competiton
         :param label_type: The type of label given in predictions (i.e. affinities-2d, boundaries, etc)
@@ -223,10 +224,11 @@ class EMDatasetSampler(object):
             train_stacked = np.expand_dims(train_stacked, axis=0)
 
         # Define inputs to the graph
-        crop_pad = input_size // 4
-        z_crop_pad = z_input_size // 2
+        crop_pad = input_size // 6 * 2
+        z_crop_pad = z_input_size // 4 * 2
         patch_size = input_size + crop_pad
         z_patch_size = z_input_size + z_crop_pad
+
 
         # Create dataset, and pad the dataset with mirroring
         pad = input_size // 2
@@ -240,6 +242,7 @@ class EMDatasetSampler(object):
         # because a tf.constant cannot hold a dataset that is over 2GB.
         image_ph = tf.placeholder(dtype=tf.float32, shape=self.padded_dataset.shape, name='image_ph')
         self.dataset_constant = tf.Variable(image_ph, trainable=False, collections=[])
+
         print(self.padded_dataset.shape)
         print(self.padded_dataset[:, :self.padded_dataset.shape[1] // 2, :self.padded_dataset.shape[2] // 2, :self.padded_dataset.shape[3] // 2].shape)
 
@@ -248,11 +251,12 @@ class EMDatasetSampler(object):
             patch_size_dims = [patch_size, patch_size]
             if self.dim == 3:
                 patch_size_dims = [z_patch_size] + patch_size_dims
-            sample = tf.random_crop(self.dataset_constant, size=[batch_size] + patch_size_dims + [train_stacked.shape[self.dim + 1]])
+
+            self.sample = tf.random_crop(self.dataset_constant, size=[batch_size] + patch_size_dims + [train_stacked.shape[self.dim + 1]])
 
             # Perform random mirroring
             if self.dim == 2:
-                mirrored_sample = tf.map_fn(lambda img: tf.image.random_flip_left_right(img), sample)
+                mirrored_sample = tf.map_fn(lambda img: tf.image.random_flip_left_right(img), self.sample)
             elif self.dim == 3:
 
                 def mirrorExample(example):
@@ -261,7 +265,8 @@ class EMDatasetSampler(object):
                                    lambda: tf.map_fn(lambda img: tf.image.flip_left_right(img), example), 
                                    lambda: example)
                      
-                mirrored_sample = tf.map_fn(mirrorExample, sample)
+                mirrored_sample = tf.map_fn(mirrorExample, self.sample)
+
 
             # Randomly flip the 3D cube upside down
             shouldFlip = tf.random_uniform(shape=(), minval=0, maxval=2, dtype=tf.int32)
@@ -269,32 +274,35 @@ class EMDatasetSampler(object):
                                      lambda: tf.reverse(mirrored_sample, [0]),
                                      lambda: mirrored_sample)
 
-            # Apply a random rotation
-            # angle = tf.random_uniform(shape=(), minval=0, maxval=2*math.pi)
-            # if self.dim == 2:
-            #     rotated_sample = tf.map_fn(lambda img: tf.contrib.image.rotate(img, angle), flipped_sample)
-            # elif self.dim == 3:
-            #     def rotateExample(example):
-            #         angle_i = tf.random_uniform(shape=(), minval=0, maxval=2*math.pi)
-            #         return tf.map_fn(lambda img: tf.contrib.image.rotate(img, angle_i), example)
-            #     rotated_sample = tf.map_fn(rotateExample, flipped_sample)
 
-            rotated sample = flipped_sample
+            # Apply a random rotation
+            angle = tf.random_uniform(shape=(), minval=0, maxval=2*math.pi)
+            if self.dim == 2:
+                rotated_sample = tf.map_fn(lambda img: tf.contrib.image.rotate(img, angle), flipped_sample)
+            elif self.dim == 3:
+                def rotateExample(example):
+                    angle_i = tf.random_uniform(shape=(), minval=0, maxval=2*math.pi)
+                    return tf.map_fn(lambda img: tf.contrib.image.rotate(img, angle_i), example)
+                rotated_sample = tf.map_fn(rotateExample, flipped_sample)
+
+
             # Apply random gaussian blurring
-            # def blurExample(example):
-            #     shouldBlur = tf.random_uniform(shape=(), minval=0, maxval=2, dtype=tf.int32)
-            #     sigma = tf.random_uniform(shape=(), minval=2, maxval=5, dtype=tf.float32)
-            #     return tf.cond(tf.equal(1, shouldBlur),
-            #             lambda: tf_gaussian_blur(example, sigma, 5),
-            #             lambda: example)
-            # if self.dim == 2:
-            #     blurred_sample = tf.map_fn(blurExample, rotated_sample)
-            # elif self.dim == 3:
-            #     blurred_sample = tf.map_fn(lambda example: tf.map_fn(blurExample, example), rotated_sample)
+            # SHOULD NOT BLUR LABELS
+            def blurExample(example):
+                shouldBlur = tf.random_uniform(shape=(), minval=0, maxval=2, dtype=tf.int32)
+                sigma = tf.random_uniform(shape=(), minval=2, maxval=5, dtype=tf.float32)
+                return tf.cond(tf.equal(1, shouldBlur),
+                        lambda: tf_gaussian_blur(example, sigma, 5),
+                        lambda: example)
+            if self.dim == 2:
+                blurred_sample = tf.map_fn(blurExample, rotated_sample)
+            elif self.dim == 3:
+                blurred_sample = tf.map_fn(lambda example: tf.map_fn(blurExample, example), rotated_sample)
 
             # IDEALLY, we'd have elastic deformation here, but right now too much overhead to compute
             # elastically_deformed_sample = tf.elastic_deformation(rotated_sample)
-            elastically_deformed_sample = rotated_sample
+            elastically_deformed_sample = self.sample
+
 
 
             # Separate the image from the labels
