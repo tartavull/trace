@@ -16,6 +16,7 @@ class UNetArchitecture(Architecture):
     def __init__(self, model_name, output_mode):
         super(UNetArchitecture, self).__init__(model_name, output_mode, '2D')
         self.receptive_field = 1
+        self.z_receptive_field = 1
 
 
 RES_VNET = UNetArchitecture(
