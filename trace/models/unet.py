@@ -11,16 +11,65 @@ FOV = 189
 OUTPT = 192
 INPT = 380
 
+
 class UNetArchitecture(Architecture):
     def __init__(self, model_name, output_mode):
         super(UNetArchitecture, self).__init__(model_name, output_mode, '2D')
-        self.receptive_field = FOV
+        self.receptive_field = 1
 
 
 RES_VNET = UNetArchitecture(
     model_name='res_vnet',
     output_mode=AFFINITIES_2D
 )
+
+UNET_3D = UNetArchitecture(
+    model_name='unet_3d',
+    output_mode=AFFINITIES_3D
+)
+
+class UNet_Jon(Model):
+    def __init__(self, architecture, is_training=False):
+        super(UNet, self).__init__(architecture)
+        
+        in_node = self.image
+        batch_size = tf.shape(in_node)[0]
+        in_size = tf.shape(in_node)[1]
+        size = in_size
+
+        #convolution variables
+        c1=ConvKernel3d(size=(4,4,1), strides=(2,2,1), n_lower=1, n_upper=12)
+        c2=ConvKernel3d(size=(4,4,1), strides=(2,2,1), n_lower=12, n_upper=24)
+        c3=ConvKernel3d(size=(4,4,4), strides=(2,2,2), n_lower=24, n_upper=48)
+        c1t=ConvKernel3d(size=(4,4,1), strides=(2,2,1), n_lower=1, n_upper=12).transpose()
+        c2t=ConvKernel3d(size=(4,4,1), strides=(2,2,1), n_lower=12, n_upper=24).transpose()
+        c3t=ConvKernel3d(size=(4,4,4), strides=(2,2,2), n_lower=24, n_upper=48).transpose()
+
+        b0 = bias_variable([1,1,1,1,1])
+        b1 = bias_variable([1,1,1,1,12])
+        b2 = bias_variable([1,1,1,1,24])
+        b3 = bias_variable([1,1,1,1,48])
+        b0t = bias_variable([1,1,1,1,1])
+        b1t = bias_variable([1,1,1,1,12])
+        b2t = bias_variable([1,1,1,1,24])
+
+        layer_0 = in_node
+        layer_1 = tf.nn.relu(c1(l0)+b1)
+        layer_2 = tf.nn.relu(c2(l1)+b2)
+        layer_3 = tf.nn.relu(c3(l2)+b3)
+        layer_3t = l3
+        layer_2t = tf.nn.relu(c3t(l3t)+l2+b2t)
+        layer_1t = tf.nn.relu(c2t(l2t)+l1+b1t)
+        layer_0t = tf.nn.relu(c1t(l1t)+l0+b0t)
+
+        last_layer = layer_0t
+        self.prediction = tf.nn.sigmoid(last_layer)
+        self.binary_prediction = tf.round(self.prediction)
+
+        self.cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(last_layer, self.target))
+        self.pixel_error = tf.reduce_mean(tf.cast(tf.abs(self.binary_prediction - self.target), tf.float32))
+
+        self.saver = tf.train.Saver()
 
 class UNet(Model):
     '''
