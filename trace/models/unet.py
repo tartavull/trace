@@ -58,7 +58,7 @@ class UNet_Jon(Model):
         layer_1 = tf.nn.relu(c1(layer_0)+b1)
         layer_2 = tf.nn.relu(c2(layer_1)+b2)
         layer_3 = tf.nn.relu(c3(layer_2)+b3)
-        layer_3t = l3
+        layer_3t = layer_3
         layer_2t = tf.nn.relu(c3t(layer_3t)+layer_2+b2t)
         layer_1t = tf.nn.relu(c2t(layer_2t)+layer_1+b1t)
         layer_0t = tf.nn.relu(c1t(layer_1t)+layer_0+b0t)
