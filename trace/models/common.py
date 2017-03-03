@@ -97,7 +97,7 @@ class TransposeKernel(ConvKernel):
         return self.kernel
 
 class ConvKernel3d(ConvKernel):
-    def __init__(self, name, size=(4,4,1), strides=(2,2,1), n_lower=1, n_upper=1):
+    def __init__(self, size=(4,4,1), strides=(2,2,1), n_lower=1, n_upper=1):
         self.weights = weight_variable(shape=[size[0],size[1],size[2],n_lower,n_upper])
         self.size = size
         self.strides = [1,strides[0],strides[1],strides[2],1]
@@ -125,7 +125,7 @@ class ConvKernel3d(ConvKernel):
             full_in_shape = (x._shape_as_list()[0],)+self.in_shape
             ret = tf.nn.conv3d_transpose(x, self.down_coeff*self.weights, output_shape=full_in_shape, strides=self.strides, padding='VALID')
         return tf.reshape(ret, full_in_shape)
-
+# 
 
 class Layer(object):
     depth = 0
@@ -300,7 +300,10 @@ class Model(object):
         if self.dim == 2:
             self.target = self.example[:, self.fov // 2:-(self.fov // 2), self.fov // 2:-(self.fov // 2), 1:]
         elif self.dim == 3:
-            self.target = self.example[:, self.z_fov // 2:-(self.z_fov // 2), self.fov // 2:-(self.fov // 2), self.fov // 2:-(self.fov // 2), 1:]
+            if self.fov == 1:
+                self.target = self.example[:, :, :, :, 1:]
+            else: 
+                self.target = self.example[:, self.z_fov // 2:-(self.z_fov // 2), self.fov // 2:-(self.fov // 2), self.fov // 2:-(self.fov // 2), 1:]
             
         #self.image = tf.Print(self.image, [tf.shape(self.image)])
         #self.target = tf.Print(self.target, [tf.shape(self.target)])
