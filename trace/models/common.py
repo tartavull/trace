@@ -1,5 +1,8 @@
 import tensorflow as tf
 from utils import *
+import operator
+import numpy as np
+import pprint
 shape_dict3d={}
 
 def weight_variable(shape):
