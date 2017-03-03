@@ -30,7 +30,7 @@ UNET_3D = UNetArchitecture(
 
 class UNet_Jon(Model):
     def __init__(self, architecture, is_training=False):
-        super(UNet, self).__init__(architecture)
+        super(UNet_Jon, self).__init__(architecture)
         
         in_node = self.image
         batch_size = tf.shape(in_node)[0]
