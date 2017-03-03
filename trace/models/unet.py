@@ -41,10 +41,10 @@ class UNet_Jon(Model):
         #convolution variables
         c1=ConvKernel3d(name="d_conv1", size=(4,4,1), strides=(2,2,1), n_lower=1, n_upper=12)
         c2=ConvKernel3d(name="d_conv2", size=(4,4,1), strides=(2,2,1), n_lower=12, n_upper=24)
-        c3=ConvKernel3d(name="d_conv2", size=(4,4,4), strides=(2,2,2), n_lower=24, n_upper=48)
-        c1t=ConvKernel3d(name="u_conv2", size=(4,4,1), strides=(2,2,1), n_lower=1, n_upper=12).transpose()
+        c3=ConvKernel3d(name="d_conv3", size=(4,4,4), strides=(2,2,2), n_lower=24, n_upper=48)
+        c1t=ConvKernel3d(name="u_conv1", size=(4,4,1), strides=(2,2,1), n_lower=1, n_upper=12).transpose()
         c2t=ConvKernel3d(name="u_conv2", size=(4,4,1), strides=(2,2,1), n_lower=12, n_upper=24).transpose()
-        c3t=ConvKernel3d(name="u_conv2", size=(4,4,4), strides=(2,2,2), n_lower=24, n_upper=48).transpose()
+        c3t=ConvKernel3d(name="u_conv3", size=(4,4,4), strides=(2,2,2), n_lower=24, n_upper=48).transpose()
 
         b0 = bias_variable([1,1,1,1,1])
         b1 = bias_variable([1,1,1,1,12])
