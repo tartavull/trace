@@ -97,8 +97,8 @@ class TransposeKernel(ConvKernel):
         return self.kernel
 
 class ConvKernel3d(ConvKernel):
-    def __init__(self, size=(4,4,1), strides=(2,2,1), n_lower=1, n_upper=1):
-        self.weights = weight_variable(shape=[size[0],size[1],size[2],n_lower,n_upper])
+    def __init__(self, name, size=(4,4,1), strides=(2,2,1), n_lower=1, n_upper=1):
+        self.weights = get_weight_variable(name=name, shape=[size[0],size[1],size[2],n_lower,n_upper])
         self.size = size
         self.strides = [1,strides[0],strides[1],strides[2],1]
         self.n_lower = n_lower
