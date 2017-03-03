@@ -19,6 +19,7 @@ except Exception:
           " If this fails, segascorus is likely not compatible with your computer (i.e. Macs).")
 
 import evaluation
+from utils import *
 
 
 class TrainingParams:
@@ -62,17 +63,25 @@ class LossHook(Hook):
 
 
 class ValidationHook(Hook):
-    def __init__(self, frequency, dset, model, data_folder, boundary_mode):
+    def __init__(self, frequency, dset_sampler, model, data_folder, boundary_mode):
         self.boundary_mode = boundary_mode
         self.frequency = frequency
         self.data_folder = data_folder
-        self.dset = dset
+        self.dset_sampler = dset_sampler
 
         # Get the inputs and mirror them
-        self.reshaped_val_inputs, self.reshaped_val_labels = dset.get_validation_set()
-        self.val_examples = np.concatenate([self.reshaped_val_inputs, self.reshaped_val_labels], axis=3)
-        self.mirrored_val_examples = aug.mirror_across_borders(np.concatenate([
-                            self.reshaped_val_inputs, self.reshaped_val_labels], axis=3), model.fov)
+        if boundary_mode == AFFINITIES_3D:
+            self.val_inputs, self.val_labels = dset_sampler.get_validation_set()
+            self.reshaped_val_inputs = self.val_inputs[np.newaxis, :, :, :, np.newaxis]
+            self.reshaped_val_labels = np.einsum('dzyx->zyxd', self.val_labels)[np.newaxis, :, :, :, :]
+            self.val_examples = np.concatenate([self.reshaped_val_inputs, self.reshaped_val_labels], axis=model.dim + 1)
+            if model.dim == 2:
+                self.mirrored_val_examples = aug.mirror_across_borders(self.val_examples, model.fov)
+            else:
+                self.mirrored_val_examples = aug.mirror_across_borders_3d(self.val_examples, model.fov, model.z_fov)
+        else:
+            raise NotImplementedError('Implement other modes')
+
 
         self.rand_f_score = tf.placeholder(tf.float32)
         self.rand_f_score_merge = tf.placeholder(tf.float32)
@@ -95,15 +104,23 @@ class ValidationHook(Hook):
             tf.summary.scalar('vi_split_score', self.vi_f_score_split),
         ])
 
+
+        if model.fov == 1:
+            val_output_patch_summary = tf.summary.image('validation_output_patch', model.image[0])
+        else:
+            val_output_patch_summary = tf.summary.image('validation_output_patch', 
+                                                model.image[0, 
+                                                    model.z_fov // 2:(model.z_fov // 2) + 3,
+                                                    model.fov // 2:-(model.fov // 2),
+                                                    model.fov // 2:-(model.fov // 2),
+                                                :]),
+
         with tf.variable_scope('validation_images'):
             self.validation_image_summaries = tf.summary.merge([
-                tf.summary.image('validation_input_image', model.image),
-                tf.summary.image('validation_output_patch', model.image[:,
-                                                 model.fov // 2:-model.fov // 2,
-                                                 model.fov // 2:-model.fov // 2,
-                                                 :]),
-                tf.summary.image('validation_output_target', model.target[:, :, :, :1]),
-                tf.summary.image('validation_predictions', model.prediction[:, :, :, :1]),
+                tf.summary.image('validation_input_image', model.image[0]),
+                val_output_patch_summary,
+                tf.summary.image('validation_output_target', model.target[0, :3, :, :, :]),
+                tf.summary.image('validation_predictions', model.prediction[0, :3, :, :, :]),
             ])
 
     def eval(self, step, model, session, summary_writer):

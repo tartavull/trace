@@ -63,6 +63,11 @@ def mirror_across_borders(data, fov):
     return mirrored_data
 
 
+def mirror_across_borders_3d(data, fov, z_fov):
+    mirrored_data = np.pad(data, [(0, 0), (z_fov // 2, z_fov // 2), (fov // 2, fov // 2), (fov // 2, fov // 2), (0, 0)], mode='reflect')
+    return mirrored_data
+
+
 def maybe_create_affinities(dataset_prefix, num_examples):
     """
     Args:
