@@ -77,6 +77,40 @@ UNET_3D = UNetArchitecture(
     ]
 )
 
+UNET_3D_4LAYERS = UNetArchitecture(
+    model_name='unet_3d_4layers',
+    output_mode=AFFINITIES_3D,
+    layers=[
+        UNet3DLayer(layer_name='layer_d1', is_valid=False, is_residual=True, 
+                    uses_max_pool=True, filter_size=3, z_filter_size=3,
+                    n_feature_maps=64, num_convs=3, is_contracting=True, 
+                    is_expanding=False, is_training=False),
+        UNet3DLayer(layer_name='layer_d2', is_valid=False, is_residual=True, 
+                    uses_max_pool=True, filter_size=3, z_filter_size=3,
+                    n_feature_maps=128, num_convs=3, is_contracting=True, 
+                    is_expanding=False, is_training=False),
+        UNet3DLayer(layer_name='layer_d3', is_valid=False, is_residual=True, 
+                    uses_max_pool=True, filter_size=3, z_filter_size=3,
+                    n_feature_maps=256, num_convs=3, is_contracting=True, 
+                    is_expanding=False, is_training=False),
+        UNet3DLayer(layer_name='layer_4', is_valid=False, is_residual=True, 
+                    uses_max_pool=True, filter_size=3, z_filter_size=3,
+                    n_feature_maps=512, num_convs=3, is_contracting=False, 
+                    is_expanding=True, is_training=False),
+        UNet3DLayer(layer_name='layer_u3', is_valid=False, is_residual=True, 
+                    uses_max_pool=True, filter_size=3, z_filter_size=3,
+                    n_feature_maps=256, num_convs=3, is_contracting=False, 
+                    is_expanding=True, is_training=False),
+        UNet3DLayer(layer_name='layer_u2', is_valid=False, is_residual=True, 
+                    uses_max_pool=True, filter_size=3, z_filter_size=3,
+                    n_feature_maps=128, num_convs=3, is_contracting=False, 
+                    is_expanding=True, is_training=False),
+        UNet3DLayer(layer_name='layer_u1', is_valid=False, is_residual=True, 
+                    uses_max_pool=True, filter_size=3, z_filter_size=3,
+                    n_feature_maps=64, num_convs=3, is_contracting=False, 
+                    is_expanding=False, is_training=False),
+    ]
+)
 
 class UNet(Model):
     def __init__(self, architecture, is_training=False):

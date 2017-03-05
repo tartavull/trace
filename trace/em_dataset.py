@@ -284,13 +284,19 @@ class EMDatasetSampler(object):
             sample = tf.random_crop(self.__dataset_constant, size=crop_size)
 
             # Flip a coin, and apply an op to sample (sample can be 5d or 4d)
-            def randomly_map_and_apply_op(data, op):
-                should_apply = tf.random_uniform(shape=(), minval=0, maxval=2, dtype=tf.int32)
+            # Prob is the denominator of the probability (1 in prob chance)
+            def randomly_map_and_apply_op(data, op, prob=2):
+                should_apply = tf.random_uniform(shape=(), minval=0, maxval=prob, dtype=tf.int32)
 
                 def tf_if(ex):
-                    return tf.cond(tf.equal(1, should_apply), lambda: op(ex), lambda: ex)
+                    return tf.cond(tf.equal(0, should_apply), lambda: op(ex), lambda: ex)
 
                 return tf.map_fn(tf_if, data)
+
+            def randomly_apply_op(data, op, prob=2):
+                should_apply = tf.random_uniform(shape=(), minval=0, maxval=prob, dtype=tf.int32)
+
+                return tf.cond(tf.equal(0, should_apply), lambda: op(data), lambda: data)
 
             # Perform random mirroring, by applying the same mirroring to each image in the stack
             def mirror_each_image_in_stack_op(stack):
@@ -298,7 +304,7 @@ class EMDatasetSampler(object):
             mirrored_sample = randomly_map_and_apply_op(sample, mirror_each_image_in_stack_op)
 
             # Randomly flip the 3D shape upside down
-            flipped_sample = randomly_map_and_apply_op(mirrored_sample, lambda stack: tf.reverse(stack, axis=[1]))
+            flipped_sample = randomly_map_and_apply_op(mirrored_sample, lambda stack: tf.reverse(stack, axis=[0]))
 
             # Apply a random rotation to each stack
             def apply_random_rotation_to_stack(stack):
@@ -319,11 +325,14 @@ class EMDatasetSampler(object):
             deformed_labels = elastically_deformed_sample[:, :, :, :, 1:]
 
             # Apply random gaussian blurring to the image
-            def apply_random_blur_to_slice(img):
-                sigma = tf.random_uniform(shape=(), minval=2, maxval=5, dtype=tf.float32)
-                return tf_gaussian_blur(img, sigma, size=5)
+            def apply_random_blur_to_stack(stack):
+                def apply_random_blur_to_slice(img):
+                    sigma = tf.random_uniform(shape=(), minval=2, maxval=5, dtype=tf.float32)
+                    return tf_gaussian_blur(img, sigma, size=5)
 
-            blurred_inputs = tf.map_fn(lambda stack: randomly_map_and_apply_op(stack, apply_random_blur_to_slice),
+                return tf.map_fn(lambda slice: randomly_apply_op(stack, apply_random_blur_to_slice, prob=5))
+
+            blurred_inputs = tf.map_fn(lambda stack: apply_random_blur_to_stack(stack),
                                        deformed_inputs)
 
             # Mess with the levels
