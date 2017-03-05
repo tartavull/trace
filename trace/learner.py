@@ -306,9 +306,7 @@ class Learner:
 
         # Initialize the variables
         sess.run(tf.global_variables_initializer())
-        sess.run(dset_sampler.dataset_constant.initializer, 
-                        feed_dict={'image_ph:0': dset_sampler.padded_dataset})
-        del dset_sampler.padded_dataset
+        dset_sampler.initialize_session_variables(sess)
 
         # Create enqueue op and a QueueRunner to handle queueing of training examples
         enqueue_op = model.queue.enqueue(dset_sampler.training_example_op)
@@ -372,17 +370,23 @@ class Learner:
         self.model.saver.restore(self.sess, self.ckpt_folder + 'model.ckpt')
         print("Model restored.")
 
-    def predict(self, inputs):
-        # Mirror the inputs
-        mirrored_inputs = aug.mirror_across_borders(inputs, self.model.fov)
+    def predict(self, inputs, n_slices_per_pred):
+        # Make sure that the inputs are 5-dimensional, in the form [batch_size, z_dim, y_dim, x_dim, n_chan]
+        assert(len(inputs.size) == 5)
 
-        preds = []
+        # Add mirror padding so that convolutions aren't borked
+        padded_inputs = aug.mirror_across_borders_3d(inputs, self.model.fov, self.model.z_fov)
 
-        # Break into slices because otherwise tensorflow runs out of memory
-        num_slices = mirrored_inputs.shape[0]
-        for l in range(num_slices):
-            reshaped_slice = np.expand_dims(mirrored_inputs[l], axis=0)
-            pred = self.sess.run(self.model.prediction, feed_dict={self.model.image: reshaped_slice})
-            preds.append(pred)
+        all_preds = []
 
-        return np.squeeze(np.asarray(preds), axis=1)
+        for stack in padded_inputs:
+            preds = []
+
+            for l in range(len(stack), step=n_slices_per_pred):
+                print('Predicting slices %d:%d' % l, l + n_slices_per_pred)
+                pred = self.sess.run(self.model.prediction, feed_dict={self.model.image: stack[l:l+n_slices_per_pred]})
+                preds.append(pred)
+
+            all_preds.append(np.asarray(preds))
+
+        return all_preds
