@@ -234,23 +234,27 @@ class EMDatasetSampler(object):
         # All inputs and labels come in with the shape: [n_images, x_dim, y_dim]
         # In order to generalize we, expand into 5 dimensions: [batch_size, z_dim, x_dim, y_dim, n_channels]
 
-        def expand_to_5d(data):
+        def expand_3d_to_5d(data):
             # Add a batch dimension and a channel dimension
             data = np.expand_dims(data, axis=EMDatasetSampler.BATCH_AXIS)
             data = np.expand_dims(data, axis=EMDatasetSampler.CHANNEL_AXIS)
 
             return data
 
+        def expand_4d_to_5d(data):
+            data = np.expand_dims(data, axis=EMDatasetSampler.BATCH_AXIS)
+            return data
+
         # Extract the inputs and labels from the dataset
-        self.__train_inputs = expand_to_5d(dataset.train_inputs)
-        self.__train_labels = convert_between_label_types(dataset.label_type, label_output_type,
-                                                          expand_to_5d(dataset.train_labels))
+        self.__train_inputs = expand_3d_to_5d(dataset.train_inputs)
+        self.__train_labels = expand_4d_to_5d(convert_between_label_types(dataset.label_type, label_output_type,
+                                                          dataset.train_labels))
 
-        self.__validation_inputs = expand_to_5d(dataset.validation_inputs)
-        self.__validation_labels = convert_between_label_types(dataset.label_type, label_output_type,
-                                                               expand_to_5d(dataset.validation_labels))
+        self.__validation_inputs = expand_3d_to_5d(dataset.validation_inputs)
+        self.__validation_labels = expand_4d_to_5d(convert_between_label_types(dataset.label_type, label_output_type,
+                                                               dataset.validation_labels))
 
-        self.__test_inputs = expand_to_5d(dataset.test_inputs)
+        self.__test_inputs = expand_3d_to_5d(dataset.test_inputs)
 
         # Stack the inputs and labels, so when we sample we sample corresponding labels and inputs
         train_stacked = np.concatenate((self.__train_inputs, self.__train_labels), axis=EMDatasetSampler.CHANNEL_AXIS)
@@ -268,14 +272,12 @@ class EMDatasetSampler(object):
         # Pad in 5 dimensions
         self.__padded_dataset = np.pad(train_stacked, [[0, 0], [z_pad, z_pad], [pad, pad], [pad, pad], [0, 0]], mode='reflect')
 
-        # The dataset is loaded into a constant variable from a placeholder
-        # because a tf.constant cannot hold a dataset that is over 2GB.
-        self.__image_ph = tf.placeholder(dtype=tf.float32, shape=self.__padded_dataset.shape)
-        self.__dataset_constant = tf.Variable(self.__image_ph, trainable=False, collections=[])
 
         with tf.device('/cpu:0'):
-            image_ph = tf.placeholder(dtype=tf.float32, shape=self.padded_dataset.shape, name='image_ph')
-            self.dataset_constant = tf.Variable(image_ph, trainable=False, collections=[])
+            # The dataset is loaded into a constant variable from a placeholder
+            # because a tf.constant cannot hold a dataset that is over 2GB.
+            self.__image_ph = tf.placeholder(dtype=tf.float32, shape=self.__padded_dataset.shape)
+            self.__dataset_constant = tf.Variable(self.__image_ph, trainable=False, collections=[])
 
             # Sample and squeeze the dataset, squeezing so that we can perform the distortions
             crop_size = [1, z_patch_size, patch_size, patch_size, train_stacked.shape[4]]
@@ -296,7 +298,7 @@ class EMDatasetSampler(object):
             mirrored_sample = randomly_map_and_apply_op(sample, mirror_each_image_in_stack_op)
 
             # Randomly flip the 3D shape upside down
-            flipped_sample = randomly_map_and_apply_op(mirrored_sample, lambda stack: tf.reverse(stack, axis=[0]))
+            flipped_sample = randomly_map_and_apply_op(mirrored_sample, lambda stack: tf.reverse(stack, axis=[1]))
 
             # Apply a random rotation to each stack
             def apply_random_rotation_to_stack(stack):

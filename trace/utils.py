@@ -130,7 +130,7 @@ def convert_between_label_types(input_type, output_type, original_labels):
         elif output_type == AFFINITIES_2D:
             raise NotImplementedError('Seg3d->Aff2d not implemented')
         elif output_type == AFFINITIES_3D:
-            return trans.affinitize(original_labels)
+            return np.einsum('dzyx->zyxd', trans.affinitize(original_labels))
         elif output_type == SEGMENTATION_2D:
             raise NotImplementedError('Seg3d->Seg2d not implemented')
         else:
