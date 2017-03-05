@@ -199,10 +199,12 @@ class UNet3DLayer(Layer):
         
         # If applicable, add the residual connection.
         if self.is_residual:
-            if self.is_valid:
-                residual = crop(prev_layer, cur_node, batch_size)
-            else:
+            if skip_connect == None:
                 residual = prev_layer
+            else:
+                residual = skip_connect
+            if self.is_valid:
+                residual = crop(residual, cur_node, batch_size)
             if prev_n_feature_maps != self.n_feature_maps:
                 residual = tf.tile(residual, (1, 1, 1, 1, self.n_feature_maps // prev_n_feature_maps))
             final_node = cur_node + residual

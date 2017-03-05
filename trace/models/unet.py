@@ -40,31 +40,39 @@ UNET_3D = UNetArchitecture(
     layers=[
         UNet3DLayer(layer_name='layer_d1', is_valid=False, is_residual=True, 
                     uses_max_pool=True, filter_size=3, z_filter_size=3,
-                    n_feature_maps=64, num_convs=2, is_contracting=True, 
+                    n_feature_maps=64, num_convs=3, is_contracting=True, 
                     is_expanding=False, is_training=False),
         UNet3DLayer(layer_name='layer_d2', is_valid=False, is_residual=True, 
                     uses_max_pool=True, filter_size=3, z_filter_size=3,
-                    n_feature_maps=128, num_convs=2, is_contracting=True, 
+                    n_feature_maps=128, num_convs=3, is_contracting=True, 
                     is_expanding=False, is_training=False),
         UNet3DLayer(layer_name='layer_d3', is_valid=False, is_residual=True, 
                     uses_max_pool=True, filter_size=3, z_filter_size=3,
-                    n_feature_maps=256, num_convs=2, is_contracting=True, 
+                    n_feature_maps=256, num_convs=3, is_contracting=True, 
                     is_expanding=False, is_training=False),
         UNet3DLayer(layer_name='layer_d4', is_valid=False, is_residual=True, 
                     uses_max_pool=True, filter_size=3, z_filter_size=3,
-                    n_feature_maps=512, num_convs=2, is_contracting=False, 
+                    n_feature_maps=512, num_convs=3, is_contracting=True, 
+                    is_expanding=False, is_training=False),
+        UNet3DLayer(layer_name='layer_5', is_valid=False, is_residual=True, 
+                    uses_max_pool=True, filter_size=3, z_filter_size=3,
+                    n_feature_maps=1024, num_convs=3, is_contracting=False, 
+                    is_expanding=True, is_training=False),
+        UNet3DLayer(layer_name='layer_u4', is_valid=False, is_residual=True, 
+                    uses_max_pool=True, filter_size=3, z_filter_size=3,
+                    n_feature_maps=512, num_convs=3, is_contracting=False, 
                     is_expanding=True, is_training=False),
         UNet3DLayer(layer_name='layer_u3', is_valid=False, is_residual=True, 
                     uses_max_pool=True, filter_size=3, z_filter_size=3,
-                    n_feature_maps=256, num_convs=2, is_contracting=False, 
+                    n_feature_maps=256, num_convs=3, is_contracting=False, 
                     is_expanding=True, is_training=False),
         UNet3DLayer(layer_name='layer_u2', is_valid=False, is_residual=True, 
                     uses_max_pool=True, filter_size=3, z_filter_size=3,
-                    n_feature_maps=128, num_convs=2, is_contracting=False, 
+                    n_feature_maps=128, num_convs=3, is_contracting=False, 
                     is_expanding=True, is_training=False),
         UNet3DLayer(layer_name='layer_u1', is_valid=False, is_residual=True, 
                     uses_max_pool=True, filter_size=3, z_filter_size=3,
-                    n_feature_maps=64, num_convs=2, is_contracting=False, 
+                    n_feature_maps=64, num_convs=3, is_contracting=False, 
                     is_expanding=False, is_training=False),
     ]
 )
@@ -93,8 +101,7 @@ class UNet(Model):
                         skip_connect = None
                     prev_layer, prev_n_feature_maps = layer.connect(prev_layer, prev_n_feature_maps, dilation_rate=1, is_training=False, skip_connect=skip_connect)
                 else:
-                    last_layer = layer.connect(prev_layer, prev_n_feature_maps, dilation_rate=1, is_training=False)
-                    break
+                    last_layer = layer.connect(prev_layer, prev_n_feature_maps, dilation_rate=1, is_training=False, skip_connect=skip_connections[0])
 
         # Predictions
         self.prediction = tf.nn.sigmoid(last_layer)

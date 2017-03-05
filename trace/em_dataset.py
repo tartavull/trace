@@ -262,10 +262,10 @@ class EMDatasetSampler(object):
 
         # The dataset is loaded into a constant variable from a placeholder
         # because a tf.constant cannot hold a dataset that is over 2GB.
-        image_ph = tf.placeholder(dtype=tf.float32, shape=self.padded_dataset.shape, name='image_ph')
-        self.dataset_constant = tf.Variable(image_ph, trainable=False, collections=[])
-
         with tf.device('/cpu:0'):
+            image_ph = tf.placeholder(dtype=tf.float32, shape=self.padded_dataset.shape, name='image_ph')
+            self.dataset_constant = tf.Variable(image_ph, trainable=False, collections=[])
+
             # Sample and squeeze the dataset, squeezing so that we can perform the distortions
             patch_size_dims = [patch_size, patch_size]
             if self.dim == 3:
