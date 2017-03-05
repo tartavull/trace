@@ -175,7 +175,8 @@ def predict(model_type, params_type, dataset_name, split, run_name):
     predictions = classifier.predict(inputs)
 
     # Prepare the predictions for submission for this particular dataset
-    dataset.prepare_predictions_for_submission(ckpt_folder, split, predictions, params.output_mode)
+    # Only send in the first dimension of predictions, because theoretically predict can predict on many stacks
+    dataset.prepare_predictions_for_submission(ckpt_folder, split, predictions[0], params.output_mode)
 
 
 @cli.command()
@@ -236,7 +237,8 @@ def ens_predict(ensemble_method, ensemble_params, dataset_name, split, run_name)
     predictions = classifier.predict(dataset, inputs)
 
     # Prepare the predictions for submission for this particular dataset
-    dataset.prepare_predictions_for_submission(classifier.ensembler_folder, split, predictions,
+    # Only take the first of the predictions
+    dataset.prepare_predictions_for_submission(classifier.ensembler_folder, split, predictions[0],
                                                ensemble_params[0].output_mode)
 
 if __name__ == '__main__':

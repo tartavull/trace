@@ -253,7 +253,7 @@ class EnsembleLearner:
 
             print("Saving this model's predictions")
             # Save their prediction for posterity
-            dataset.prepare_predictions_for_submission(ckpt_folder, split, predictions,
+            dataset.prepare_predictions_for_submission(ckpt_folder, split, pred[0],
                                                        label_type=config.architecture.output_mode)
 
             predictions.append(pred)
