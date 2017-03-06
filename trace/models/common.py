@@ -116,6 +116,7 @@ class ConvKernel3d(ConvKernel):
 
     def __call__(self,x):
         with tf.name_scope('conv3d') as scope:
+            print(x)
             self.in_shape = tf.shape(x)
             tmp=tf.nn.conv3d(x, self.up_coeff*self.weights, strides=self.strides, padding='VALID')
             shape_dict3d[(tuple(tmp._shape_as_list()[1:4]), self.size, tuple(self.strides))]=tuple(x._shape_as_list()[1:4])
