@@ -120,15 +120,19 @@ class ConvKernel3d(ConvKernel):
             print 'in_shape'
             print self.in_shape
             tmp=tf.nn.conv3d(x, self.up_coeff*self.weights, strides=self.strides, padding='VALID')
-            shape_dict3d[(tuple(tf.shape(tmp)[1:4]), self.size, tuple(self.strides))]=tuple(tf.shape(x)[1:4])
+            tmp_shape = tf.shape(tmp)
+            tmp_list = [tmp_shape[1],tmp_shape[2],tmp_shape[3]]
+            x_list = [in_shape[1],in_shape[2],in_shape[3]]
+            shape_dict3d[(tuple(tmp_list), self.size, tuple(self.strides))]=tuple(x_list)
         return tmp
 
     def transpose_call(self,x):
         with tf.name_scope('conv3d_t') as scope:
             if not hasattr(self,"in_shape"):
-                self.in_shape=shape_dict3d[(tuple(tf.shape(x)[1:4]),self.size,tuple(self.strides))]+(self.n_lower,)
+                x_shape = tf.shape(x)
+                x_list = [x_shape[1],x_shape[2],x_shape[3]]
+                self.in_shape=shape_dict3d[(tuple(x_list),self.size,tuple(self.strides))]+(self.n_lower,)
             full_in_shape = (tf.shape(x)[0],)+self.in_shape
-            full_in_shape = tf.Print(full_in_shape, [full_in_shape])
             ret = tf.nn.conv3d_transpose(x, self.down_coeff*self.weights, output_shape=full_in_shape, strides=self.strides, padding='VALID')
         return tf.reshape(ret, full_in_shape)
 # 
