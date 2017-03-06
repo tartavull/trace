@@ -55,6 +55,8 @@ def conv2d_transpose(x, W, stride):
 
 def conv3d_transpose(x, W, stride):
     x_shape = tf.shape(x)
+    print("conv3d_transpose")
+    print(x_shape)
     output_shape = tf.pack([x_shape[0], x_shape[1] * 2, x_shape[2] * 2, x_shape[3] * 2, x_shape[4] // 2])
     return tf.nn.conv2d_transpose(x, W, output_shape, strides=[1, stride, stride, stride, 1], padding='SAME')
 
@@ -370,9 +372,15 @@ class Model(object):
         with tf.device('/cpu:0'):
             self.queue = tf.FIFOQueue(50, tf.float32)
 
+        shape = [None] + [None] * self.dim + [architecture.n_outputs + 1]
+        print("shape")
+        print(shape)
+
         # Draw example from the queue and separate
         self.example = tf.placeholder_with_default(self.queue.dequeue(),
                 shape=[None] + [None] * self.dim + [architecture.n_outputs + 1])
+
+        print (self.example)
 
         #self.example = tf.Print(self.example, [tf.shape(self.example)])
         if self.dim == 2:
@@ -382,17 +390,19 @@ class Model(object):
 
         # Standardize each input image, using map because per_image_standardization takes one image at a time
         if self.dim == 2:
-            self.standardized_image = tf.map_fn(lambda img: tf.image.per_image_standardization(img), self.image)
+            self.image = tf.map_fn(lambda img: tf.image.per_image_standardization(img), self.image)
         elif self.dim == 3:
             mean, var = tf.nn.moments(self.image, axes=[0,1,2,3,4], keep_dims=False)
-            self.standardized_image = (self.image - mean) / tf.sqrt(var)
+            self.image = (self.image - mean) / tf.sqrt(var)
 
 
         # Crop the labels to the appropriate field of view
         if self.dim == 2:
             self.target = self.example[:, self.fov // 2:-(self.fov // 2), self.fov // 2:-(self.fov // 2), 1:]
         elif self.dim == 3:
-            self.target = self.example[:, self.z_fov // 2:-(self.z_fov // 2), self.fov // 2:-(self.fov // 2), self.fov // 2:-(self.fov // 2), 1:]
+            self.target = self.example[:, :, :, :, 1:]
+#            self.target = self.example[:, self.z_fov // 2:-(self.z_fov // 2), self.fov // 2:-(self.fov // 2), self.fov // 2:-(self.fov // 2), 1:]
             
         #self.image = tf.Print(self.image, [tf.shape(self.image)])
         #self.target = tf.Print(self.target, [tf.shape(self.target)])
+        #print(self.target)

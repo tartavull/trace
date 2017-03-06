@@ -1,13 +1,16 @@
 from conv_net import *
 from unet import *
+from unet_alt import *
 
 MODEL_DICT = {
     'conv': ConvNet,
     'unet': UNet,
     'res_vnet': ResVNet,
+    'unet_alt': UNet_Alt,
 }
 
 PARAMS_DICT = {
+    'unet': U_NET,
     'n4': N4,
     'n4_3d': N4_3D,
     'n4_widened': N4_WIDENED,

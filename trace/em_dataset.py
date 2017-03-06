@@ -289,33 +289,33 @@ class EMDatasetSampler(object):
             # Randomly flip the 3D cube upside down
             shouldFlip = tf.random_uniform(shape=(), minval=0, maxval=2, dtype=tf.int32)
             flipped_sample = tf.cond(tf.equal(1, shouldFlip), 
-                                     lambda: tf.reverse(mirrored_sample, [0]),
+                                     lambda: mirrored_sample,
                                      lambda: mirrored_sample)
 
 
             # Apply a random rotation
-            angle = tf.random_uniform(shape=(), minval=0, maxval=2*math.pi)
-            if self.dim == 2:
-                rotated_sample = tf.map_fn(lambda img: tf.contrib.image.rotate(img, angle), flipped_sample)
-            elif self.dim == 3:
-                def rotateExample(example):
-                    angle_i = tf.random_uniform(shape=(), minval=0, maxval=2*math.pi)
-                    return tf.map_fn(lambda img: tf.contrib.image.rotate(img, angle_i), example)
-                rotated_sample = tf.map_fn(rotateExample, flipped_sample)
+#            angle = tf.random_uniform(shape=(), minval=0, maxval=2*math.pi)
+#            if self.dim == 2:
+#                rotated_sample = tf.map_fn(lambda img: tf.contrib.image.rotate(img, angle), flipped_sample)
+#            elif self.dim == 3:
+#                def rotateExample(example):
+#                    angle_i = tf.random_uniform(shape=(), minval=0, maxval=2*math.pi)
+#                    return tf.map_fn(lambda img: tf.contrib.image.rotate(img, angle_i), example)
+#                rotated_sample = tf.map_fn(rotateExample, flipped_sample)
 
 
             # Apply random gaussian blurring
             # SHOULD NOT BLUR LABELS
-            def blurExample(example):
-                shouldBlur = tf.random_uniform(shape=(), minval=0, maxval=2, dtype=tf.int32)
-                sigma = tf.random_uniform(shape=(), minval=2, maxval=5, dtype=tf.float32)
-                return tf.cond(tf.equal(1, shouldBlur),
-                        lambda: tf_gaussian_blur(example, sigma, 5),
-                        lambda: example)
-            if self.dim == 2:
-                blurred_sample = tf.map_fn(blurExample, rotated_sample)
-            elif self.dim == 3:
-                blurred_sample = tf.map_fn(lambda example: tf.map_fn(blurExample, example), rotated_sample)
+#            def blurExample(example):
+#                shouldBlur = tf.random_uniform(shape=(), minval=0, maxval=2, dtype=tf.int32)
+#                sigma = tf.random_uniform(shape=(), minval=2, maxval=5, dtype=tf.float32)
+#                return tf.cond(tf.equal(1, shouldBlur),
+#                        lambda: tf_gaussian_blur(example, sigma, 5),
+#                        lambda: example)
+#            if self.dim == 2:
+#                blurred_sample = tf.map_fn(blurExample, rotated_sample)
+#            elif self.dim == 3:
+#                blurred_sample = tf.map_fn(lambda example: tf.map_fn(blurExample, example), rotated_sample)
 
             # IDEALLY, we'd have elastic deformation here, but right now too much overhead to compute
             # elastically_deformed_sample = tf.elastic_deformation(rotated_sample)
@@ -348,7 +348,8 @@ class EMDatasetSampler(object):
                 cropped_labels = deformed_labels[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
 
             # Re-stack the image and labels
-            self.training_example_op = tf.concat([cropped_image, cropped_labels], axis=self.dim + 1)
+            #self.training_example_op = tf.concat(self.dim + 1, [cropped_image, cropped_labels])
+            self.training_example_op = tf.concat([cropped_image, cropped_labels], axis = self.dim + 1)
 
     def get_full_training_set(self):
         return self.train_inputs, self.train_labels

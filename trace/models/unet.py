@@ -93,7 +93,7 @@ class UNet(Model):
 
         # Loss
         self.cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=prev_layer,
-                                                                                    labels=self.target))
+                                                                                    labels=self.target)) #took out labels
         self.binary_prediction = tf.round(self.prediction)
         self.pixel_error = tf.reduce_mean(tf.cast(tf.abs(self.binary_prediction - self.target), tf.float32))
 
