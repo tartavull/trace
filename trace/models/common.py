@@ -297,6 +297,7 @@ class Model(object):
                 shape=[None] + [None] * self.dim + [architecture.n_outputs + 1])
 
         print('example')
+        print(self.example)
         self.example = tf.Print(self.example, [tf.shape(self.example)])
         if self.dim == 2:
             self.image = self.example[:, :, :, :1]
