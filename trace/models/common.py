@@ -127,7 +127,7 @@ class ConvKernel3d(ConvKernel):
         return tmp
 
     def transpose_call(self,x):
-        with tf.name_scope('conv3d_t') as scope:
+        with tf.name_scope('conv3d') as scope:
             if not hasattr(self,"in_shape"):
                 x_shape = tf.shape(x)
                 x_list = [x_shape[1],x_shape[2],x_shape[3]]
