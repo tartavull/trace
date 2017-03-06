@@ -100,13 +100,13 @@ class TransposeKernel(ConvKernel):
         return self.kernel
 
 class ConvKernel3d(ConvKernel):
-    def __init__(self, name, size=(4,4,1), strides=(2,2,1), n_lower=1, n_upper=1):
+    def __init__(self, name, dict_key, size=(4,4,1), strides=(2,2,1), n_lower=1, n_upper=1):
         self.weights = get_weight_variable(name=name, shape=[size[0],size[1],size[2],n_lower,n_upper])
         self.size = size
         self.strides = [1,strides[0],strides[1],strides[2],1]
         self.n_lower = n_lower
         self.n_upper = n_upper
-
+        self.dict_key = dict_key
         #up_coeff and down_coeff are coefficients meant to keep the magnitude of the output independent of stride and size choices
         self.up_coeff = 1.0/np.sqrt(reduce(operator.mul,size)*n_lower)
         self.down_coeff = 1.0/np.sqrt(reduce(operator.mul,size)/(reduce(operator.mul,strides))*n_upper)
@@ -117,26 +117,19 @@ class ConvKernel3d(ConvKernel):
     def __call__(self,x):
         with tf.name_scope('conv3d') as scope:
             self.in_shape = tf.shape(x)
-            print 'in_shape'
-            print self.in_shape
             tmp=tf.nn.conv3d(x, self.up_coeff*self.weights, strides=self.strides, padding='VALID')
-            tmp_shape = tf.shape(tmp)
-            tmp_list = [tmp_shape[1],tmp_shape[2],tmp_shape[3]]
             x_list = [self.in_shape[1],self.in_shape[2],self.in_shape[3]]
-            shape_dict3d[(tuple(tmp_list), self.size, tuple(self.strides))]=tuple(x_list)
+            shape_dict3d[self.dict_key]=tuple(x_list)
         return tmp
 
     def transpose_call(self,x):
-        with tf.name_scope('conv3d') as scope:
+        with tf.name_scope('conv3d_t') as scope:
             if not hasattr(self,"in_shape"):
-                x_shape = tf.shape(x)
-                x_list = [x_shape[1],x_shape[2],x_shape[3]]
                 print shape_dict3d
-                self.in_shape=shape_dict3d[(tuple(x_list),self.size,tuple(self.strides))]+(self.n_lower,)
+                self.in_shape=shape_dict3d[self.dict_key]+(self.n_lower,)
             full_in_shape = (tf.shape(x)[0],)+self.in_shape
             ret = tf.nn.conv3d_transpose(x, self.down_coeff*self.weights, output_shape=full_in_shape, strides=self.strides, padding='VALID')
         return tf.reshape(ret, full_in_shape)
-# 
 
 class Layer(object):
     depth = 0
