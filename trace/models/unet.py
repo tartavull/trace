@@ -55,7 +55,7 @@ class UNet_Jon(Model):
         b1t = bias_variable([1,1,1,1,12])
         b2t = bias_variable([1,1,1,1,24])
 
-        layer_0 = c0(in_node)
+        layer_0 = tf.Print(c0(in_node), [c0(in_node)])
         layer_1 = tf.nn.relu(c1(layer_0)+b1)
         layer_2 = tf.nn.relu(c2(layer_1)+b2)
         layer_3 = tf.nn.relu(c3(layer_2)+b3)

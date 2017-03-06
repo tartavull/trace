@@ -116,7 +116,7 @@ class ConvKernel3d(ConvKernel):
 
     def __call__(self,x):
         with tf.name_scope('conv3d') as scope:
-            self.in_shape = tf.shape(x)
+            self.in_shape = tf.Print(tf.shape(x), [tf.shape(x)])
             tmp=tf.nn.conv3d(x, self.up_coeff*self.weights, strides=self.strides, padding='VALID')
             shape_dict3d[self.dict_key] = self.in_shape[1:4]
         return tmp
@@ -124,9 +124,7 @@ class ConvKernel3d(ConvKernel):
     def transpose_call(self,x):
         with tf.name_scope('conv3d_t') as scope:
             if not hasattr(self,"in_shape"):
-                print shape_dict3d
                 self.in_shape = tf.concat([shape_dict3d[self.dict_key],tf.stack([self.n_lower])], 0)
-                print self.in_shape
             full_in_shape = tf.concat([tf.shape(x)[:1], self.in_shape], 0)
             ret = tf.nn.conv3d_transpose(x, self.down_coeff*self.weights, output_shape=full_in_shape, strides=self.strides, padding='VALID')
         return tf.reshape(ret, full_in_shape)
@@ -302,8 +300,6 @@ class Model(object):
         elif self.dim == 3:
             self.image = self.example[:, :, :, :, :1]
 
-        print('image')
-        print(self.image)
         # Crop the labels to the appropriate field of view
         if self.dim == 2:
             self.target = self.example[:, self.fov // 2:-(self.fov // 2), self.fov // 2:-(self.fov // 2), 1:]

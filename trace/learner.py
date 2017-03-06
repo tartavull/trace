@@ -292,50 +292,9 @@ class Learner:
         enqueue_op = model.queue.enqueue(dset_sampler.training_example_op)
         qr = tf.train.QueueRunner(model.queue, [enqueue_op] * 4)
 
-        # Initialize the variables
-        sess.run(tf.global_variables_initializer()) 
-        sess.run(dset_sampler.dataset_constant.initializer, 
-            feed_dict={'image_ph:0': dset_sampler.padded_dataset})
-        
-        del dset_sampler.padded_dataset
-
-
-        '''
-        sess.run(enqueue_op)
-        sess.run(enqueue_op)
-        sess.run(optimize_step)
-        run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
-        run_metadata = tf.RunMetadata()
-        sess.run(optimize_step, options=run_options, run_metadata=run_metadata)
-        tl = timeline.Timeline(run_metadata.step_stats)
-        ctf = tl.generate_chrome_trace_format()
-        with open('timeline.json', 'w') as f:
-            f.write(ctf)
-        print('done')
-        '''
-
         # Create a Coordinator, launch the Queuerunner threads
         coord = tf.train.Coordinator()
         enqueue_threads = qr.create_threads(sess, coord=coord, daemon=True, start=True)
-
-        '''
-        def train_function():
-            step = 0
-            while True:
-                print(step)
-                sess.run(optimize_step)
-                step += 1
-
-        train_threads = []
-        for _ in range(8):
-            th = threading.Thread(target=train_function)
-            th.daemon = True
-            train_threads.append(th)
-        for th in train_threads:
-            th.start()
-        for th in train_threads:
-            th.join()
-        '''
 
         # Iterate through the dataset
         print("Start")
