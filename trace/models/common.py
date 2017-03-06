@@ -131,6 +131,7 @@ class ConvKernel3d(ConvKernel):
             if not hasattr(self,"in_shape"):
                 x_shape = tf.shape(x)
                 x_list = [x_shape[1],x_shape[2],x_shape[3]]
+                print shape_dict3d
                 self.in_shape=shape_dict3d[(tuple(x_list),self.size,tuple(self.strides))]+(self.n_lower,)
             full_in_shape = (tf.shape(x)[0],)+self.in_shape
             ret = tf.nn.conv3d_transpose(x, self.down_coeff*self.weights, output_shape=full_in_shape, strides=self.strides, padding='VALID')
