@@ -281,13 +281,6 @@ class Learner:
         # Define an optimizer
         optimize_step = training_params.optimizer(training_params.learning_rate).minimize(model.cross_entropy)
 
-
-        # Initialize the variables
-        sess.run(tf.global_variables_initializer())
-        sess.run(dset_sampler.dataset_constant.initializer,
-                        feed_dict={'image_ph:0': dset_sampler.padded_dataset})
-        del dset_sampler.padded_dataset
-
         # Create enqueue op and a QueueRunner to handle queueing of training examples
         enqueue_op = model.queue.enqueue(dset_sampler.training_example_op)
         qr = tf.train.QueueRunner(model.queue, [enqueue_op] * 4)
