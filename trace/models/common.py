@@ -119,15 +119,15 @@ class ConvKernel3d(ConvKernel):
             self.in_shape = tf.shape(x)
             tmp=tf.nn.conv3d(x, self.up_coeff*self.weights, strides=self.strides, padding='VALID')
             x_list = [self.in_shape[1],self.in_shape[2],self.in_shape[3]]
-            shape_dict3d[self.dict_key]=tuple(x_list)
+            shape_dict3d[self.dict_key] = x_list
         return tmp
 
     def transpose_call(self,x):
         with tf.name_scope('conv3d_t') as scope:
             if not hasattr(self,"in_shape"):
                 print shape_dict3d
-                self.in_shape=shape_dict3d[self.dict_key]+(self.n_lower,)
-            full_in_shape = (tf.shape(x)[0],)+self.in_shape
+                self.in_shape = tf.concat([shape_dict3d[self.dict_key],tf.stack([self.n_lower])], 0)
+            full_in_shape = tf.concat([tf.shape(x)[0], self.in_shape], 0)
             ret = tf.nn.conv3d_transpose(x, self.down_coeff*self.weights, output_shape=full_in_shape, strides=self.strides, padding='VALID')
         return tf.reshape(ret, full_in_shape)
 
