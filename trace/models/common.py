@@ -296,13 +296,15 @@ class Model(object):
         self.example = tf.placeholder_with_default(self.queue.dequeue(),
                 shape=[None] + [None] * self.dim + [architecture.n_outputs + 1])
 
-        print('example')
-        print(self.example)
-        self.example = tf.Print(self.example, [tf.shape(self.example)])
+
+        # self.example = tf.Print(self.example, [tf.shape(self.example)])
         if self.dim == 2:
             self.image = self.example[:, :, :, :1]
         elif self.dim == 3:
             self.image = self.example[:, :, :, :, :1]
+
+        print('image')
+        print(self.image)
         # Crop the labels to the appropriate field of view
         if self.dim == 2:
             self.target = self.example[:, self.fov // 2:-(self.fov // 2), self.fov // 2:-(self.fov // 2), 1:]
