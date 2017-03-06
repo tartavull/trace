@@ -137,7 +137,7 @@ class UNet_Alt(Model):
         self.binary_prediction=tf.round(self.prediction)
         self.sigmoid_prediction = tf.nn.sigmoid(self.prediction)
 #        self.cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits = tf.reshape(self.prediction\
-    #, [-1,2]), labels = tf.reshape(self.target, [-1,2]))) #maybe take out reshaping if you need to          
+    #, [-1,2]), labels = tf.reshape(self.target, [-1,2])))
         self.cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=l0t, labels = self.target))
             
         self.pixel_error = tf.reduce_mean(tf.cast(tf.abs(self.binary_prediction - self.target), tf.float32))
