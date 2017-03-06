@@ -55,14 +55,14 @@ class UNet_Jon(Model):
         b1t = bias_variable([1,1,1,1,12])
         b2t = bias_variable([1,1,1,1,24])
 
-        layer_0 = tf.Print(c0(in_node), [c0(in_node)])
-        layer_1 = tf.Print(tf.nn.relu(c1(layer_0)+b1),[tf.shape(tf.nn.relu(c1(layer_0)+b1))], message='layer1')
-        layer_2 = tf.Print(tf.nn.relu(c2(layer_1)+b2),[tf.shape(tf.nn.relu(c2(layer_1)+b2))], message='layer2')
-        layer_3 = tf.Print(tf.nn.relu(c3(layer_2)+b3),[tf.shape(tf.nn.relu(c3(layer_2)+b3))], message='layer3')
+        layer_0 = c0(in_node)
+        layer_1 = tf.nn.relu(c1(layer_0)+b1)
+        layer_2 = tf.nn.relu(c2(layer_1)+b2)
+        layer_3 = tf.nn.relu(c3(layer_2)+b3)
         layer_3t = layer_3
-        layer_2t = tf.Print(tf.nn.relu(c3t(layer_3t)+layer_2+b2t),[tf.shape(tf.nn.relu(c3t(layer_3t)+layer_2+b2t))], message='layer_2t')
-        layer_1t = tf.Print(tf.nn.relu(c2t(layer_2t)+layer_1+b1t),[tf.nn.relu(c2t(layer_2t)+layer_1+b1t)], message='layer_1t')
-        layer_0t = tf.Print(tf.nn.relu(c1t(layer_1t)+layer_0+b0t),[tf.nn.relu(c1t(layer_1t)+layer_0+b0t)], message='layer_0t')
+        layer_2t = tf.nn.relu(c3t(layer_3t)+layer_2+b2t)
+        layer_1t = tf.nn.relu(c2t(layer_2t)+layer_1+b1t)
+        layer_0t = tf.nn.relu(c1t(layer_1t)+layer_0+b0t)
 
         last_layer = layer_0t
         self.prediction = tf.nn.sigmoid(last_layer)
