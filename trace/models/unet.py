@@ -40,11 +40,11 @@ class UNet_Jon(Model):
 
         #convolution variables
         c0=ConvKernel3d(name='d_conv0', dict_key='c0', size=(1,1,1), strides=(1,1,1), n_lower=1, n_upper=3)
-        c1=ConvKernel3d(name="d_conv1", dict_key='c1', size=(4,4,1), strides=(2,2,1), n_lower=3, n_upper=12)
-        c2=ConvKernel3d(name="d_conv2", dict_key='c2', size=(4,4,1), strides=(2,2,1), n_lower=12, n_upper=24)
+        c1=ConvKernel3d(name="d_conv1", dict_key='c1', size=(1,4,4), strides=(1,2,2), n_lower=3, n_upper=12)
+        c2=ConvKernel3d(name="d_conv2", dict_key='c2', size=(1,4,4), strides=(1,2,2), n_lower=12, n_upper=24)
         c3=ConvKernel3d(name="d_conv3", dict_key='c3', size=(4,4,4), strides=(2,2,2), n_lower=24, n_upper=48)
-        c1t=ConvKernel3d(name="u_conv1", dict_key='c1', size=(4,4,1), strides=(2,2,1), n_lower=3, n_upper=12).transpose()
-        c2t=ConvKernel3d(name="u_conv2", dict_key='c2', size=(4,4,1), strides=(2,2,1), n_lower=12, n_upper=24).transpose()
+        c1t=ConvKernel3d(name="u_conv1", dict_key='c1', size=(1,4,4), strides=(1,2,2), n_lower=3, n_upper=12).transpose()
+        c2t=ConvKernel3d(name="u_conv2", dict_key='c2', size=(1,4,4), strides=(1,2,2), n_lower=12, n_upper=24).transpose()
         c3t=ConvKernel3d(name="u_conv3", dict_key='c3', size=(4,4,4), strides=(2,2,2), n_lower=24, n_upper=48).transpose()
 
         b0 = bias_variable([1,1,1,1,1])
