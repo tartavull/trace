@@ -37,11 +37,7 @@ class UNet_Jon(Model):
         batch_size = tf.shape(in_node)[0]
         in_size = tf.shape(in_node)[1]
         size = in_size
-
-        print("in-node shape")
-        print(tf.shape(self.image))
-        print(in_node)
-        print(batch_size)
+        
         #convolution variables
         c1=ConvKernel3d(name="d_conv1", size=(4,4,1), strides=(2,2,1), n_lower=1, n_upper=12)
         c2=ConvKernel3d(name="d_conv2", size=(4,4,1), strides=(2,2,1), n_lower=12, n_upper=24)
@@ -59,7 +55,6 @@ class UNet_Jon(Model):
         b2t = bias_variable([1,1,1,1,24])
 
         layer_0 = in_node
-        print in_node.shape
         layer_1 = tf.nn.relu(c1(layer_0)+b1)
         layer_2 = tf.nn.relu(c2(layer_1)+b2)
         layer_3 = tf.nn.relu(c3(layer_2)+b3)
