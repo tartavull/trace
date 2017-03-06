@@ -122,7 +122,7 @@ class ConvKernel3d(ConvKernel):
             tmp=tf.nn.conv3d(x, self.up_coeff*self.weights, strides=self.strides, padding='VALID')
             tmp_shape = tf.shape(tmp)
             tmp_list = [tmp_shape[1],tmp_shape[2],tmp_shape[3]]
-            x_list = [in_shape[1],in_shape[2],in_shape[3]]
+            x_list = [self.in_shape[1],self.in_shape[2],self.in_shape[3]]
             shape_dict3d[(tuple(tmp_list), self.size, tuple(self.strides))]=tuple(x_list)
         return tmp
 
