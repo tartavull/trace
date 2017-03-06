@@ -40,7 +40,7 @@ class UNet_Jon(Model):
 
         print("in-node shape")
         print(tf.shape(self.image))
-        print(in_size)
+        print(in_node)
         print(batch_size)
         #convolution variables
         c1=ConvKernel3d(name="d_conv1", size=(4,4,1), strides=(2,2,1), n_lower=1, n_upper=12)
