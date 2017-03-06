@@ -67,7 +67,7 @@ class UNet_Jon(Model):
         self.prediction = tf.nn.sigmoid(last_layer)
         self.binary_prediction = tf.round(self.prediction)
 
-        self.cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(last_layer, self.target))
+        self.cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=last_layer, labels=self.target))
         self.pixel_error = tf.reduce_mean(tf.cast(tf.abs(self.binary_prediction - self.target), tf.float32))
 
         self.saver = tf.train.Saver()
