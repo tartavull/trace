@@ -120,7 +120,7 @@ def __rand_error_affinities(model, data_folder, sigmoid_prediction, num_layers, 
 
     tmp_aff_file = 'validation-tmp-affinities.h5'
     tmp_label_file = 'validation-tmp-labels.h5'
-    ground_truth_file = 'validation-labels.h5'
+    ground_truth_file = 'validation.hdf'
 
     base = data_folder + 'results/' + model.model_name + '/'
 
@@ -130,7 +130,8 @@ def __rand_error_affinities(model, data_folder, sigmoid_prediction, num_layers, 
         out = output_file['main']
 
         reshaped_pred = np.einsum('zyxd->dzyx', sigmoid_prediction)
-        out[0:2, :, :, :] = reshaped_pred
+        #out[0:2, :, :, :] = reshaped_pred
+        out[:] = reshaped_pred
 
     # Do watershed segmentation
     current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -143,7 +144,7 @@ def __rand_error_affinities(model, data_folder, sigmoid_prediction, num_layers, 
 
     # Load the results of watershedding
     pred_seg = io_utils.import_file(base + tmp_label_file)
-    true_seg = io_utils.import_file(data_folder + ground_truth_file)
+    true_seg = h5py.File(data_folder + ground_truth_file, 'r')['volumes']['labels']['neuron_ids'][:8, :80, :80].astype(io_utils.DTYPE)
 
     return __rand_error(true_seg, pred_seg)
 

@@ -72,9 +72,8 @@ class ValidationHook(Hook):
         # Get the inputs and mirror them
         if boundary_mode == AFFINITIES_3D:
             self.val_inputs, self.val_labels = dset_sampler.get_validation_set()
-            self.reshaped_val_inputs = self.val_inputs[np.newaxis, :, :, :, np.newaxis]
-            self.reshaped_val_labels = np.einsum('dzyx->zyxd', self.val_labels)[np.newaxis, :, :, :, :]
-            self.val_examples = np.concatenate([self.reshaped_val_inputs, self.reshaped_val_labels], axis=model.dim + 1)
+
+            self.val_examples = np.concatenate([self.val_inputs, self.val_labels], axis=dset_sampler.CHANNEL_AXIS)
             if model.dim == 2:
                 self.mirrored_val_examples = aug.mirror_across_borders(self.val_examples, model.fov)
             else:
@@ -126,21 +125,27 @@ class ValidationHook(Hook):
     def eval(self, step, model, session, summary_writer):
         if step % self.frequency == 0:
             # Make predictions on the validation set
+            '''
             validation_prediction, validation_training_summary, validation_image_summary = session.run(
                 [model.prediction, self.training_summaries, self.validation_image_summaries],
                 feed_dict={
-                    model.example: self.mirrored_val_examples
+                    model.example: self.mirrored_val_examples[:, :16, :120, :120, :]
                 })
+            '''
+            val_n_layers = self.val_inputs.shape[1]
+            val_output_dim = self.val_labels.shape[2]
+
+            for z in xrange(val_n_layers):
+                for y in range(0, val_output_dim - 120 + 1, 110) + [val_output_dim - 120]:
+                    for x in range(0, val_output_dim - 120 + 1, 110) + [val_output_dim - 120]:
+                        val_pred = session.run( feed_dict={model.example: self.mirrored_val_examples}) 
 
             summary_writer.add_summary(validation_training_summary, step)
             summary_writer.add_summary(validation_image_summary, step)
 
-            val_n_layers = self.reshaped_val_inputs.shape[0]
-            val_output_dim = self.reshaped_val_labels.shape[1]
-
             # Calculate rand and VI scores
-            scores = evaluation.rand_error(model, self.data_folder, self.reshaped_val_labels,
-                                           validation_prediction, val_n_layers, val_output_dim,
+            scores = evaluation.rand_error(model, self.data_folder, self.val_labels[0, :8, :80, :80, :],
+                                           validation_prediction[0], val_n_layers, val_output_dim,
                                            data_type=self.boundary_mode)
 
             score_summary = session.run(self.validation_summaries,

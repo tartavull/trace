@@ -260,7 +260,7 @@ class EMDatasetSampler(object):
         train_stacked = np.concatenate((self.__train_inputs, self.__train_labels), axis=EMDatasetSampler.CHANNEL_AXIS)
 
         # Define inputs to the graph
-        crop_pad = input_size // 6 * 2
+        crop_pad = input_size // 10 * 4
         z_crop_pad = z_input_size // 4 * 2
         patch_size = input_size + crop_pad
         z_patch_size = z_input_size + z_crop_pad
@@ -330,7 +330,7 @@ class EMDatasetSampler(object):
                     sigma = tf.random_uniform(shape=(), minval=2, maxval=5, dtype=tf.float32)
                     return tf_gaussian_blur(img, sigma, size=5)
 
-                return tf.map_fn(lambda slice: randomly_apply_op(stack, apply_random_blur_to_slice, prob=5))
+                return tf.map_fn(lambda img: randomly_apply_op(img, apply_random_blur_to_slice, prob=5), stack)
 
             blurred_inputs = tf.map_fn(lambda stack: apply_random_blur_to_stack(stack),
                                        deformed_inputs)
