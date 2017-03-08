@@ -147,6 +147,8 @@ class UNet(Model):
         self.pixel_error = tf.reduce_mean(tf.cast(tf.abs(self.binary_prediction - self.target), tf.float32))
 
         self.saver = tf.train.Saver()
+
+    def predict():
                 
 
 class ResVNet(Model):

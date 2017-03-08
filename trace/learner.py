@@ -81,6 +81,7 @@ class ValidationHook(Hook):
         else:
             raise NotImplementedError('Implement other modes')
 
+        self.validation_pixel_error = tf.placeholder(tf.float32)
 
         self.rand_f_score = tf.placeholder(tf.float32)
         self.rand_f_score_merge = tf.placeholder(tf.float32)
@@ -89,9 +90,9 @@ class ValidationHook(Hook):
         self.vi_f_score_merge = tf.placeholder(tf.float32)
         self.vi_f_score_split = tf.placeholder(tf.float32)
 
+
         self.training_summaries = tf.summary.merge([
-            tf.summary.scalar('validation_cross_entropy', model.cross_entropy),
-            tf.summary.scalar('validation_pixel_error', model.pixel_error),
+            tf.summary.scalar('validation_pixel_error', self.validation_pixel_error),
         ])
 
         self.validation_summaries = tf.summary.merge([
@@ -125,27 +126,42 @@ class ValidationHook(Hook):
     def eval(self, step, model, session, summary_writer):
         if step % self.frequency == 0:
             # Make predictions on the validation set
-            '''
-            validation_prediction, validation_training_summary, validation_image_summary = session.run(
-                [model.prediction, self.training_summaries, self.validation_image_summaries],
-                feed_dict={
-                    model.example: self.mirrored_val_examples[:, :16, :120, :120, :]
-                })
-            '''
+
             val_n_layers = self.val_inputs.shape[1]
             val_output_dim = self.val_labels.shape[2]
 
-            for z in xrange(val_n_layers):
+            combined_pred = np.zeros((val_n_layers, val_output_dim, val_output_dim, 3))
+            overlaps = np.zeros((val_n_layers, val_output_dim, val_output_dim, 3))
+            for z in range(0, val_n_layers - 16 + 1, 15) + [val_n_layers - 16]:
                 for y in range(0, val_output_dim - 120 + 1, 110) + [val_output_dim - 120]:
                     for x in range(0, val_output_dim - 120 + 1, 110) + [val_output_dim - 120]:
-                        val_pred = session.run( feed_dict={model.example: self.mirrored_val_examples}) 
+                        pred = session.run(model.prediction, feed_dict={model.example: self.mirrored_val_examples}) 
+                        combined_pred[z:z+16, y:y+120, x:x+120, :] = pred
+                        overlaps[z:z+16, y:y+120, x:x+120, :] += np.ones((16, 120, 120, 3))
+
+            # Normalize the combined prediction by the number of times each
+            # voxel was computed in the overlapping computation.
+            validation_prediction = np.divide(combined_pred, overlaps)
+
+            validation_binary_prediction = np.round(validation_prediction)
+            validation_pixel_error = np.mean(np.absolute(validation_binary_prediction - self.mirrored_val_examples[0, :, :, :, 1:]))
+
+            validation_training_summary = session.run(self.training_summaries,
+                                                     feed_dict={
+                                                         self.validation_pixel_error: validation_pixel_error
+                                                     })
+
+            validation_image_summary = session.run(self.validation_image_summaries,
+                                                   feed_dict={
+                                                       model.example: self.mirrored_val_examples
+                                                   })
 
             summary_writer.add_summary(validation_training_summary, step)
             summary_writer.add_summary(validation_image_summary, step)
 
             # Calculate rand and VI scores
             scores = evaluation.rand_error(model, self.data_folder, self.val_labels[0, :8, :80, :80, :],
-                                           validation_prediction[0], val_n_layers, val_output_dim,
+                                           validation_prediction, val_n_layers, val_output_dim,
                                            data_type=self.boundary_mode)
 
             score_summary = session.run(self.validation_summaries,
