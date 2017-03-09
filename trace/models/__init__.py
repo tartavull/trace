@@ -4,7 +4,7 @@ from unet import *
 MODEL_DICT = {
     'conv': ConvNet,
     'unet': UNet,
-    'unet_jon': UNet_Jon
+    'unet_jon': UNet_Jon,
     'res_vnet': ResVNet,
 }
 
