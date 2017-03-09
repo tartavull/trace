@@ -114,7 +114,7 @@ def __rand_error_boundaries(true_labels, pred_labels):
     return scores[max_score_thresh]
 
 
-def __rand_error_affinities_v2(pred_affinities, true_seg, aff_type=utils.AFFINITIES_2D):
+def __rand_error_affinities_v2(pred_affinities, true_seg, aff_type=utils.AFFINITIES_3D):
     # If the affinities type we're being passed in is 2D, we can only generate a 2D segmentation,
     # so we must relabel
     relabel_2D = (aff_type == utils.AFFINITIES_2D)
