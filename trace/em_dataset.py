@@ -235,9 +235,6 @@ class EMDatasetSampler(object):
         # Pad in 5 dimensions
         self.__padded_dataset = np.pad(train_stacked, [[0, 0], [z_pad, z_pad], [pad, pad], [pad, pad], [0, 0]], mode='reflect')
 
-        print(self.padded_dataset.shape)
-        print(self.padded_dataset[:, :self.padded_dataset.shape[1] // 2, :self.padded_dataset.shape[2] // 2, :self.padded_dataset.shape[3] // 2].shape)
-
         with tf.device('/cpu:0'):
             # The dataset is loaded into a constant variable from a placeholder
             # because a tf.constant cannot hold a dataset that is over 2GB.
