@@ -262,8 +262,8 @@ class UNet3DLayer(Layer):
                 out_node = max_pool_3d(final_node)
                 out_n_feature_maps = self.n_feature_maps
             else:
-                w_d = get_weight_variable(layer_name + '_wd', [2, 2, 2, self.n_feature_maps, 2 * self.n_feature_maps])
-                b_d = get_bias_variable(layer_name + '_bd', [2 * self.n_feature_maps])
+                w_d = get_weight_variable(self.layer_name + '_wd', [2, 2, 2, self.n_feature_maps, 2 * self.n_feature_maps])
+                b_d = get_bias_variable(self.layer_name + '_bd', [2 * self.n_feature_maps])
                 weights.append(w_d)
                 biases.append(b_d)
 
