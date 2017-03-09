@@ -19,6 +19,7 @@ except Exception:
           " If this fails, segascorus is likely not compatible with your computer (i.e. Macs).")
 
 import evaluation
+from utils import *
 
 
 class TrainingParams:
@@ -62,18 +63,21 @@ class LossHook(Hook):
 
 
 class ValidationHook(Hook):
-    def __init__(self, frequency, dset, model, data_folder, boundary_mode):
+    def __init__(self, frequency, dset_sampler, model, data_folder, boundary_mode, pred_batch_shape):
+        self.pred_batch_shape = pred_batch_shape
+        self.dset_sampler = dset_sampler
         self.boundary_mode = boundary_mode
         self.frequency = frequency
         self.data_folder = data_folder
-        self.dset = dset
 
-        # Get the inputs and mirror them
-        self.reshaped_val_inputs, self.reshaped_val_labels = dset.get_validation_set()
-        self.val_examples = np.concatenate([self.reshaped_val_inputs, self.reshaped_val_labels], axis=3)
-        self.mirrored_val_examples = aug.mirror_across_borders(np.concatenate([
-                            self.reshaped_val_inputs, self.reshaped_val_labels], axis=3), model.fov)
+        # Get the inputs from dataset
+        self.val_inputs, self.val_labels, self.val_targets = dset_sampler.get_validation_set()
 
+        # Mirror the inputs
+        self.val_inputs = aug.mirror_across_borders_3d(self.val_inputs, model.fov, model.z_fov)
+
+        # Set up placeholders for other metrics
+        self.validation_pixel_error = tf.placeholder(tf.float32)
         self.rand_f_score = tf.placeholder(tf.float32)
         self.rand_f_score_merge = tf.placeholder(tf.float32)
         self.rand_f_score_split = tf.placeholder(tf.float32)
@@ -81,12 +85,9 @@ class ValidationHook(Hook):
         self.vi_f_score_merge = tf.placeholder(tf.float32)
         self.vi_f_score_split = tf.placeholder(tf.float32)
 
-        self.training_summaries = tf.summary.merge([
-            tf.summary.scalar('validation_cross_entropy', model.cross_entropy),
-            tf.summary.scalar('validation_pixel_error', model.pixel_error),
-        ])
-
+        # Create validation summaries
         self.validation_summaries = tf.summary.merge([
+            tf.summary.scalar('validation_pixel_error', self.validation_pixel_error),
             tf.summary.scalar('rand_score', self.rand_f_score),
             tf.summary.scalar('rand_merge_score', self.rand_f_score_merge),
             tf.summary.scalar('rand_split_score', self.rand_f_score_split),
@@ -95,35 +96,40 @@ class ValidationHook(Hook):
             tf.summary.scalar('vi_split_score', self.vi_f_score_split),
         ])
 
+        # Create image summaries
+        if model.fov == 1:
+            val_output_patch_summary = tf.summary.image('validation_output_patch', model.image[0])
+        else:
+            val_output_patch_summary = tf.summary.image('validation_output_patch',
+                                                model.image[0,
+                                                    model.z_fov // 2:(model.z_fov // 2) + 3,
+                                                    model.fov // 2:-(model.fov // 2),
+                                                    model.fov // 2:-(model.fov // 2),
+                                                :]),
+
         with tf.variable_scope('validation_images'):
             self.validation_image_summaries = tf.summary.merge([
-                tf.summary.image('validation_input_image', model.image),
-                tf.summary.image('validation_output_patch', model.image[:,
-                                                 model.fov // 2:-model.fov // 2,
-                                                 model.fov // 2:-model.fov // 2,
-                                                 :]),
-                tf.summary.image('validation_output_target', model.target[:, :, :, :1]),
-                tf.summary.image('validation_predictions', model.prediction[:, :, :, :1]),
+                tf.summary.image('validation_input_image', model.image[0]),
+                val_output_patch_summary,
+                tf.summary.image('validation_output_target', model.target[0, :3, :, :, :]),
+                tf.summary.image('validation_predictions', model.prediction[0, :3, :, :, :]),
             ])
 
     def eval(self, step, model, session, summary_writer):
         if step % self.frequency == 0:
             # Make predictions on the validation set
-            validation_prediction, validation_training_summary, validation_image_summary = session.run(
-                [model.prediction, self.training_summaries, self.validation_image_summaries],
-                feed_dict={
-                    model.example: self.mirrored_val_examples
-                })
 
-            summary_writer.add_summary(validation_training_summary, step)
-            summary_writer.add_summary(validation_image_summary, step)
+            summary_writer.add_summary(self.validation_image_summaries, step)
 
-            val_n_layers = self.reshaped_val_inputs.shape[0]
-            val_output_dim = self.reshaped_val_labels.shape[1]
+            # Make the prediction
+            predictions = model.predict(session, self.val_inputs, self.pred_batch_shape, mirror_inputs=False)
+
+            # INSERT CALCULATION OF PIXEL ERROR HERE
+
 
             # Calculate rand and VI scores
-            scores = evaluation.rand_error(model, self.data_folder, self.reshaped_val_labels,
-                                           validation_prediction, val_n_layers, val_output_dim,
+            scores = evaluation.rand_error(model, self.data_folder, self.val_labels[0, :8, :80, :80, :],
+                                           validation_prediction[0], val_n_layers, val_output_dim,
                                            data_type=self.boundary_mode)
 
             score_summary = session.run(self.validation_summaries,
@@ -153,12 +159,17 @@ class ImageVisualizationHook(Hook):
     def __init__(self, frequency, model):
         self.frequency = frequency
         with tf.variable_scope('images'):
-            self.training_summaries = tf.summary.merge([
-                tf.summary.image('input_image', model.image[0, model.z_fov // 2:(model.z_fov // 2) + 3]),
-                tf.summary.image('output_patch', model.image[0, model.z_fov // 2:(model.z_fov // 2) + 3,
+            if model.fov == 1:
+                output_patch_summary = tf.summary.image('output_patch', model.raw_image[0, :3, :, :, :])
+            else:
+                output_patch_summary = tf.summary.image('output_patch', model.raw_image[0, model.z_fov // 2:(model.z_fov // 2) + 3,
                                                  model.fov // 2:-(model.fov // 2),
                                                  model.fov // 2:-(model.fov // 2),
                                                  :]),
+
+            self.training_summaries = tf.summary.merge([
+                tf.summary.image('input_image', model.raw_image[0, model.z_fov // 2:(model.z_fov // 2) + 3]),
+                output_patch_summary,
                 tf.summary.image('output_target', model.target[0, :3, :, :, :]),
                 tf.summary.image('predictions', model.prediction[0, :3, :, :, :]),
             ])
@@ -281,6 +292,10 @@ class Learner:
         # Define an optimizer
         optimize_step = training_params.optimizer(training_params.learning_rate).minimize(model.cross_entropy)
 
+        # Initialize the variables
+        sess.run(tf.global_variables_initializer())
+        dset_sampler.initialize_session_variables(sess)
+
         # Create enqueue op and a QueueRunner to handle queueing of training examples
         enqueue_op = model.queue.enqueue(dset_sampler.training_example_op)
         qr = tf.train.QueueRunner(model.queue, [enqueue_op] * 4)
@@ -310,21 +325,9 @@ class Learner:
         self.model.saver.restore(self.sess, self.ckpt_folder + 'model.ckpt')
         print("Model restored.")
 
-    def predict(self, inputs):
-        # Mirror the inputs, depending on the dimension
-        if self.model.dim == 2:
-            mirrored_inputs = aug.mirror_across_borders_2d(inputs, self.model.fov)
-        elif self.model.dim == 3:
-            # Mirror, and expand on the first axis to indicate one batch
-            mirrored_inputs = aug.mirror_across_borders_3d(inputs, self.model.fov, self.model.z_fov)
-            mirrored_inputs = np.expand_dims(mirrored_inputs, axis=0)
+    def predict(self, inputs, pred_batching_shape):
+        # Make sure that the inputs are 5-dimensional, in the form [batch_size, z_dim, y_dim, x_dim, n_chan]
+        assert (len(inputs.size) == 5)
+        assert(len(pred_batching_shape) == 3)
 
-        preds = []
-
-        # Break into slices because otherwise tensorflow runs out of memory,
-        for l in range(len(mirrored_inputs), step=10):
-            print('Predicting slices %d:%d' % l, l+9)
-            pred = self.sess.run(self.model.prediction, feed_dict={self.model.image: mirrored_inputs[l:l+10]})
-            preds.append(pred)
-
-        return np.asarray(preds)
+        return self.model.predict(self.sess, inputs, pred_batching_shape, mirror_inputs=False)

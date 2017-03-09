@@ -5,6 +5,7 @@ MODEL_DICT = {
     'conv': ConvNet,
     'unet': UNet,
     'unet_jon': UNet_Jon
+    'res_vnet': ResVNet,
 }
 
 PARAMS_DICT = {
@@ -17,5 +18,6 @@ PARAMS_DICT = {
     'bn_vd2d_relu': BN_VD2D_RELU,
     'vd2d_bound': VD2D_BOUNDARIES,
     'res_vnet': RES_VNET,
-    'unet_3d': UNET_3D
+    'unet_3d': UNET_3D,
+    'unet_3d_4layers': UNET_3D_4LAYERS,
 }

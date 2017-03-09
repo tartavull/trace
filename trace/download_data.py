@@ -254,9 +254,15 @@ def __maybe_create_cremi(dest_folder, train_frac):
     __maybe_split_cremi(dest_folder + 'c/', train_frac)
 
 def maybe_create_all_datasets(trace_folder, train_frac):
+<<<<<<< HEAD
     # __maybe_create_snemi3d(trace_folder + SNEMI3D + '/', train_frac)
     # __maybe_create_isbi(trace_folder + ISBI + '/', train_frac)
     __maybe_create_cremi(trace_folder + CREMI + '/', train_frac)
+=======
+    __maybe_create_snemi3d(trace_folder + SNEMI3D + '/', train_frac)
+    __maybe_create_isbi(trace_folder + ISBI + '/', train_frac)
+    __maybe_create_cremi(trace_folder + CREMI + '/', 0.8)
+>>>>>>> aa05fc5c92f62d405977604d65801cb263a437aa
 
 
 if __name__ == '__main__':

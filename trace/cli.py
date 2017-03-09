@@ -101,8 +101,8 @@ def train(model_type, params_type, dataset_name, n_iter, run_name):
         optimizer=tf.train.AdamOptimizer,
         learning_rate=0.0002,
         n_iter=n_iter,
-        output_size=101,
-        z_output_size=13,
+        output_size=120,
+        z_output_size=16,
         batch_size=batch_size
     )
 
@@ -122,8 +122,8 @@ def train(model_type, params_type, dataset_name, n_iter, run_name):
     hooks = [
         learner.LossHook(5, model),
         learner.ModelSaverHook(100, ckpt_folder),
-        # learner.ValidationHook(500, dset, model, data_folder, params.output_mode),
-        # learner.ImageVisualizationHook(200, model),
+        learner.ValidationHook(500, dset_sampler, model, data_folder, params.output_mode),
+        learner.ImageVisualizationHook(50, model),
         # learner.HistogramHook(100, model),
         # learner.LayerVisualizationHook(500, model),
     ]
@@ -174,7 +174,8 @@ def predict(model_type, params_type, dataset_name, split, run_name):
     predictions = classifier.predict(inputs)
 
     # Prepare the predictions for submission for this particular dataset
-    dataset.prepare_predictions_for_submission(ckpt_folder, split, predictions, params.output_mode)
+    # Only send in the first dimension of predictions, because theoretically predict can predict on many stacks
+    dataset.prepare_predictions_for_submission(ckpt_folder, split, predictions[0], params.output_mode)
 
 
 @cli.command()
@@ -235,7 +236,8 @@ def ens_predict(ensemble_method, ensemble_params, dataset_name, split, run_name)
     predictions = classifier.predict(dataset, inputs)
 
     # Prepare the predictions for submission for this particular dataset
-    dataset.prepare_predictions_for_submission(classifier.ensembler_folder, split, predictions,
+    # Only take the first of the predictions
+    dataset.prepare_predictions_for_submission(classifier.ensembler_folder, split, predictions[0],
                                                ensemble_params[0].output_mode)
 
 if __name__ == '__main__':

@@ -7,6 +7,8 @@ import tensorflow as tf
 import h5py
 import time
 
+import dataprovider.transform as trans
+
 try:
     from thirdparty.segascorus import io_utils
     from thirdparty.segascorus import utils
@@ -21,9 +23,21 @@ AFFINITIES_3D = 'affinities-3d'
 SEGMENTATION_2D = 'segmentation-2d'
 SEGMENTATION_3D = 'segmentation-3d'
 
+BATCH_AXIS = 0
+Z_AXIS = 1
+Y_AXIS = 2
+X_AXIS = 3
+CHANNEL_AXIS = 4
+
 SPLIT = ['train', 'validation', 'test']
 
-import dataprovider.transform as trans
+
+def expand_3d_to_5d(data):
+    # Add a batch dimension and a channel dimension
+    data = np.expand_dims(data, axis=BATCH_AXIS)
+    data = np.expand_dims(data, axis=CHANNEL_AXIS)
+
+    return data
 
 
 def run_watershed_on_affinities(affinities, relabel2d=False, low=0.3, hi=0.9):
@@ -130,7 +144,15 @@ def convert_between_label_types(input_type, output_type, original_labels):
         elif output_type == AFFINITIES_2D:
             raise NotImplementedError('Seg3d->Aff2d not implemented')
         elif output_type == AFFINITIES_3D:
-            return trans.affinitize(original_labels)
+
+            # For each batch of stacks, affinitize and reshape
+
+            def aff_and_reshape(labs):
+                # Affinitize takes a 3d tensor, so we just take the first index
+                return np.einsum('dzyx->zyxd', trans.affinitize(labs[:, :, :, 0]))
+
+            return map(aff_and_reshape, original_labels)
+
         elif output_type == SEGMENTATION_2D:
             raise NotImplementedError('Seg3d->Seg2d not implemented')
         else:
@@ -139,36 +161,4 @@ def convert_between_label_types(input_type, output_type, original_labels):
         raise Exception('Invalid input_type')
 
 
-# Image is a 3D tensor.
-#
-# Sigma is the standard deviation in pixels - that is, the distance from the
-# center to reach one standard deviation above the mean.
-#
-# Size is the length of one side of the gaussian filter. Assuming size is odd
-def tf_gaussian_blur(image, sigma, size=5):
-    padding = tf.cast(size // 2, tf.float32)
-    # Create grid of points to evaluate gaussian function at.
-    indices = tf.linspace(-padding, padding, size)
-    X, Y = tf.meshgrid(indices, indices)
 
-    # Create gaussian filter.
-    gaussian_filter = tf.exp(-tf.cast(X * X + Y * Y, tf.float32)/(2 * sigma * sigma))
-
-    # Normalize to 1 over truncated filter
-    normalized_gaussian_filter = gaussian_filter / tf.reduce_sum(gaussian_filter)
-
-    num_channels = image.get_shape()[-1]
-    blur_filter = tf.expand_dims(tf.expand_dims(normalized_gaussian_filter, axis=2), axis=3)
-    blur_filter = tf.tile(blur_filter, tf.stack([1, 1, num_channels, num_channels]))
-
-    # Reflect image at borders to create padding for the filter.
-    padding = tf.cast(padding, tf.int32)
-    mirrored_image = tf.pad(image,
-                tf.stack([[padding, padding], [padding, padding], [0, 0]]), 'REFLECT')
-    mirrored_image = tf.expand_dims(mirrored_image, axis=0)
-
-    # Apply the gaussian filter.
-    filtered_image = tf.nn.convolution(mirrored_image, blur_filter,
-                strides = [1, 1], padding='VALID')
-
-    return filtered_image[0]

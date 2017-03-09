@@ -114,13 +114,23 @@ def __rand_error_boundaries(true_labels, pred_labels):
     return scores[max_score_thresh]
 
 
+def __rand_error_affinities_v2(pred_affinities, true_seg, aff_type=utils.AFFINITIES_3D):
+    # If the affinities type we're being passed in is 2D, we can only generate a 2D segmentation,
+    # so we must relabel
+    relabel_2D = (aff_type == utils.AFFINITIES_2D)
+
+    # Generate a 3D segmentation from the affinities, regardless of whether they are 2D or 3D, because that's
+    # how segascorus works
+    pred_segmentation = utils.convert_between_label_types(input_type=aff_type, output_type=utils.SEGMENTATION_3D)
+
+
 def __rand_error_affinities(model, data_folder, sigmoid_prediction, num_layers, output_shape, watershed_high=0.9, watershed_low=0.3):
     # Save affinities to temporary file
     # TODO pad the image with zeros so that the output covers the whole dataset
 
     tmp_aff_file = 'validation-tmp-affinities.h5'
     tmp_label_file = 'validation-tmp-labels.h5'
-    ground_truth_file = 'validation-labels.h5'
+    ground_truth_file = 'validation.hdf'
 
     base = data_folder + 'results/' + model.model_name + '/'
 
@@ -130,7 +140,8 @@ def __rand_error_affinities(model, data_folder, sigmoid_prediction, num_layers, 
         out = output_file['main']
 
         reshaped_pred = np.einsum('zyxd->dzyx', sigmoid_prediction)
-        out[0:2, :, :, :] = reshaped_pred
+        #out[0:2, :, :, :] = reshaped_pred
+        out[:] = reshaped_pred
 
     # Do watershed segmentation
     current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -143,9 +154,10 @@ def __rand_error_affinities(model, data_folder, sigmoid_prediction, num_layers, 
 
     # Load the results of watershedding
     pred_seg = io_utils.import_file(base + tmp_label_file)
-    true_seg = io_utils.import_file(data_folder + ground_truth_file)
+    true_seg = h5py.File(data_folder + ground_truth_file, 'r')['volumes']['labels']['neuron_ids'][:8, :80, :80].astype(io_utils.DTYPE)
 
     return __rand_error(true_seg, pred_seg)
+
 
 
 def rand_error(model, data_folder, true_labels, sigmoid_prediction, num_layers, output_shape, data_type='boundaries'):
