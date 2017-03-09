@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+    # -*- coding: utf-8 -*-
 from __future__ import print_function
 import os
 import webbrowser
@@ -122,7 +122,7 @@ def train(model_type, params_type, dataset_name, n_iter, run_name):
     hooks = [
         learner.LossHook(5, model),
         learner.ModelSaverHook(100, ckpt_folder),
-        learner.ValidationHook(500, dset_sampler, model, data_folder, params.output_mode),
+        # learner.ValidationHook(500, dset_sampler, model, data_folder, params.output_mode),
         learner.ImageVisualizationHook(50, model),
         # learner.HistogramHook(100, model),
         # learner.LayerVisualizationHook(500, model),
