@@ -116,10 +116,7 @@ class UNet_Alt(Model):
         b2t=make_variable([1,1,1,1,24])
 
         #Tensorflow convention is to represent volumes as (batch, x, y, z, channel)                            
-#        inpt = tf.ones((1,128,128,32,1))                                                                      
 
-#        self.image = tf.placeholder(tf.float32, shape=[1, 128, 128, 32, 1])
-#        self.target = tf.placeholder(tf.float32, shape=[None, None, None, None, 3])
         #Basic U-net with relu non-linearities and skip connections                                            
         l0 = self.image   #inpt                                                                                
         l0_0 = tf.nn.relu(c0(l0) + b0_0)
@@ -132,27 +129,13 @@ class UNet_Alt(Model):
         l1t = tf.nn.relu(c2t(l2t)+l1+b1t)
         l0t = c1t(l1t)+l0+b0t
 
- #       otpt2 = l0t
         self.logits = l0t
-#        self.prediction = otpt2
-#        self.binary_prediction=tf.round(self.prediction)
-#       self.sigmoid_prediction = tf.nn.sigmoid(l0t)
+
         self.prediction = tf.nn.sigmoid(l0t)
         self.binary_prediction = tf.round(self.prediction)
-        self.logits = tf.Print(self.logits, [self.logits], message="logits")
-        self.target = tf.Print(self.target, [self.target], message="target")
-#        self.cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits = tf.reshape(self.prediction\
-    #, [-1,2]), labels = tf.reshape(self.target, [-1,2])))
         self.cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=l0t, labels = self.target))
-            
-#        print ("labels")
-#        a = tf.Print(self.target, [self.target], message = "labels")
-#        print ("logits")
-#        b = tf.Print(l0t, [l0t], message = "logits")
 
-        self.binary_prediction = tf.Print(self.binary_prediction, [self.binary_prediction], message = "binary_prediction")
         self.pixel_error = tf.reduce_mean(tf.cast(tf.abs(self.binary_prediction - self.target), tf.float32))
-        self.pixel_error = tf.Print(self.pixel_error, [self.pixel_error], message="pixel_error")
         self.train_step = tf.train.AdamOptimizer(learning_rate).minimize(self.cross_entropy)
 
         self.saver = tf.train.Saver()
