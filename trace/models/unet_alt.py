@@ -130,18 +130,127 @@ class UNet_Alt(Model):
         l3t = l3
         l2t = tf.nn.relu(c3t(l3t)+l2+b2t)
         l1t = tf.nn.relu(c2t(l2t)+l1+b1t)
-        l0t = tf.nn.relu(c1t(l1t)+l0+b0t)
+        l0t = c1t(l1t)+l0+b0t
+
+ #       otpt2 = l0t
+        self.logits = l0t
+#        self.prediction = otpt2
+#        self.binary_prediction=tf.round(self.prediction)
+#       self.sigmoid_prediction = tf.nn.sigmoid(l0t)
+        self.prediction = tf.nn.sigmoid(l0t)
+        self.binary_prediction = tf.round(self.prediction)
+        self.logits = tf.Print(self.logits, [self.logits], message="logits")
+        self.target = tf.Print(self.target, [self.target], message="target")
+#        self.cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits = tf.reshape(self.prediction\
+    #, [-1,2]), labels = tf.reshape(self.target, [-1,2])))
+        self.cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=l0t, labels = self.target))
+            
+#        print ("labels")
+#        a = tf.Print(self.target, [self.target], message = "labels")
+#        print ("logits")
+#        b = tf.Print(l0t, [l0t], message = "logits")
+
+        self.binary_prediction = tf.Print(self.binary_prediction, [self.binary_prediction], message = "binary_prediction")
+        self.pixel_error = tf.reduce_mean(tf.cast(tf.abs(self.binary_prediction - self.target), tf.float32))
+        self.pixel_error = tf.Print(self.pixel_error, [self.pixel_error], message="pixel_error")
+        self.train_step = tf.train.AdamOptimizer(learning_rate).minimize(self.cross_entropy)
+
+        self.saver = tf.train.Saver()
+        self.model_name = "unet3d_first"
+
+class UNet_Alt_Wider(Model):
+    def __init__(self, architecture, is_training=False):
+        super(UNet_Alt, self).__init__(architecture)
+        learning_rate = .001
+        self.out = 101
+        self.fov = 1
+        self.inpt = self.fov + 2 * (self.out // 2)
+        self.z_fov = 1
+        prev_layer = self.image
+
+        #convolution variables                                                                                 
+        c0=ConvKernel3d(dict_key = "0", size=(1,1,1), strides=(1,1,1), n_lower=1, n_upper=3)
+        c1=ConvKernel3d(dict_key = "1", size=(1,4,4), strides=(1,2,2), n_lower=3, n_upper=12)
+        c2=ConvKernel3d(dict_key = "2", size=(1,4,4), strides=(1,2,2), n_lower=12, n_upper=24)
+        c3=ConvKernel3d(dict_key = "3", size=(4,4,4), strides=(2,2,2), n_lower=24, n_upper=48)
+
+        c1t=ConvKernel3d(dict_key = "1", size=(1,4,4), strides=(1,2,2), n_lower=3, n_upper=12).transpose()
+        c2t=ConvKernel3d(dict_key = "2", size=(1,4,4), strides=(1,2,2), n_lower=12, n_upper=24).transpose()
+        c3t=ConvKernel3d(dict_key = "3", size=(4,4,4), strides=(2,2,2), n_lower=24, n_upper=48).transpose()
+
+        #weight variables
+        w0_f1 = weight_variable([3,3,1,96,96])
+        w0_f2 = weight_variable([3,3,1,96,96])
+
+        w1_f1 = weight_variable([3,3,1,96,96])
+        w1_f2 = weight_variable([3,3,1,96,96])
+
+        w2_f1 = weight_variable([3,3,1,96,96])
+        w2_f2 = weight_variable([3,3,1,96,96])
+
+    #bias variables                                                                                      
+        b0_0 = make_variable([1,1,1,1,1])
+        b0=make_variable([1,1,1,1,1])
+
+        b0_f1 = make_variable([1,1,1,1,12])
+        b0_f2 = make_variable([1,1,1,1,12])
+
+        b1=make_variable([1,1,1,1,12])
+
+        b1_f1 = make_variable([1,1,1,1,24])
+        b1_f2 = make_variable([1,1,1,1,24])
+
+        b2=make_variable([1,1,1,1,24])
+
+        b2_f1 = make_variable([1,1,1,1,48])
+        b2_f2 = make_variable([1,1,1,1,48])
+
+        b3=make_variable([1,1,1,1,48])
+
+        b0t=make_variable([1,1,1,1,1])
+        b1t=make_variable([1,1,1,1,12])
+        b2t=make_variable([1,1,1,1,24])
+
+        #Tensorflow convention is to represent volumes as (batch, x, y, z, channel)                            
+        #Basic U-net with relu non-linearities and skip connections                                            
+        l0 = self.image   #inpt                                                                                
+        l0_0 = tf.nn.relu(c0(l0) + b0_0)
+
+        # add layers
+        l0_f1 = tf.nn.relu(conv3d(l0_0, w0_f1)+ b0_f1)
+        l0_f2 = tf.nn.relu(conv3d(l0_f1, w0_f2) + b0_f2)
+
+        l1 = tf.nn.relu(c1(l0_f2)+b1)
+
+        # add layers
+        l1_f1 = tf.nn.relu(conv3d(l1, w1_f1) + b1_f1)
+        l1_f2 = tf.nn.relu(conv3d(l1_f1, w1_f2) + b1_f2)
+
+        l2 = tf.nn.relu(c2(l1_f2)+b2)
+
+        # add layers
+        l2_f1 = tf.nn.relu(conv3d(l2, w2_f1) + b2_f1)
+        l2_f2 = tf.nn.relu(conv3d(l2_f1, w2_f2) + b2_f2)
+
+        l3 = tf.nn.relu(c3(l2_f2)+b3)
+
+        l3t = l3
+        l2t = tf.nn.relu(c3t(l3t)+l2+b2t)
+        l1t = tf.nn.relu(c2t(l2t)+l1+b1t)
+        l0t = c1t(l1t)+l0+b0t
 
         otpt2 = l0t
         self.prediction = otpt2
         self.binary_prediction=tf.round(self.prediction)
         self.sigmoid_prediction = tf.nn.sigmoid(self.prediction)
-#        self.cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits = tf.reshape(self.prediction\
-    #, [-1,2]), labels = tf.reshape(self.target, [-1,2])))
+        print ("target")
+        print(self.target)
+        print ("l0t")
+        print(l0t)
         self.cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=l0t, labels = self.target))
             
         self.pixel_error = tf.reduce_mean(tf.cast(tf.abs(self.binary_prediction - self.target), tf.float32))
         self.train_step = tf.train.AdamOptimizer(learning_rate).minimize(self.cross_entropy)
 
         self.saver = tf.train.Saver()
-        self.model_name = "unet3d_first"
+        self.model_name = "unet3d_wider"

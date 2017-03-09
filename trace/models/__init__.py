@@ -7,6 +7,7 @@ MODEL_DICT = {
     'unet': UNet,
     'res_vnet': ResVNet,
     'unet_alt': UNet_Alt,
+    'unet_alt_wider': UNet_Alt_Wider,
 }
 
 PARAMS_DICT = {
