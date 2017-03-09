@@ -65,15 +65,11 @@ def max_pool(x, dilation=1, strides=[2, 2], window_shape=[2, 2]):
     return tf.nn.pool(x, window_shape=window_shape, dilation_rate=[dilation, dilation],
                       strides=strides, padding='VALID', pooling_type='MAX')
 
-<<<<<<< HEAD
-=======
 
 def max_pool_3d(x, dilation=1, z_dilation=1, strides=[2, 2, 2], window_shape=[2, 2, 2]):
     return tf.nn.pool(x, window_shape=window_shape, dilation_rate=[z_dilation, dilation, dilation],
                       strides=strides, padding='VALID', pooling_type='MAX')
 
-
->>>>>>> aa05fc5c92f62d405977604d65801cb263a437aa
 def dropout(x, keep_prob):
     mask = tf.ones(x.get_shape()[3])
     dropoutMask = tf.nn.dropout(mask, keep_prob)
@@ -101,14 +97,9 @@ def crop_3d(x1, x2, batch_size):
 def crop_and_concat(x1, x2, batch_size):
     return tf.concat([crop(x1, x2, batch_size), x2], 3)
 
-<<<<<<< HEAD
-=======
-
 def crop_and_concat_3d(x1, x2, batch_size):
     return tf.concat([crop_3d(x1, x2, batch_size), x2], 4)
 
-
->>>>>>> aa05fc5c92f62d405977604d65801cb263a437aa
 # Arguments:
 #   - inputs: mini-batch of input images
 #   - is_training: flag specifying whether to use mini-batch or population
@@ -188,9 +179,6 @@ class Layer(object):
     def connect(self, prev_layer, prev_n_feature_maps, dilation_rate, is_training, z_dilation_rate=1,
                 skip_connect=None):
         raise NotImplementedError("Abstract Class!")
-
-<<<<<<< HEAD
-=======
 
 class UNet3DLayer(Layer):
     def __init__(self, *args, **kwargs):
@@ -307,8 +295,6 @@ class UNet3DLayer(Layer):
             out_node = same_conv3d(final_node, w_o) + b_o
             return out_node
 
-
->>>>>>> aa05fc5c92f62d405977604d65801cb263a437aa
 class ConvLayer(Layer):
     def __init__(self, *args, **kwargs):
         self.is_valid = kwargs['is_valid']
@@ -451,30 +437,6 @@ class Model(object):
         with tf.device('/cpu:0'):
             self.queue = tf.FIFOQueue(50, tf.float32)
 
-        # Draw example from the queue and separate
-<<<<<<< HEAD
-        self.example = tf.placeholder_with_default(self.queue.dequeue(),
-                shape=[None] + [None] * self.dim + [architecture.n_outputs + 1])
-
-
-        # self.example = tf.Print(self.example, [tf.shape(self.example)])
-        if self.dim == 2:
-            self.image = self.example[:, :, :, :1]
-        elif self.dim == 3:
-            self.image = self.example[:, :, :, :, :1]
-
-        # Crop the labels to the appropriate field of view
-        if self.dim == 2:
-            self.target = self.example[:, self.fov // 2:-(self.fov // 2), self.fov // 2:-(self.fov // 2), 1:]
-        elif self.dim == 3:
-            if self.fov == 1:
-                self.target = self.example[:, :, :, :, 1:]
-            else: 
-                self.target = self.example[:, self.z_fov // 2:-(self.z_fov // 2), self.fov // 2:-(self.fov // 2), self.fov // 2:-(self.fov // 2), 1:]
-            
-        #self.image = tf.Print(self.image, [tf.shape(self.image)])
-        #self.target = tf.Print(self.target, [tf.shape(self.target)])
-=======
         # Inputs are tensor of shape [batch, z, y, x, n_chan]
         self.example = tf.placeholder_with_default(self.queue.dequeue(), shape=[None, None, None, None, None])
 
@@ -516,4 +478,3 @@ class Model(object):
     #     """
     #     raise NotImplementedError('Abstract model does not implement prediction with evaluation')
     #
->>>>>>> aa05fc5c92f62d405977604d65801cb263a437aa

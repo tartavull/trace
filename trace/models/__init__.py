@@ -20,4 +20,5 @@ PARAMS_DICT = {
     'res_vnet': RES_VNET,
     'unet_3d': UNET_3D,
     'unet_3d_4layers': UNET_3D_4LAYERS,
+    'unet_3d_basic': UNET_3D_BASIC
 }

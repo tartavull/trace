@@ -203,13 +203,9 @@ class EMDatasetSampler(object):
         :param label_output_type: The format in which the dataset labels should be sampled, i.e. for training, taking
         on values 'boundaries', 'affinities-2d', etc.
         """
-
-<<<<<<< HEAD
-=======
         # All inputs and labels come in with the shape: [n_images, x_dim, y_dim]
         # In order to generalize we, expand into 5 dimensions: [batch_size, z_dim, x_dim, y_dim, n_channels]
-
->>>>>>> aa05fc5c92f62d405977604d65801cb263a437aa
+   
         # Extract the inputs and labels from the dataset
         self.__train_inputs = expand_3d_to_5d(dataset.train_inputs)
         self.__train_labels = expand_3d_to_5d(dataset.train_labels)
@@ -243,59 +239,6 @@ class EMDatasetSampler(object):
         print(self.padded_dataset[:, :self.padded_dataset.shape[1] // 2, :self.padded_dataset.shape[2] // 2, :self.padded_dataset.shape[3] // 2].shape)
 
         with tf.device('/cpu:0'):
-<<<<<<< HEAD
-            # Sample and squeeze the dataset, squeezing so that we can perform the distortions
-            patch_size_dims = [patch_size, patch_size]
-            if self.dim == 3:
-                patch_size_dims = [z_patch_size] + patch_size_dims
-
-            self.sample = tf.random_crop(self.dataset_constant, size=[batch_size] + patch_size_dims + [train_stacked.shape[self.dim + 1]])
-
-            # Perform random mirroring
-            if self.dim == 2:
-                mirrored_sample = tf.map_fn(lambda img: tf.image.random_flip_left_right(img), self.sample)
-            elif self.dim == 3:
-
-                def mirrorExample(example):
-                    shouldMirror = tf.random_uniform(shape=(), minval=0, maxval=2, dtype=tf.int32)
-                    return tf.cond(tf.equal(1, shouldMirror), 
-                                   lambda: tf.map_fn(lambda img: tf.image.flip_left_right(img), example), 
-                                   lambda: example)
-                     
-                mirrored_sample = tf.map_fn(mirrorExample, self.sample)
-
-
-            # Randomly flip the 3D cube upside down
-            shouldFlip = tf.random_uniform(shape=(), minval=0, maxval=2, dtype=tf.int32)
-            flipped_sample = tf.cond(tf.equal(1, shouldFlip), 
-                                     lambda: tf.reverse(mirrored_sample, [0]),
-                                     lambda: mirrored_sample)
-
-
-            # Apply a random rotation
-            angle = tf.random_uniform(shape=(), minval=0, maxval=2*math.pi)
-            if self.dim == 2:
-                rotated_sample = tf.map_fn(lambda img: tf.contrib.image.rotate(img, angle), flipped_sample)
-            elif self.dim == 3:
-                def rotateExample(example):
-                    angle_i = tf.random_uniform(shape=(), minval=0, maxval=2*math.pi)
-                    return tf.map_fn(lambda img: tf.contrib.image.rotate(img, angle_i), example)
-                rotated_sample = tf.map_fn(rotateExample, flipped_sample)
-
-
-            # Apply random gaussian blurring
-            # SHOULD NOT BLUR LABELS
-            def blurExample(example):
-                shouldBlur = tf.random_uniform(shape=(), minval=0, maxval=2, dtype=tf.int32)
-                sigma = tf.random_uniform(shape=(), minval=2, maxval=5, dtype=tf.float32)
-                return tf.cond(tf.equal(1, shouldBlur),
-                        lambda: tf_gaussian_blur(example, sigma, 5),
-                        lambda: example)
-            if self.dim == 2:
-                blurred_sample = tf.map_fn(blurExample, rotated_sample)
-            elif self.dim == 3:
-                blurred_sample = tf.map_fn(lambda example: tf.map_fn(blurExample, example), rotated_sample)
-=======
             # The dataset is loaded into a constant variable from a placeholder
             # because a tf.constant cannot hold a dataset that is over 2GB.
             self.__image_ph = tf.placeholder(dtype=tf.float32, shape=self.__padded_dataset.shape)
@@ -341,7 +284,6 @@ class EMDatasetSampler(object):
                 return tf.map_fn(lambda img: tf.contrib.image.rotate(img, angle), stack)
 
             rotated_sample = tf.map_fn(apply_random_rotation_to_stack, flipped_sample)
->>>>>>> aa05fc5c92f62d405977604d65801cb263a437aa
 
             # IDEALLY, we'd have elastic deformation here, but right now too much overhead to compute
             # elastically_deformed_sample = tf.elastic_deformation(rotated_sample)
