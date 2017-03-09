@@ -36,7 +36,8 @@ RES_VNET = UNetArchitecture(
 
 UNET_3D_BASIC = UNetArchitecture(
     model_name='unet_3d_basic',
-    output_mode=AFFINITIES_3D
+    output_mode=AFFINITIES_3D,
+    layers=[]
 )
 
 class UNet_Jon(Model):
