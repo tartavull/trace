@@ -36,7 +36,7 @@ def same_conv2d(x, W, dilation=1):
 
 
 def same_conv3d(x, W, dilation=1, z_dilation=1):
-    return tf.nn.convolution(x, W, strides=[1, 1, 1], padding='SAME', dilation_rate=[z_dilation_rate, dilation, dilation])
+    return tf.nn.convolution(x, W, strides=[1, 1, 1], padding='SAME', dilation_rate=[z_dilation, dilation, dilation])
 
 
 def down_conv2d(x, W, dilation=1):

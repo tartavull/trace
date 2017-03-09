@@ -143,7 +143,7 @@ class UNet_Alt(Model):
 
 class UNet_Alt_Wider(Model):
     def __init__(self, architecture, is_training=False):
-        super(UNet_Alt, self).__init__(architecture)
+        super(UNet_Alt_Wider, self).__init__(architecture)
         learning_rate = .001
         self.out = 101
         self.fov = 1
@@ -162,37 +162,56 @@ class UNet_Alt_Wider(Model):
         c3t=ConvKernel3d(dict_key = "3", size=(4,4,4), strides=(2,2,2), n_lower=24, n_upper=48).transpose()
 
         #weight variables
-        w0_f1 = weight_variable([3,3,1,96,96])
-        w0_f2 = weight_variable([3,3,1,96,96])
+        w0_f1 = get_weight_variable("w0_f1", [1,3,3,3,3])
+        w0_f2 = get_weight_variable("w0_f2", [1,3,3,3,3])
 
-        w1_f1 = weight_variable([3,3,1,96,96])
-        w1_f2 = weight_variable([3,3,1,96,96])
+        w1_f1 = get_weight_variable("w1_f1", [1,3,3,12,12])
+        w1_f2 = get_weight_variable("w1_f2", [1,3,3,12,12])
 
-        w2_f1 = weight_variable([3,3,1,96,96])
-        w2_f2 = weight_variable([3,3,1,96,96])
+        w2_f1 = get_weight_variable("w2_f1", [1,3,3,24,24])
+        w2_f2 = get_weight_variable("w2_f2", [1,3,3,24,24])
+
+        w3_f1 = get_weight_variable("w3_f1", [1,3,3,48,48])
+        w3_f2 = get_weight_variable("w3_f2", [1,3,3,48,48])
+
+        w2t_f1 = get_weight_variable("w2t_f1", [1,3,3,24,24])
+        w2t_f2 = get_weight_variable("w2t_f2", [1,3,3,24,24])
+
+        w1t_f1 = get_weight_variable("w1t_f1", [1,3,3,12,12])
+        w1t_f2 = get_weight_variable("w1t_f2", [1,3,3,12,12])
 
     #bias variables                                                                                      
         b0_0 = make_variable([1,1,1,1,1])
         b0=make_variable([1,1,1,1,1])
 
-        b0_f1 = make_variable([1,1,1,1,12])
-        b0_f2 = make_variable([1,1,1,1,12])
+        b0_f1 = make_variable([1,1,1,1,3])
+        b0_f2 = make_variable([1,1,1,1,3])
 
         b1=make_variable([1,1,1,1,12])
 
-        b1_f1 = make_variable([1,1,1,1,24])
-        b1_f2 = make_variable([1,1,1,1,24])
+        b1_f1 = make_variable([1,1,1,1,12])
+        b1_f2 = make_variable([1,1,1,1,12])
 
         b2=make_variable([1,1,1,1,24])
 
-        b2_f1 = make_variable([1,1,1,1,48])
-        b2_f2 = make_variable([1,1,1,1,48])
+        b2_f1 = make_variable([1,1,1,1,24])
+        b2_f2 = make_variable([1,1,1,1,24])
 
         b3=make_variable([1,1,1,1,48])
 
+        b3_f1 = make_variable([1,1,1,1,48])
+        b3_f2 = make_variable([1,1,1,1,48])
+
         b0t=make_variable([1,1,1,1,1])
         b1t=make_variable([1,1,1,1,12])
+  
+        b1t_f1 = make_variable([1,1,1,1,12])
+        b1t_f2 = make_variable([1,1,1,1,12])
+
         b2t=make_variable([1,1,1,1,24])
+
+        b2t_f1 = make_variable([1,1,1,1,24])
+        b2t_f2 = make_variable([1,1,1,1,24])
 
         #Tensorflow convention is to represent volumes as (batch, x, y, z, channel)                            
         #Basic U-net with relu non-linearities and skip connections                                            
@@ -200,36 +219,43 @@ class UNet_Alt_Wider(Model):
         l0_0 = tf.nn.relu(c0(l0) + b0_0)
 
         # add layers
-        l0_f1 = tf.nn.relu(conv3d(l0_0, w0_f1)+ b0_f1)
-        l0_f2 = tf.nn.relu(conv3d(l0_f1, w0_f2) + b0_f2)
+        l0_f1 = tf.nn.relu(same_conv3d(l0_0, w0_f1)+ b0_f1)
+        l0_f2 = tf.nn.relu(same_conv3d(l0_f1, w0_f2) + b0_f2)
 
         l1 = tf.nn.relu(c1(l0_f2)+b1)
 
         # add layers
-        l1_f1 = tf.nn.relu(conv3d(l1, w1_f1) + b1_f1)
-        l1_f2 = tf.nn.relu(conv3d(l1_f1, w1_f2) + b1_f2)
+        l1_f1 = tf.nn.relu(same_conv3d(l1, w1_f1) + b1_f1)
+        l1_f2 = tf.nn.relu(same_conv3d(l1_f1, w1_f2) + b1_f2)
 
         l2 = tf.nn.relu(c2(l1_f2)+b2)
 
         # add layers
-        l2_f1 = tf.nn.relu(conv3d(l2, w2_f1) + b2_f1)
-        l2_f2 = tf.nn.relu(conv3d(l2_f1, w2_f2) + b2_f2)
+        l2_f1 = tf.nn.relu(same_conv3d(l2, w2_f1) + b2_f1)
+        l2_f2 = tf.nn.relu(same_conv3d(l2_f1, w2_f2) + b2_f2)
 
         l3 = tf.nn.relu(c3(l2_f2)+b3)
 
-        l3t = l3
-        l2t = tf.nn.relu(c3t(l3t)+l2+b2t)
-        l1t = tf.nn.relu(c2t(l2t)+l1+b1t)
-        l0t = c1t(l1t)+l0+b0t
+        l3_f1 = tf.nn.relu(same_conv3d(l3, w3_f1) + b3_f1)
+        l3_f2 = tf.nn.relu(same_conv3d(l3_f1, w3_f2) + b3_f2)
 
-        otpt2 = l0t
-        self.prediction = otpt2
+        l3t = l3_f2
+        
+        l2t = tf.nn.relu(c3t(l3t)+l2+b2t)
+
+        l2t_f1 = tf.nn.relu(same_conv3d(l2t, w2t_f1) + b2t_f1)
+        l2t_f2 = tf.nn.relu(same_conv3d(l2t_f1,w2t_f2) + b2t_f2)
+
+        l1t = tf.nn.relu(c2t(l2t_f2)+l1+b1t)
+
+        l1t_f1 = tf.nn.relu(same_conv3d(l1t, w1t_f1) + b1t_f1)
+        l1t_f2 = tf.nn.relu(same_conv3d(l1t_f1,w1t_f2) + b1t_f2)
+
+        l0t = c1t(l1t_f2)+l0+b0t
+
+        self.logits = l0t
+        self.prediction = tf.nn.sigmoid(l0t)
         self.binary_prediction=tf.round(self.prediction)
-        self.sigmoid_prediction = tf.nn.sigmoid(self.prediction)
-        print ("target")
-        print(self.target)
-        print ("l0t")
-        print(l0t)
         self.cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=l0t, labels = self.target))
             
         self.pixel_error = tf.reduce_mean(tf.cast(tf.abs(self.binary_prediction - self.target), tf.float32))
