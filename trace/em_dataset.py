@@ -213,12 +213,6 @@ class CREMIDataset(Dataset):
 
 class EMDatasetSampler(object):
 
-    BATCH_AXIS = 0
-    Z_AXIS = 1
-    Y_AXIS = 2
-    X_AXIS = 3
-    CHANNEL_AXIS = 4
-
     def __init__(self, dataset, input_size, z_input_size, batch_size=1, label_output_type=BOUNDARIES):
         """Helper for sampling an EM dataset. The field self.training_example_op is the only field that should be
         accessed outside this class for training.
@@ -234,30 +228,21 @@ class EMDatasetSampler(object):
         # All inputs and labels come in with the shape: [n_images, x_dim, y_dim]
         # In order to generalize we, expand into 5 dimensions: [batch_size, z_dim, x_dim, y_dim, n_channels]
 
-        def expand_3d_to_5d(data):
-            # Add a batch dimension and a channel dimension
-            data = np.expand_dims(data, axis=EMDatasetSampler.BATCH_AXIS)
-            data = np.expand_dims(data, axis=EMDatasetSampler.CHANNEL_AXIS)
-
-            return data
-
-        def expand_4d_to_5d(data):
-            data = np.expand_dims(data, axis=EMDatasetSampler.BATCH_AXIS)
-            return data
-
         # Extract the inputs and labels from the dataset
         self.__train_inputs = expand_3d_to_5d(dataset.train_inputs)
-        self.__train_labels = expand_4d_to_5d(convert_between_label_types(dataset.label_type, label_output_type,
-                                                          dataset.train_labels))
+        self.__train_labels = expand_3d_to_5d(dataset.train_labels)
+        self.__train_targets = convert_between_label_types(dataset.label_type, label_output_type,
+                                                           expand_3d_to_5d(dataset.train_labels))
 
         self.__validation_inputs = expand_3d_to_5d(dataset.validation_inputs)
-        self.__validation_labels = expand_4d_to_5d(convert_between_label_types(dataset.label_type, label_output_type,
-                                                               dataset.validation_labels))
+        self.__validation_labels = expand_3d_to_5d(dataset.validation_labels)
+        self.__validation_targets = convert_between_label_types(dataset.label_type, label_output_type,
+                                                                expand_3d_to_5d(dataset.validation_labels))
 
         self.__test_inputs = expand_3d_to_5d(dataset.test_inputs)
 
         # Stack the inputs and labels, so when we sample we sample corresponding labels and inputs
-        train_stacked = np.concatenate((self.__train_inputs, self.__train_labels), axis=EMDatasetSampler.CHANNEL_AXIS)
+        train_stacked = np.concatenate((self.__train_inputs, self.__train_targets), axis=CHANNEL_AXIS)
 
         # Define inputs to the graph
         crop_pad = input_size // 10 * 4
@@ -272,16 +257,19 @@ class EMDatasetSampler(object):
         # Pad in 5 dimensions
         self.__padded_dataset = np.pad(train_stacked, [[0, 0], [z_pad, z_pad], [pad, pad], [pad, pad], [0, 0]], mode='reflect')
 
-
         with tf.device('/cpu:0'):
             # The dataset is loaded into a constant variable from a placeholder
             # because a tf.constant cannot hold a dataset that is over 2GB.
             self.__image_ph = tf.placeholder(dtype=tf.float32, shape=self.__padded_dataset.shape)
             self.__dataset_constant = tf.Variable(self.__image_ph, trainable=False, collections=[])
 
-            # Sample and squeeze the dataset, squeezing so that we can perform the distortions
+            # Sample and squeeze the dataset in multiple batches, squeezing so that we can perform the distortions
             crop_size = [1, z_patch_size, patch_size, patch_size, train_stacked.shape[4]]
-            sample = tf.random_crop(self.__dataset_constant, size=crop_size)
+            samples = []
+            for i in range(batch_size):
+                samples.append(tf.random_crop(self.__dataset_constant, size=crop_size))
+
+            samples = tf.squeeze(samples, axis=1)
 
             # Flip a coin, and apply an op to sample (sample can be 5d or 4d)
             # Prob is the denominator of the probability (1 in prob chance)
@@ -301,7 +289,7 @@ class EMDatasetSampler(object):
             # Perform random mirroring, by applying the same mirroring to each image in the stack
             def mirror_each_image_in_stack_op(stack):
                 return tf.map_fn(lambda img: tf.image.flip_left_right(img), stack)
-            mirrored_sample = randomly_map_and_apply_op(sample, mirror_each_image_in_stack_op)
+            mirrored_sample = randomly_map_and_apply_op(samples, mirror_each_image_in_stack_op)
 
             # Randomly flip the 3D shape upside down
             flipped_sample = randomly_map_and_apply_op(mirrored_sample, lambda stack: tf.reverse(stack, axis=[0]))
@@ -346,17 +334,17 @@ class EMDatasetSampler(object):
             cropped_labels = deformed_labels[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
 
             # Re-stack the image and labels
-            self.training_example_op = tf.concat([tf.concat([cropped_inputs, cropped_labels], axis=EMDatasetSampler.CHANNEL_AXIS)] * batch_size, axis=EMDatasetSampler.BATCH_AXIS)
+            self.training_example_op = tf.concat([tf.concat([cropped_inputs, cropped_labels], axis=CHANNEL_AXIS)] * batch_size, axis=BATCH_AXIS)
 
     def initialize_session_variables(self, sess):
         sess.run(self.__dataset_constant.initializer, feed_dict={self.__image_ph: self.__padded_dataset})
         del self.__padded_dataset
 
     def get_full_training_set(self):
-        return self.__train_inputs, self.__train_labels
+        return self.__train_inputs, self.__train_labels, self.__train_targets
 
     def get_validation_set(self):
-        return self.__validation_inputs, self.__validation_labels
+        return self.__validation_inputs, self.__validation_labels, self.__validation_targets
 
     def get_test_set(self):
         return self.__test_inputs

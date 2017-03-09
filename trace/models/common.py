@@ -87,9 +87,10 @@ def crop_3d(x1, x2, batch_size):
     x2_shape = tf.Print(x2_shape, [x2_shape, tf.shape(x1)])
     offsets = tf.zeros(tf.stack([x2_shape[1], 2]), dtype=tf.float32)
     size = tf.stack([x2_shape[2], x2_shape[3]])
-    
+
     z_crop = tf.shape(x1)[1] - x2_shape[1]
-    return tf.map_fn(lambda img: tf.image.extract_glimpse(img, size=size, offsets=offsets, centered=True), x1)[z_crop // 2 : -(z_crop // 2)]
+    return tf.map_fn(lambda img: tf.image.extract_glimpse(img, size=size, offsets=offsets, centered=True), x1)[
+           z_crop // 2: -(z_crop // 2)]
 
 
 def crop_and_concat(x1, x2, batch_size):
@@ -98,7 +99,6 @@ def crop_and_concat(x1, x2, batch_size):
 
 def crop_and_concat_3d(x1, x2, batch_size):
     return tf.concat([crop_3d(x1, x2, batch_size), x2], 4)
-
 
 
 # Arguments:
@@ -127,6 +127,7 @@ def batch_norm_layer(inputs, is_training, decay=0.9):
 
 class Layer(object):
     depth = 0
+
     def __init__(self, dim, filter_size, n_feature_maps, activation_fn=lambda x: x, z_filter_size=1):
         self.dim = dim
         self.filter_size = filter_size
@@ -134,7 +135,8 @@ class Layer(object):
         self.n_feature_maps = n_feature_maps
         self.activation_fn = activation_fn
 
-    def connect(self, prev_layer, prev_n_feature_maps, dilation_rate, is_training, z_dilation_rate=1, skip_connect=None):
+    def connect(self, prev_layer, prev_n_feature_maps, dilation_rate, is_training, z_dilation_rate=1,
+                skip_connect=None):
         raise NotImplementedError("Abstract Class!")
 
 
@@ -156,12 +158,13 @@ class UNet3DLayer(Layer):
         del kwargs['is_contracting']
         del kwargs['is_expanding']
         del kwargs['is_training']
-        
+
         kwargs['dim'] = 3
 
         super(UNet3DLayer, self).__init__(*args, **kwargs)
 
-    def connect(self, prev_layer, prev_n_feature_maps, dilation_rate, is_training, z_dilation_rate=1, skip_connect=None):
+    def connect(self, prev_layer, prev_n_feature_maps, dilation_rate, is_training, z_dilation_rate=1,
+                skip_connect=None):
         weights = []
         biases = []
         convs = []
@@ -177,14 +180,17 @@ class UNet3DLayer(Layer):
             convs.append(cur_node)
             in_n_feature_maps = prev_n_feature_maps * 2
 
-
         # Set up each convolution in the layer.
         for i in range(self.num_convs):
             # Create the weights and biases.
             if i == 0:
-                w_i = get_weight_variable(self.layer_name + '_w0', [self.z_filter_size, self.filter_size, self.filter_size, in_n_feature_maps, self.n_feature_maps])
+                w_i = get_weight_variable(self.layer_name + '_w0',
+                                          [self.z_filter_size, self.filter_size, self.filter_size, in_n_feature_maps,
+                                           self.n_feature_maps])
             else:
-                w_i = get_weight_variable(self.layer_name + '_w' + str(i), [self.z_filter_size, self.filter_size, self.filter_size, self.n_feature_maps, self.n_feature_maps])
+                w_i = get_weight_variable(self.layer_name + '_w' + str(i),
+                                          [self.z_filter_size, self.filter_size, self.filter_size, self.n_feature_maps,
+                                           self.n_feature_maps])
             b_i = get_bias_variable(self.layer_name + '_b' + str(i), [self.n_feature_maps])
             weights.append(w_i)
             biases.append(b_i)
@@ -196,7 +202,7 @@ class UNet3DLayer(Layer):
                 convFn = same_conv3d
             cur_node = tf.nn.elu(convFn(cur_node, w_i) + b_i)
             convs.append(cur_node)
-        
+
         # If applicable, add the residual connection.
         if self.is_residual:
             if skip_connect == None:
@@ -209,9 +215,8 @@ class UNet3DLayer(Layer):
                 residual = tf.tile(residual, (1, 1, 1, 1, self.n_feature_maps // prev_n_feature_maps))
             final_node = cur_node + residual
 
-
         # If on the contracting path, down sample using either max-pooling
-        # or down-convolution. 
+        # or down-convolution.
         if self.is_contracting:
             if self.uses_max_pool:
                 out_node = max_pool_3d(final_node)
@@ -230,7 +235,9 @@ class UNet3DLayer(Layer):
         elif self.is_expanding:
             # If on the expanding path, upsample using transposed
             # convolution.
-            w_u = get_weight_variable(self.layer_name + '_wu', [self.z_filter_size, self.filter_size, self.filter_size, self.n_feature_maps // 2, self.n_feature_maps])
+            w_u = get_weight_variable(self.layer_name + '_wu',
+                                      [self.z_filter_size, self.filter_size, self.filter_size, self.n_feature_maps // 2,
+                                       self.n_feature_maps])
             b_u = get_bias_variable(self.layer_name + '_bu', [self.n_feature_maps // 2])
             weights.append(w_u)
             biases.append(b_u)
@@ -242,12 +249,12 @@ class UNet3DLayer(Layer):
             return up_conv, out_n_feature_maps
         else:
             # Map back to affinites.
-            w_o = get_weight_variable('w_o', [self.z_filter_size, self.filter_size, self.filter_size, self.n_feature_maps, 3])
+            w_o = get_weight_variable('w_o',
+                                      [self.z_filter_size, self.filter_size, self.filter_size, self.n_feature_maps, 3])
             b_o = get_bias_variable('b_o', [3])
             out_node = same_conv3d(final_node, w_o) + b_o
             return out_node
 
-            
 
 class ConvLayer(Layer):
     def __init__(self, *args, **kwargs):
@@ -279,7 +286,7 @@ class ConvLayer(Layer):
         # Apply the activation function
         self.activations = self.activation_fn(convolution + self.biases)
 
-        #self.activations = tf.Print(self.activations, [tf.shape(self.activations)])
+        # self.activations = tf.Print(self.activations, [tf.shape(self.activations)])
 
         # Prepare the next values in the loop
         return self.activations, self.n_feature_maps
@@ -322,7 +329,7 @@ class PoolLayer(Layer):
                                       padding='VALID',
                                       pooling_type='MAX')
 
-        #self.activations = tf.Print(self.activations, [tf.shape(self.activations)])
+        # self.activations = tf.Print(self.activations, [tf.shape(self.activations)])
 
         self.n_feature_maps = prev_n_feature_maps
 
@@ -387,42 +394,49 @@ class Model(object):
         self.fov = architecture.fov
         self.z_fov = architecture.z_fov
 
-        if self.architecture.output_mode == AFFINITIES_3D:
-            self.dim = 3
-        else:
-            self.dim = 2
-
         # Create an input queue
         with tf.device('/cpu:0'):
             self.queue = tf.FIFOQueue(50, tf.float32)
 
         # Draw example from the queue and separate
-        self.example = tf.placeholder_with_default(self.queue.dequeue(),
-                shape=[None] + [None] * self.dim + [architecture.n_outputs + 1])
+        # Inputs are tensor of shape [batch, z, y, x, n_chan]
+        self.example = tf.placeholder_with_default(self.queue.dequeue(), shape=[None, None, None, None, None])
 
-        #self.example = tf.Print(self.example, [tf.shape(self.example)])
-        if self.dim == 2:
-            self.raw_image = self.example[:, :, :, :1]
-        elif self.dim == 3:
-            self.raw_image = self.example[:, :, :, :, :1]
+        self.raw_image = self.example[:, :, :, :, :1]
 
         # Standardize each input image, using map because per_image_standardization takes one image at a time
-        if self.dim == 2:
-            self.image = tf.map_fn(lambda img: tf.image.per_image_standardization(img), self.raw_image)
-        elif self.dim == 3:
-            mean, var = tf.nn.moments(self.raw_image, axes=[0,1,2,3,4], keep_dims=False)
-            self.image = (self.raw_image - mean) / tf.sqrt(var)
+        self.image = tf.map_fn(lambda stack: tf.map_fn(lambda img: tf.image.per_image_standardization(img), stack), self.raw_image)
 
+        # Comment out if we want to have averaged
+        # mean, var = tf.nn.moments(self.raw_image, axes=[0, 1, 2, 3, 4], keep_dims=False)
+        # self.image = (self.raw_image - mean) / tf.sqrt(var)
 
         # Crop the labels to the appropriate field of view
-        if self.dim == 2:
-            self.target = self.example[:, self.fov // 2:-(self.fov // 2), self.fov // 2:-(self.fov // 2), 1:]
-        elif self.dim == 3:
-            if self.fov == 1 and self.z_fov == 1:
-                self.target = self.example[:, :, :, :, 1:]
-            else:
-                self.target = self.example[:, self.z_fov // 2:-(self.z_fov // 2), self.fov // 2:-(self.fov // 2), self.fov // 2:-(self.fov // 2), 1:]
+        if self.fov == 1 and self.z_fov == 1:
+            self.target = self.example[:, :, :, :, 1:]
+        else:
+            self.target = self.example[:, self.z_fov // 2:-(self.z_fov // 2), self.fov // 2:-(self.fov // 2),
+                          self.fov // 2:-(self.fov // 2), 1:]
 
-            
-        #self.image = tf.Print(self.image, [tf.shape(self.image)])
-        #self.target = tf.Print(self.target, [tf.shape(self.target)])
+    def predict(self, session, inputs, pred_batch_shape, mirror_inputs=True):
+        """Predict on a set of inputs, producing a tensor with the same shape.
+
+        :param pred_batch_shape: When predicting, break into pieces of this shape for evaluation (3D tensor [z, y, x])
+        :param session: Tensorflow session
+        :param mirror_inputs: Decide to mirror the inputs every time
+        :param inputs: A tensor of input stacks with dimension [batch, z, y, x, 1]
+        """
+        raise NotImplementedError('Abstract model does not implement prediction')
+
+    # def predict_with_evaluation(self, session, inputs, metrics, labels, pred_batch_shape, mirror_inputs=True):
+    #     """Predict on a set of inputs, and evaluate the model-specific metrics specified in metrics against labels
+    #
+    #     :param pred_batch_shape: When predicting, break into pieces of this shape for evaluation
+    #     :param session: Tensorflow session
+    #     :param mirror_inputs: Decide to mirror the inputs every time
+    #     :param inputs: A tensor of input stacks with dimension [batch, z, y, x, 1]
+    #     :param labels: Labels with dimension [batch, z, y, x, 1], against which we will evaluate our predictions
+    #     :param metrics: A list of metrics on which we will evaluate
+    #     """
+    #     raise NotImplementedError('Abstract model does not implement prediction with evaluation')
+    #

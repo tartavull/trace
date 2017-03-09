@@ -259,4 +259,4 @@ class EnsembleLearner:
             predictions.append(pred)
 
         # Return the ensembled predictions
-        return self.ensemble_method.predict(predictions)
+        return self.ensemble_method.predict(None, predictions)

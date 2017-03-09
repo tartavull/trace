@@ -33,7 +33,6 @@ def elastic_transform(image, labels, alpha, sigma, random_state=None):
 
     x, y = np.meshgrid(np.arange(shape[0]), np.arange(shape[1]), indexing='ij')
 
-
     # Missing section augmentation
     # Data blurring
     # Misalignment (learning linear transformation)
@@ -103,12 +102,6 @@ def tf_gaussian_blur(image, sigma, size=5):
     squeezed_image = tf.squeeze(filtered_image, axis=0)
 
     return squeezed_image
-
-
-
-def mirror_across_borders_3d(data, fov, z_fov):
-    mirrored_data = np.pad(data, [(0, 0), (z_fov // 2, z_fov // 2), (fov // 2, fov // 2), (fov // 2, fov // 2), (0, 0)], mode='reflect')
-    return mirrored_data
 
 
 def maybe_create_affinities(dataset_prefix, num_examples):
