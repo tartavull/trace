@@ -141,7 +141,8 @@ def __rand_error_affinities(model, data_folder, sigmoid_prediction, num_layers, 
         output_file.create_dataset('main', shape=(3, num_layers, output_shape, output_shape))
         out = output_file['main']
 
-        reshaped_pred = np.einsum('zyxd->dzyx', sigmoid_prediction)
+        # Currently only processing the first batch
+        reshaped_pred = np.einsum('zyxd->dzyx', sigmoid_prediction[0])
         #out[0:2, :, :, :] = reshaped_pred
         out[:] = reshaped_pred
 
@@ -156,7 +157,7 @@ def __rand_error_affinities(model, data_folder, sigmoid_prediction, num_layers, 
 
     # Load the results of watershedding
     pred_seg = io_utils.import_file(base + tmp_label_file)
-    true_seg = h5py.File(data_folder + ground_truth_file, 'r')['volumes']['labels']['neuron_ids'][:8, :80, :80].astype(io_utils.DTYPE)
+    true_seg = h5py.File(data_folder + ground_truth_file, 'r')['volumes']['labels']['neuron_ids'][:].astype(io_utils.DTYPE)
 
     is2D = model.architecture.output_mode != AFFINITIES_3D
 

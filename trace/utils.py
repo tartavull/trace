@@ -151,7 +151,7 @@ def convert_between_label_types(input_type, output_type, original_labels):
                 # Affinitize takes a 3d tensor, so we just take the first index
                 return np.einsum('dzyx->zyxd', trans.affinitize(labs[:, :, :, 0]))
 
-            return map(aff_and_reshape, original_labels)
+            return np.array(map(aff_and_reshape, original_labels))
 
         elif output_type == SEGMENTATION_2D:
             raise NotImplementedError('Seg3d->Seg2d not implemented')
