@@ -63,26 +63,18 @@ class LossHook(Hook):
 
 
 class ValidationHook(Hook):
-    def __init__(self, frequency, dset_sampler, model, data_folder, boundary_mode):
+    def __init__(self, frequency, dset_sampler, model, data_folder, boundary_mode, pred_batch_shape):
+        self.pred_batch_shape = pred_batch_shape
+        self.dset_sampler = dset_sampler
         self.boundary_mode = boundary_mode
         self.frequency = frequency
         self.data_folder = data_folder
-        self.dset_sampler = dset_sampler
 
-        # Get the inputs and mirror them
-        if boundary_mode == AFFINITIES_3D:
-            self.val_inputs, self.val_labels = dset_sampler.get_validation_set()
+        # Get the inputs from dataset
+        self.val_inputs, self.val_labels, self.val_targets = dset_sampler.get_validation_set()
 
-            self.val_examples = np.concatenate([self.val_inputs, self.val_labels], axis=dset_sampler.CHANNEL_AXIS)
-            if model.dim == 2:
-                self.mirrored_val_examples = aug.mirror_across_borders(self.val_examples, model.fov)
-            else:
-                self.mirrored_val_examples = aug.mirror_across_borders_3d(self.val_examples, model.fov, model.z_fov)
-        else:
-            raise NotImplementedError('Implement other modes')
-
+        # Set up placeholders for other metrics
         self.validation_pixel_error = tf.placeholder(tf.float32)
-
         self.rand_f_score = tf.placeholder(tf.float32)
         self.rand_f_score_merge = tf.placeholder(tf.float32)
         self.rand_f_score_split = tf.placeholder(tf.float32)
@@ -90,12 +82,9 @@ class ValidationHook(Hook):
         self.vi_f_score_merge = tf.placeholder(tf.float32)
         self.vi_f_score_split = tf.placeholder(tf.float32)
 
-
-        self.training_summaries = tf.summary.merge([
-            tf.summary.scalar('validation_pixel_error', self.validation_pixel_error),
-        ])
-
+        # Create validation summaries
         self.validation_summaries = tf.summary.merge([
+            tf.summary.scalar('validation_pixel_error', self.validation_pixel_error),
             tf.summary.scalar('rand_score', self.rand_f_score),
             tf.summary.scalar('rand_merge_score', self.rand_f_score_merge),
             tf.summary.scalar('rand_split_score', self.rand_f_score_split),
@@ -104,7 +93,7 @@ class ValidationHook(Hook):
             tf.summary.scalar('vi_split_score', self.vi_f_score_split),
         ])
 
-
+        # Create image summaries
         with tf.variable_scope('validation_images'):
             if model.fov == 1:
                 val_output_patch_summary = tf.summary.image('validation_output_patch', model.image[0])
@@ -132,39 +121,22 @@ class ValidationHook(Hook):
             patch_dim = 120
             z_patch_dim = 16
 
-            combined_pred = np.zeros((val_n_layers, val_output_dim, val_output_dim, 3))
-            overlaps = np.zeros((val_n_layers, val_output_dim, val_output_dim, 3))
-            for z in range(0, val_n_layers - z_patch_dim + 1, z_patch_dim - 1) + [val_n_layers - z_patch_dim]:
-                print('z: ' + str(z) + '/' + str(val_n_layers))
-                for y in range(0, val_output_dim - patch_dim + 1, patch_dim - 10) + [val_output_dim - patch_dim]:
-                    print('y: ' + str(y) + '/' + str(val_output_dim))
-                    for x in range(0, val_output_dim - patch_dim + 1, patch_dim - 10) + [val_output_dim - patch_dim]:
-                        pred = session.run(model.prediction, 
-                                           feed_dict={
-                                               model.example: self.mirrored_val_examples[:, z:z + z_patch_dim, y:y + patch_dim, x:x + patch_dim, :]
-                                           }) 
-                        combined_pred[z:z + z_patch_dim, y:y + patch_dim, x:x + patch_dim, :] += pred[0]
-                        overlaps[z:z + z_patch_dim, y:y + patch_dim, x:x + patch_dim, :] += np.ones((z_patch_dim, patch_dim, patch_dim, 3))
+            # Make the prediction
+            validation_prediction = model.predict(session, self.val_inputs, self.pred_batch_shape, mirror_inputs=False)
 
-            # Normalize the combined prediction by the number of times each
-            # voxel was computed in the overlapping computation.
-            validation_prediction = np.divide(combined_pred, overlaps)
 
             validation_binary_prediction = np.round(validation_prediction)
             validation_pixel_error = np.mean(np.absolute(validation_binary_prediction - self.mirrored_val_examples[0, :, :, :, 1:]))
 
-            validation_training_summary = session.run(self.training_summaries,
-                                                     feed_dict={
-                                                         self.validation_pixel_error: validation_pixel_error
-                                                     })
 
             validation_image_summary = session.run(self.validation_image_summaries,
                                                    feed_dict={
+                                                       self.validation_pixel_error: validation_pixel_error,
                                                        model.example: self.mirrored_val_examples[:, :16, :400, :400, :]
                                                    })
 
-            summary_writer.add_summary(validation_training_summary, step)
             summary_writer.add_summary(validation_image_summary, step)
+
 
             # Calculate rand and VI scores
             scores = evaluation.rand_error(model, self.data_folder, self.val_labels[0, :8, :80, :80, :],
@@ -398,23 +370,9 @@ class Learner:
         self.model.saver.restore(self.sess, self.ckpt_folder + 'model.ckpt')
         print("Model restored.")
 
-    def predict(self, inputs, n_slices_per_pred):
+    def predict(self, inputs, pred_batching_shape):
         # Make sure that the inputs are 5-dimensional, in the form [batch_size, z_dim, y_dim, x_dim, n_chan]
-        assert(len(inputs.size) == 5)
+        assert (len(inputs.size) == 5)
+        assert(len(pred_batching_shape) == 3)
 
-        # Add mirror padding so that convolutions aren't borked
-        padded_inputs = aug.mirror_across_borders_3d(inputs, self.model.fov, self.model.z_fov)
-
-        all_preds = []
-
-        for stack in padded_inputs:
-            preds = []
-
-            for l in range(len(stack), step=n_slices_per_pred):
-                print('Predicting slices %d:%d' % l, l + n_slices_per_pred)
-                pred = self.sess.run(self.model.prediction, feed_dict={self.model.image: stack[l:l+n_slices_per_pred]})
-                preds.append(pred)
-
-            all_preds.append(np.asarray(preds))
-
-        return all_preds
+        return self.model.predict(self.sess, inputs, pred_batching_shape, mirror_inputs=False)

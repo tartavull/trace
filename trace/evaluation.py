@@ -116,6 +116,16 @@ def __rand_error_boundaries(true_labels, pred_labels):
     return scores[max_score_thresh]
 
 
+def __rand_error_affinities_v2(pred_affinities, true_seg, aff_type=AFFINITIES_3D):
+    # If the affinities type we're being passed in is 2D, we can only generate a 2D segmentation,
+    # so we must relabel
+    relabel_2D = (aff_type == utils.AFFINITIES_2D)
+
+    # Generate a 3D segmentation from the affinities, regardless of whether they are 2D or 3D, because that's
+    # how segascorus works
+    pred_segmentation = utils.convert_between_label_types(input_type=aff_type, output_type=utils.SEGMENTATION_3D)
+
+
 def __rand_error_affinities(model, data_folder, sigmoid_prediction, num_layers, output_shape, watershed_high=0.9, watershed_low=0.3):
     # Save affinities to temporary file
     # TODO pad the image with zeros so that the output covers the whole dataset
@@ -151,6 +161,7 @@ def __rand_error_affinities(model, data_folder, sigmoid_prediction, num_layers, 
     is2D = model.architecture.output_mode != AFFINITIES_3D
 
     return __rand_error(true_seg, pred_seg, relabel2d=is2D)
+
 
 
 def rand_error(model, data_folder, true_labels, sigmoid_prediction, num_layers, output_shape, data_type='boundaries'):

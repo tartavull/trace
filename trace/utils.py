@@ -7,6 +7,8 @@ import tensorflow as tf
 import h5py
 import time
 
+import dataprovider.transform as trans
+
 try:
     from thirdparty.segascorus import io_utils
     from thirdparty.segascorus import utils
@@ -21,9 +23,21 @@ AFFINITIES_3D = 'affinities-3d'
 SEGMENTATION_2D = 'segmentation-2d'
 SEGMENTATION_3D = 'segmentation-3d'
 
+BATCH_AXIS = 0
+Z_AXIS = 1
+Y_AXIS = 2
+X_AXIS = 3
+CHANNEL_AXIS = 4
+
 SPLIT = ['train', 'validation', 'test']
 
-import dataprovider.transform as trans
+
+def expand_3d_to_5d(data):
+    # Add a batch dimension and a channel dimension
+    data = np.expand_dims(data, axis=BATCH_AXIS)
+    data = np.expand_dims(data, axis=CHANNEL_AXIS)
+
+    return data
 
 
 def run_watershed_on_affinities(affinities, relabel2d=False, low=0.3, hi=0.9):
@@ -130,7 +144,15 @@ def convert_between_label_types(input_type, output_type, original_labels):
         elif output_type == AFFINITIES_2D:
             raise NotImplementedError('Seg3d->Aff2d not implemented')
         elif output_type == AFFINITIES_3D:
-            return np.einsum('dzyx->zyxd', trans.affinitize(original_labels))
+
+            # For each batch of stacks, affinitize and reshape
+
+            def aff_and_reshape(labs):
+                # Affinitize takes a 3d tensor, so we just take the first index
+                return np.einsum('dzyx->zyxd', trans.affinitize(labs[:, :, :, 0]))
+
+            return map(aff_and_reshape, original_labels)
+
         elif output_type == SEGMENTATION_2D:
             raise NotImplementedError('Seg3d->Seg2d not implemented')
         else:

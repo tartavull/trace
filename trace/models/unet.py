@@ -148,6 +148,66 @@ class UNet(Model):
 
         self.saver = tf.train.Saver()
 
+
+    def predict(self, session, inputs, pred_batch_shape, mirror_inputs=True):
+        if mirror_inputs:
+            inputs = mirror_aross_borders_3d(inputs, self.fov, self.z_fov)
+
+        return self.__predict_with_evaluations(session, inputs, None, pred_batch_shape, mirror_inputs)
+
+
+    def __predict_with_evaluation(self, session, metrics, pred_tile_shape, mirror_inputs=True):
+        # Extract the tile sizes from the argument
+        z_out_patch, y_out_patch, x_out_patch = pred_tile_shape[0], pred_tile_shape[1], pred_tile_shape[2]
+        z_in_patch = z_out_patch + self.z_fov - 1
+        y_in_patch = y_out_patch + self.fov - 1
+        x_in_patch = x_out_patch + self.fov - 1
+
+        # Extract the overall input size.
+        z_inp_size, y_inp_size, x_inp_size = inputs.shape[1], inputs.shape[2], inputs.shape[3]
+
+        # Create accumulator for output.
+        combined_pred = np.zeros((inputs.shape[0],
+                                  z_inp_size - self.z_fov + 1, 
+                                  y_inp_size - self.fov + 1,
+                                  x_inp_size - self.fov + 1,
+                                  3))
+        # Create accumulator for overlaps.
+        overlaps = np.zeros((inputs.shape[0], val_n_layers, val_output_dim, val_output_dim, 3))
+
+        for stack in inputs: 
+
+            # Iterate through the overlapping tiles.
+            for z in range(0, z_inp_size - z_in_patch + 1, z_out_patch - 1) + [z_inp_size - z_in_patch]:
+                print('z: ' + str(z) + '/' + str(z_inp_size))
+                for y in range(0, y_inp_size - y_in_patch + 1, y_out_patch - 10) + [y_inp_size - y_in_patch]:
+                    print('y: ' + str(y) + '/' + str(y_inp_size))
+                    for x in range(0, x_inp_size - x_in_patch + 1, x_out_patch - 10) + [x_inp_size - x_in_patch]:
+                        pred = session.run(model.prediction, 
+                                           feed_dict={
+                                               model.example: stack[:, 
+                                                                    z:z + z_in_patch, 
+                                                                    y:y + y_in_patch,
+                                                                    x:x + x_in_patch,
+                                                                    :]
+                                           }) 
+                        combined_pred[stack, 
+                                      z:z + z_out_patch,
+                                      y:y + y_out_patch,
+                                      x:x + x_out_patch, :] += pred[0]
+                        overlaps[stack,
+                                 z:z + z_out_patch,
+                                 y:y + y_out_patch,
+                                 x:x + x_out_patch, 
+                                 :] += np.ones((z_patch_dim, patch_dim, patch_dim, 3))
+
+            # Normalize the combined prediction by the number of times each
+            # voxel was computed in the overlapping computation.
+            validation_prediction = np.divide(combined_pred, overlaps)
+
+            return validation_prediction
+
+
                 
 
 class ResVNet(Model):
