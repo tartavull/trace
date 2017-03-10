@@ -127,6 +127,8 @@ class ValidationHook(Hook):
             # Make the prediction
             validation_prediction = model.predict(session, self.val_inputs, self.pred_batch_shape, mirror_inputs=False)
 
+            # I am looking at first example from batch, but to be honest I'm not
+            # sure why it doesn't work regardless.
             validation_binary_prediction = np.round(validation_prediction[0])
             validation_pixel_error = np.mean(np.absolute(validation_binary_prediction - self.val_targets[0]))
 
@@ -378,3 +380,4 @@ class Learner:
         assert(len(pred_batching_shape) == 3)
 
         return self.model.predict(self.sess, inputs, pred_batching_shape, mirror_inputs=False)
+
