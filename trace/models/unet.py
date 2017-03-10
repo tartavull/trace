@@ -148,7 +148,6 @@ class UNet(Model):
 
         self.saver = tf.train.Saver()
 
-    def predict():
                 
 
 class ResVNet(Model):

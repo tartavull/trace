@@ -105,17 +105,16 @@ class ValidationHook(Hook):
         ])
 
 
-        if model.fov == 1:
-            val_output_patch_summary = tf.summary.image('validation_output_patch', model.image[0])
-        else:
-            val_output_patch_summary = tf.summary.image('validation_output_patch', 
-                                                model.image[0, 
-                                                    model.z_fov // 2:(model.z_fov // 2) + 3,
-                                                    model.fov // 2:-(model.fov // 2),
-                                                    model.fov // 2:-(model.fov // 2),
-                                                :]),
-
         with tf.variable_scope('validation_images'):
+            if model.fov == 1:
+                val_output_patch_summary = tf.summary.image('validation_output_patch', model.image[0])
+            else:
+                val_output_patch_summary = tf.summary.image('validation_output_patch', 
+                                                    model.image[0, 
+                                                        model.z_fov // 2:(model.z_fov // 2) + 3,
+                                                        model.fov // 2:-(model.fov // 2),
+                                                        model.fov // 2:-(model.fov // 2),
+                                                    :]),
             self.validation_image_summaries = tf.summary.merge([
                 tf.summary.image('validation_input_image', model.image[0]),
                 val_output_patch_summary,
@@ -130,14 +129,22 @@ class ValidationHook(Hook):
             val_n_layers = self.val_inputs.shape[1]
             val_output_dim = self.val_labels.shape[2]
 
+            patch_dim = 120
+            z_patch_dim = 16
+
             combined_pred = np.zeros((val_n_layers, val_output_dim, val_output_dim, 3))
             overlaps = np.zeros((val_n_layers, val_output_dim, val_output_dim, 3))
-            for z in range(0, val_n_layers - 16 + 1, 15) + [val_n_layers - 16]:
-                for y in range(0, val_output_dim - 120 + 1, 110) + [val_output_dim - 120]:
-                    for x in range(0, val_output_dim - 120 + 1, 110) + [val_output_dim - 120]:
-                        pred = session.run(model.prediction, feed_dict={model.example: self.mirrored_val_examples}) 
-                        combined_pred[z:z+16, y:y+120, x:x+120, :] = pred
-                        overlaps[z:z+16, y:y+120, x:x+120, :] += np.ones((16, 120, 120, 3))
+            for z in range(0, val_n_layers - z_patch_dim + 1, z_patch_dim - 1) + [val_n_layers - z_patch_dim]:
+                print('z: ' + str(z) + '/' + str(val_n_layers))
+                for y in range(0, val_output_dim - patch_dim + 1, patch_dim - 10) + [val_output_dim - patch_dim]:
+                    print('y: ' + str(y) + '/' + str(val_output_dim))
+                    for x in range(0, val_output_dim - patch_dim + 1, patch_dim - 10) + [val_output_dim - patch_dim]:
+                        pred = session.run(model.prediction, 
+                                           feed_dict={
+                                               model.example: self.mirrored_val_examples[:, z:z + z_patch_dim, y:y + patch_dim, x:x + patch_dim, :]
+                                           }) 
+                        combined_pred[z:z + z_patch_dim, y:y + patch_dim, x:x + patch_dim, :] += pred[0]
+                        overlaps[z:z + z_patch_dim, y:y + patch_dim, x:x + patch_dim, :] += np.ones((z_patch_dim, patch_dim, patch_dim, 3))
 
             # Normalize the combined prediction by the number of times each
             # voxel was computed in the overlapping computation.
@@ -153,7 +160,7 @@ class ValidationHook(Hook):
 
             validation_image_summary = session.run(self.validation_image_summaries,
                                                    feed_dict={
-                                                       model.example: self.mirrored_val_examples
+                                                       model.example: self.mirrored_val_examples[:, :16, :400, :400, :]
                                                    })
 
             summary_writer.add_summary(validation_training_summary, step)

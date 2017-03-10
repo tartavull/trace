@@ -10,6 +10,7 @@ import skimage.morphology as morph
 import tifffile as tiff
 
 import cv2
+from utils import AFFINITIES_3D
 
 try:
     from thirdparty.segascorus import io_utils
@@ -18,6 +19,7 @@ try:
 except Exception:
     print("Segascorus is not installed. Please install by going to trace/trace/thirdparty/segascorus and run 'make'."
           " If this fails, segascorus is likely not compatible with your computer (i.e. Macs).")
+
 
 
 def __rand_error(true_seg, pred_seg, calc_rand_score=True, calc_rand_error=False, calc_variation_score=True,
@@ -146,7 +148,9 @@ def __rand_error_affinities(model, data_folder, sigmoid_prediction, num_layers, 
     pred_seg = io_utils.import_file(base + tmp_label_file)
     true_seg = h5py.File(data_folder + ground_truth_file, 'r')['volumes']['labels']['neuron_ids'][:8, :80, :80].astype(io_utils.DTYPE)
 
-    return __rand_error(true_seg, pred_seg)
+    is2D = model.architecture.output_mode != AFFINITIES_3D
+
+    return __rand_error(true_seg, pred_seg, relabel2d=is2D)
 
 
 def rand_error(model, data_folder, true_labels, sigmoid_prediction, num_layers, output_shape, data_type='boundaries'):
