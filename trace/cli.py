@@ -172,7 +172,7 @@ def predict(model_type, params_type, dataset_name, split, run_name):
     classifier.restore()
 
     # Predict on the classifier
-    predictions = classifier.predict(inputs)
+    predictions = classifier.predict(inputs, [])
 
     # Prepare the predictions for submission for this particular dataset
     # Only send in the first dimension of predictions, because theoretically predict can predict on many stacks
@@ -234,7 +234,7 @@ def ens_predict(ensemble_method, ensemble_params, dataset_name, split, run_name)
     classifier = ens.EnsembleLearner(ensemble_params, p_name, ensemble_method, data_folder, run_name)
 
     # Make the predictions
-    predictions = classifier.predict(dataset, inputs)
+    predictions = classifier.predict(inputs, [16, 120, 120])
 
     # Prepare the predictions for submission for this particular dataset
     # Only take the first of the predictions

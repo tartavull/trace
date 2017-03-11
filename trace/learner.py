@@ -75,6 +75,11 @@ class ValidationHook(Hook):
         self.val_examples = np.concatenate([self.val_inputs, self.val_targets], axis=CHANNEL_AXIS)
         self.mirrored_val_examples = aug.mirror_across_borders_3d(self.val_examples, model.fov, model.z_fov)
 
+        self.val_examples = np.concatenate([self.val_inputs, self.val_targets], axis=CHANNEL_AXIS)
+
+        # Mirror the inputs
+        self.mirrored_val_examples = aug.mirror_across_borders_3d(self.val_examples, model.fov, model.z_fov)
+
         # Set up placeholders for other metrics
         self.validation_pixel_error = tf.placeholder(tf.float32)
         self.rand_f_score = tf.placeholder(tf.float32)
@@ -120,8 +125,6 @@ class ValidationHook(Hook):
             val_n_layers = self.val_inputs.shape[1]
             val_output_dim = self.val_labels.shape[2]
 
-            patch_dim = 120
-            z_patch_dim = 16
 
             # Make the prediction
             validation_prediction = model.predict(session, self.val_inputs, self.pred_batch_shape, mirror_inputs=False)
@@ -140,12 +143,12 @@ class ValidationHook(Hook):
 
 
             # Calculate rand and VI scores
-            scores = evaluation.rand_error(model, self.data_folder, self.val_labels[0, :8, :80, :80, :],
+            scores = evaluation.rand_error(model, self.data_folder, self.val_targets[0, :8, :80, :80, :],
                                            validation_prediction, val_n_layers, val_output_dim,
                                            data_type=self.boundary_mode)
 
             score_summary = session.run(self.validation_summaries,
-                                        feed_dict={ self.validation_pixel_error: validation_pixel_error,
+                                        feed_dict={self.validation_pixel_error: validation_pixel_error,
                                                    self.rand_f_score: scores['Rand F-Score Full'],
                                                    self.rand_f_score_merge: scores['Rand F-Score Merge'],
                                                    self.rand_f_score_split: scores['Rand F-Score Split'],
@@ -378,3 +381,4 @@ class Learner:
         assert(len(pred_batching_shape) == 3)
 
         return self.model.predict(self.sess, inputs, pred_batching_shape, mirror_inputs=False)
+

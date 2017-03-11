@@ -167,18 +167,15 @@ class UNet(Model):
         z_inp_size, y_inp_size, x_inp_size = inputs.shape[1], inputs.shape[2], inputs.shape[3]
         z_outp_size = z_inp_size - self.z_fov + 1
         y_outp_size = y_inp_size - self.fov + 1
-        x_outp_size = x_inp_size - self.fov + 1
+        x_outp_size  = x_inp_size - self.fov + 1
 
         # Create accumulator for output.
         combined_pred = np.zeros((inputs.shape[0],
-                                  z_outp_size,
-                                  y_outp_size,
-                                  x_outp_size,
-                                  3))
+                                  z_outp_size, y_outp_size, x_outp_size, 3))
         # Create accumulator for overlaps.
         overlaps = np.zeros((inputs.shape[0], z_outp_size, y_outp_size, x_outp_size, 3))
 
-        for stack, _ in enumerate(inputs): 
+        for stack, _ in enumerate(inputs):
             # Iterate through the overlapping tiles.
             for z in range(0, z_inp_size - z_in_patch + 1, z_out_patch - 1) + [z_inp_size - z_in_patch]:
                 print('z: ' + str(z) + '/' + str(z_inp_size))
