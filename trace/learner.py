@@ -72,6 +72,8 @@ class ValidationHook(Hook):
 
         # Get the inputs from dataset
         self.val_inputs, self.val_labels, self.val_targets = dset_sampler.get_validation_set()
+        self.val_examples = np.concatenate([self.val_inputs, self.val_targets], axis=CHANNEL_AXIS)
+        self.mirrored_val_examples = aug.mirror_across_borders_3d(self.val_examples, model.fov, model.z_fov)
 
         # Set up placeholders for other metrics
         self.validation_pixel_error = tf.placeholder(tf.float32)
@@ -126,12 +128,11 @@ class ValidationHook(Hook):
 
 
             validation_binary_prediction = np.round(validation_prediction)
-            validation_pixel_error = np.mean(np.absolute(validation_binary_prediction - self.mirrored_val_examples[0, :, :, :, 1:]))
+            validation_pixel_error = np.mean(np.absolute(validation_binary_prediction - self.val_targets))
 
 
             validation_image_summary = session.run(self.validation_image_summaries,
                                                    feed_dict={
-                                                       self.validation_pixel_error: validation_pixel_error,
                                                        model.example: self.mirrored_val_examples[:, :16, :400, :400, :]
                                                    })
 
@@ -144,7 +145,8 @@ class ValidationHook(Hook):
                                            data_type=self.boundary_mode)
 
             score_summary = session.run(self.validation_summaries,
-                                        feed_dict={self.rand_f_score: scores['Rand F-Score Full'],
+                                        feed_dict={ self.validation_pixel_error: validation_pixel_error,
+                                                   self.rand_f_score: scores['Rand F-Score Full'],
                                                    self.rand_f_score_merge: scores['Rand F-Score Merge'],
                                                    self.rand_f_score_split: scores['Rand F-Score Split'],
                                                    self.vi_f_score: scores['VI F-Score Full'],

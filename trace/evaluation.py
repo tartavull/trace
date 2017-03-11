@@ -141,7 +141,8 @@ def __rand_error_affinities(model, data_folder, sigmoid_prediction, num_layers, 
         output_file.create_dataset('main', shape=(3, num_layers, output_shape, output_shape))
         out = output_file['main']
 
-        reshaped_pred = np.einsum('zyxd->dzyx', sigmoid_prediction)
+        # Just using the first batch for now.
+        reshaped_pred = np.einsum('zyxd->dzyx', sigmoid_prediction[0])
         #out[0:2, :, :, :] = reshaped_pred
         out[:] = reshaped_pred
 
