@@ -172,7 +172,7 @@ def predict(model_type, params_type, dataset_name, split, run_name):
     classifier.restore()
 
     # Predict on the classifier
-    predictions = classifier.predict(inputs, [])
+    predictions = classifier.predict(inputs, [16, 120, 120])
 
     # Prepare the predictions for submission for this particular dataset
     # Only send in the first dimension of predictions, because theoretically predict can predict on many stacks

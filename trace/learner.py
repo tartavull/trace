@@ -377,7 +377,7 @@ class Learner:
 
     def predict(self, inputs, pred_batching_shape):
         # Make sure that the inputs are 5-dimensional, in the form [batch_size, z_dim, y_dim, x_dim, n_chan]
-        assert (len(inputs.size) == 5)
+        assert (len(inputs.shape) == 5)
         assert(len(pred_batching_shape) == 3)
 
         return self.model.predict(self.sess, inputs, pred_batching_shape, mirror_inputs=False)
