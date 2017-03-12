@@ -71,14 +71,13 @@ RUN git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*" && \
 # Checkout the specified branch
 RUN git checkout $BRANCH
 
-# Download the h5 images
+# Prepare for download, but don't download b/c it's too large for travis
 WORKDIR /home/trace/trace
 RUN mkdir isbi/
 RUN mkdir snemi3d/
 RUN mkdir -p cremi/a/
 RUN mkdir -p cremi/b/
 RUN mkdir -p cremi/c/
-RUN python cli.py download
 
 # Neuroglancer
 EXPOSE 4125
