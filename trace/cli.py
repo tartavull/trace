@@ -60,6 +60,7 @@ def visualize(dataset_name, split, params_type, run_name, aff, ip, port, remote)
             vu.add_affinities(data_folder, split + '-pred-affinities', viewer)
     if split == 'test':
         vu.add_file(data_folder + 'results/' + params_type + '/' +  'run-' + run_name + '/', split+'-predictions', viewer)
+        vu.add_file(data_folder + 'results/' + params_type + '/' +  'run-' + run_name + '/', split+'-segmentation', viewer)
     else:
         vu.add_file(data_folder, split + '-labels', viewer)
 
