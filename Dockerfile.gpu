@@ -1,4 +1,6 @@
-FROM tensorflow/tensorflow:nightly-devel-gpu
+FROM tensorflow/tensorflow:latest-gpu
+
+ARG BRANCH=master
 
 MAINTAINER Ben Eisner <beisner@princeton.edu>
 
@@ -14,10 +16,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libgmp-dev \
         libwebp-dev \
         libffi-dev \
+        openssl \
         tcl8.6-dev \
         tk8.6-dev \
         python-tk \
-        screen \
+        build-essential \
+        libssl-dev \
+        libffi-dev \
+        python-dev \
         wget \
         && \
     apt-get clean && \
@@ -42,14 +48,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN pip --no-cache-dir install \
         cython \
         requests \
-        tqdm
+        tqdm \
+        munkres \
+        scikit-image \
+        opencv-python
 
 # Install the cremi dataworks
 RUN pip install git+https://github.com/cremi/cremi_python.git
 
 # Get the code for trace
 RUN git clone --depth=50 https://github.com/tartavull/trace.git /home/trace/
-ADD ./ /home/trace
 WORKDIR /home/trace
 RUN git submodule update --init --recursive && \
     pip install -r requirements.txt && \
@@ -60,9 +68,16 @@ RUN git submodule update --init --recursive && \
 RUN git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*" && \
     git fetch
 
+# Checkout the specified branch
+RUN git checkout $BRANCH
 
 # Download the h5 images
 WORKDIR /home/trace/trace
+RUN mkdir isbi/
+RUN mkdir snemi3d/
+RUN mkdir -p cremi/a/
+RUN mkdir -p cremi/b/
+RUN mkdir -p cremi/c/
 RUN python cli.py download
 
 # Neuroglancer
