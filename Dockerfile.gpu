@@ -73,6 +73,11 @@ RUN git checkout $BRANCH
 
 # Download the h5 images
 WORKDIR /home/trace/trace
+RUN mkdir isbi/
+RUN mkdir snemi3d/
+RUN mkdir -p cremi/a/
+RUN mkdir -p cremi/b/
+RUN mkdir -p cremi/c/
 RUN python cli.py download
 
 # Neuroglancer
