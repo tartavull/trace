@@ -203,7 +203,7 @@ def __maybe_create_cremi(dest_folder, train_frac):
     base_url = 'https://cremi.org/static/data/'
 
     if not os.path.exists(dest_folder):
-        os.mkdir(dest_folder)
+        os.makedirs(dest_folder)
 
     # For now, only download the un-padded versions
     a_train_fn = 'sample_A_20160501.hdf'
