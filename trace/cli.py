@@ -5,6 +5,7 @@ import webbrowser
 import subprocess
 import click
 import tensorflow as tf
+import h5py
 
 import em_dataset as em
 import download_data
@@ -33,12 +34,12 @@ def download():
 @cli.command()
 @click.argument('split', type=click.Choice(SPLIT))
 @click.argument('dataset_name', type=click.Choice(DATASET_DICT.keys()))
-@click.option('--aff/--no-aff', default=False, help="Display only the affinities.")
+@click.option('--aff/--no-aff', default=False, help="Display the affinities as well.")
 @click.argument('params_type', type=click.Choice(PARAMS_DICT.keys()))
 @click.argument('run_name', type=str, default='1')
 @click.option('--ip', default='172.17.0.2', help="IP address for serving")
 @click.option('--port', default=4125, help="Port for serving")
-@click.option('--remote', help="IP address of AWS machine")
+@click.option('--remote', default='127.0.0.1', help="IP address of AWS machine")
 def visualize(dataset_name, split, params_type, run_name, aff, ip, port, remote):
     """
     Opens a tab in your webbrowser showing the chosen dataset
@@ -50,16 +51,17 @@ def visualize(dataset_name, split, params_type, run_name, aff, ip, port, remote)
     neuroglancer.set_static_content_source(url='https://neuroglancer-demo.appspot.com')
     neuroglancer.set_server_bind_address(bind_address=ip, bind_port=port)
     viewer = neuroglancer.Viewer(voxel_size=[6, 6, 30])
+        
+    vu.add_file(data_folder, split + '-input', viewer)
     if aff:
-        vu.add_affinities(data_folder, split + '-affinities', viewer)
-    else:
-        vu.add_file(data_folder, split + '-input', viewer)
-        print(data_folder)
         if split == 'test':
-            vu.add_file(data_folder + 'results/' + params_type + '/' +  'run-' + run_name + '/', split+'-predictions', viewer)
-            print(data_folder + 'results/' + params_type + '/' +  'run-' + run_name + '/')
+            vu.add_file(data_folder + 'results/' + params_type + '/' +  'run-' + run_name + '/', split+'-pred-affinities', viewer)
         else:
-            vu.add_file(data_folder, split + '-labels', viewer)
+            vu.add_affinities(data_folder, split + '-pred-affinities', viewer)
+    if split == 'test':
+        vu.add_file(data_folder + 'results/' + params_type + '/' +  'run-' + run_name + '/', split+'-predictions', viewer)
+    else:
+        vu.add_file(data_folder, split + '-labels', viewer)
 
     print('open your brower at:')
     print(viewer.__str__().replace('172.17.0.2', remote))
@@ -180,6 +182,11 @@ def predict(model_type, params_type, dataset_name, split, run_name):
 
     # Predict on the classifier
     predictions = classifier.predict(inputs, [16, 120, 120])
+
+    # Save the predicted affinities and lables for viewing in neuroglancer
+    dataset.prepare_predictions_for_neuroglancer_affinities(ckpt_folder, split, predictions, params.output_mode)
+    dataset.prepare_predictions_for_neuroglancer(ckpt_folder, split, predictions, params.output_mode)
+
 
     # Prepare the predictions for submission for this particular dataset
     # Only send in the first dimension of predictions, because theoretically predict can predict on many stacks
