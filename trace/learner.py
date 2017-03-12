@@ -72,6 +72,8 @@ class ValidationHook(Hook):
 
         # Get the inputs from dataset
         self.val_inputs, self.val_labels, self.val_targets = dset_sampler.get_validation_set()
+        self.val_examples = np.concatenate([self.val_inputs, self.val_targets], axis=CHANNEL_AXIS)
+        self.mirrored_val_examples = aug.mirror_across_borders_3d(self.val_examples, model.fov, model.z_fov)
 
         self.val_examples = np.concatenate([self.val_inputs, self.val_targets], axis=CHANNEL_AXIS)
 
@@ -119,9 +121,9 @@ class ValidationHook(Hook):
             # Make the prediction
             validation_prediction = model.predict(session, self.val_inputs, self.pred_batch_shape, mirror_inputs=False)
 
-            # Calculate the pixel error
-            validation_binary_prediction = np.round(validation_prediction[0])
-            validation_pixel_error = np.mean(np.absolute(validation_binary_prediction - self.val_targets[0]))
+
+            validation_binary_prediction = np.round(validation_prediction)
+            validation_pixel_error = np.mean(np.absolute(validation_binary_prediction - self.val_targets))
 
             # Run an image summary
             summary_im = self.mirrored_val_examples[:, :16, :400, :400, :]
@@ -361,7 +363,9 @@ class Learner:
 
     def predict(self, inputs, pred_batching_shape):
         # Make sure that the inputs are 5-dimensional, in the form [batch_size, z_dim, y_dim, x_dim, n_chan]
-        assert (len(inputs.size) == 5)
+
+        assert (len(inputs.shape) == 5)
         assert (len(pred_batching_shape) == 3)
 
         return self.model.predict(self.sess, inputs, pred_batching_shape, mirror_inputs=False)
+

@@ -34,10 +34,12 @@ def download():
 @click.argument('split', type=click.Choice(SPLIT))
 @click.argument('dataset_name', type=click.Choice(DATASET_DICT.keys()))
 @click.option('--aff/--no-aff', default=False, help="Display only the affinities.")
+@click.argument('params_type', type=click.Choice(PARAMS_DICT.keys()))
+@click.argument('run_name', type=str, default='1')
 @click.option('--ip', default='172.17.0.2', help="IP address for serving")
 @click.option('--port', default=4125, help="Port for serving")
 @click.option('--remote', help="IP address of AWS machine")
-def visualize(dataset_name, split, aff, ip, port, remote):
+def visualize(dataset_name, split, params_type, run_name, aff, ip, port, remote):
     """
     Opens a tab in your webbrowser showing the chosen dataset
     """
@@ -52,7 +54,12 @@ def visualize(dataset_name, split, aff, ip, port, remote):
         vu.add_affinities(data_folder, split + '-affinities', viewer)
     else:
         vu.add_file(data_folder, split + '-input', viewer)
-        vu.add_file(data_folder, split + '-labels', viewer)
+        print(data_folder)
+        if split == 'test':
+            vu.add_file(data_folder + 'results/' + params_type + '/' +  'run-' + run_name + '/', split+'-predictions', viewer)
+            print(data_folder + 'results/' + params_type + '/' +  'run-' + run_name + '/')
+        else:
+            vu.add_file(data_folder, split + '-labels', viewer)
 
     print('open your brower at:')
     print(viewer.__str__().replace('172.17.0.2', remote))
@@ -122,9 +129,9 @@ def train(model_type, params_type, dataset_name, n_iter, run_name):
 
     hooks = [
         learner.LossHook(10, model),
-        learner.ModelSaverHook(1000, ckpt_folder),
-        learner.ValidationHook(250, dset_sampler, model, data_folder, params.output_mode, [training_params.z_output_size, training_params.output_size, training_params.output_size]),
-        learner.ImageVisualizationHook(1000, model),
+        learner.ModelSaverHook(5000, ckpt_folder),
+        learner.ValidationHook(500, dset_sampler, model, data_folder, params.output_mode, [training_params.z_output_size, training_params.output_size, training_params.output_size]),
+        learner.ImageVisualizationHook(2000, model),
         # learner.HistogramHook(100, model),
         # learner.LayerVisualizationHook(500, model),
     ]
@@ -172,7 +179,7 @@ def predict(model_type, params_type, dataset_name, split, run_name):
     classifier.restore()
 
     # Predict on the classifier
-    predictions = classifier.predict(inputs)
+    predictions = classifier.predict(inputs, [16, 120, 120])
 
     # Prepare the predictions for submission for this particular dataset
     # Only send in the first dimension of predictions, because theoretically predict can predict on many stacks
@@ -234,7 +241,7 @@ def ens_predict(ensemble_method, ensemble_params, dataset_name, split, run_name)
     classifier = ens.EnsembleLearner(ensemble_params, p_name, ensemble_method, data_folder, run_name)
 
     # Make the predictions
-    predictions = classifier.predict(dataset, inputs)
+    predictions = classifier.predict(inputs, [16, 120, 120])
 
     # Prepare the predictions for submission for this particular dataset
     # Only take the first of the predictions

@@ -1,4 +1,5 @@
 import subprocess
+import os
 
 import numpy as np
 
@@ -49,6 +50,7 @@ def run_watershed_on_affinities(affinities, relabel2d=False, low=0.3, hi=0.9):
     tmp_label_file = 'tmp-labels.h5'
 
     base = './tmp/' + str(int(round(time.time() * 1000))) + '/'
+    os.makedirs(base)
 
     if not os.path.exists('./tmp/'):
         os.mkdir('./tmp/')
