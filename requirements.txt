@@ -2,10 +2,11 @@ scipy
 click>=6.6
 cython>=0.22.1
 dataprovider>=0.1.5
+munkres
 tifffile
 h5py
 tensorflow
 tqdm
 scikit-image
 opencv-python
-munkres
+

@@ -2,10 +2,14 @@ import subprocess
 
 import numpy as np
 
+import shutil
+
 import tensorflow as tf
 
 import h5py
 import time
+
+import os
 
 import dataprovider.transform as trans
 
@@ -46,6 +50,11 @@ def run_watershed_on_affinities(affinities, relabel2d=False, low=0.3, hi=0.9):
 
     base = './tmp/' + str(int(round(time.time() * 1000))) + '/'
 
+    if not os.path.exists('./tmp/'):
+        os.mkdir('./tmp/')
+
+    os.mkdir(base)
+
     # Move to the front
     reshaped_aff = np.einsum('zyxd->dzyx', affinities)
 
@@ -72,6 +81,8 @@ def run_watershed_on_affinities(affinities, relabel2d=False, low=0.3, hi=0.9):
     prep = utils.parse_fns(utils.prep_fns, [relabel2d, False])
     pred_seg, _ = utils.run_preprocessing(pred_seg, pred_seg, prep)
 
+    shutil.rmtree('./tmp/')
+
     return pred_seg
 
 
@@ -79,6 +90,7 @@ def convert_between_label_types(input_type, output_type, original_labels):
     # No augmentation needed, as we're basically doing e2e learning
     if input_type == output_type:
         return original_labels
+
 
     # This looks like a shit show, but conversion is hard.
     # Also, we will implement this as we go.

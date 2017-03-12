@@ -101,14 +101,12 @@ class ValidationHook(Hook):
         # Create image summaries
         with tf.variable_scope('validation_images'):
             if model.fov == 1:
-                val_output_patch_summary = tf.summary.image('validation_output_patch', model.image[0])
+                summary_image = model.image[0]
             else:
-                val_output_patch_summary = tf.summary.image('validation_output_patch', 
-                                                    model.image[0, 
-                                                        model.z_fov // 2:(model.z_fov // 2) + 3,
-                                                        model.fov // 2:-(model.fov // 2),
-                                                        model.fov // 2:-(model.fov // 2),
-                                                    :]),
+                summary_image = model.image[0, model.z_fov // 2:(model.z_fov // 2) + 3,
+                                model.fov // 2:-(model.fov // 2), model.fov // 2:-(model.fov // 2), :]
+
+            val_output_patch_summary = tf.summary.image('validation_output_patch', summary_image)
             self.validation_image_summaries = tf.summary.merge([
                 tf.summary.image('validation_input_image', model.image[0]),
                 val_output_patch_summary,
@@ -118,31 +116,24 @@ class ValidationHook(Hook):
 
     def eval(self, step, model, session, summary_writer):
         if step % self.frequency == 0:
-            # Make predictions on the validation set
-
-            val_n_layers = self.val_inputs.shape[1]
-            val_output_dim = self.val_labels.shape[2]
-
-
             # Make the prediction
             validation_prediction = model.predict(session, self.val_inputs, self.pred_batch_shape, mirror_inputs=False)
 
+            # Calculate the pixel error
             validation_binary_prediction = np.round(validation_prediction[0])
             validation_pixel_error = np.mean(np.absolute(validation_binary_prediction - self.val_targets[0]))
 
-
+            # Run an image summary
+            summary_im = self.mirrored_val_examples[:, :16, :400, :400, :]
             validation_image_summary = session.run(self.validation_image_summaries,
-                                                   feed_dict={
-                                                       model.example: self.mirrored_val_examples[:, :16, :400, :400, :]
-                                                   })
+                                                   feed_dict={model.example: summary_im})
 
             summary_writer.add_summary(validation_image_summary, step)
 
-
             # Calculate rand and VI scores
-            scores = evaluation.rand_error(model, self.data_folder, self.val_targets[0, :8, :80, :80, :],
-                                           validation_prediction, val_n_layers, val_output_dim,
-                                           data_type=self.boundary_mode)
+            scores = evaluation.rand_error_from_prediction(self.val_targets[0, :8, :80, :80, :],
+                                                           validation_prediction,
+                                                           pred_type=model.architecture.output_mode)
 
             score_summary = session.run(self.validation_summaries,
                                         feed_dict={self.validation_pixel_error: validation_pixel_error,
@@ -175,10 +166,11 @@ class ImageVisualizationHook(Hook):
             if model.fov == 1:
                 output_patch_summary = tf.summary.image('output_patch', model.raw_image[0, :3, :, :, :])
             else:
-                output_patch_summary = tf.summary.image('output_patch', model.raw_image[0, model.z_fov // 2:(model.z_fov // 2) + 3,
-                                                 model.fov // 2:-(model.fov // 2),
-                                                 model.fov // 2:-(model.fov // 2),
-                                                 :]),
+                output_patch_summary = tf.summary.image('output_patch',
+                                                        model.raw_image[0, model.z_fov // 2:(model.z_fov // 2) + 3,
+                                                        model.fov // 2:-(model.fov // 2),
+                                                        model.fov // 2:-(model.fov // 2),
+                                                        :]),
 
             self.training_summaries = tf.summary.merge([
                 tf.summary.image('input_image', model.raw_image[0, model.z_fov // 2:(model.z_fov // 2) + 3]),
@@ -201,13 +193,10 @@ class HistogramHook(Hook):
         with tf.variable_scope('histograms', reuse=True):
             for layer in model.architecture.layers:
                 layer_str = 'layer ' + str(layer.depth) + ': ' + layer.layer_type
-                histograms.append(tf.summary.histogram(layer_str + \
-                                                       ' activations', layer.activations))
+                histograms.append(tf.summary.histogram(layer_str + ' activations', layer.activations))
                 if hasattr(layer, 'weights') and hasattr(layer, 'biases'):
-                    histograms.append(tf.summary.histogram(layer_str + \
-                                                           ' weights', layer.weights))
-                    histograms.append(tf.summary.histogram(layer_str + \
-                                                           ' biases', layer.biases))
+                    histograms.append(tf.summary.histogram(layer_str + ' weights', layer.weights))
+                    histograms.append(tf.summary.histogram(layer_str + ' biases', layer.biases))
 
             histograms.append(tf.summary.histogram('prediction', model.prediction))
 
@@ -305,7 +294,6 @@ class Learner:
         # Definte an optimizer
         optimize_step = training_params.optimizer(training_params.learning_rate).minimize(model.cross_entropy)
 
-
         # Initialize the variables
         sess.run(tf.global_variables_initializer())
         dset_sampler.initialize_session_variables(sess)
@@ -313,7 +301,6 @@ class Learner:
         # Create enqueue op and a QueueRunner to handle queueing of training examples
         enqueue_op = model.queue.enqueue(dset_sampler.training_example_op)
         qr = tf.train.QueueRunner(model.queue, [enqueue_op] * 4)
-
 
         '''
         sess.run(enqueue_op)
@@ -364,7 +351,7 @@ class Learner:
             for hook in hooks:
                 hook.eval(step, model, sess, summary_writer)
 
-        #with tf.device('/cpu:0'):
+        # with tf.device('/cpu:0'):
         coord.request_stop()
         coord.join(enqueue_threads)
 
@@ -375,6 +362,6 @@ class Learner:
     def predict(self, inputs, pred_batching_shape):
         # Make sure that the inputs are 5-dimensional, in the form [batch_size, z_dim, y_dim, x_dim, n_chan]
         assert (len(inputs.size) == 5)
-        assert(len(pred_batching_shape) == 3)
+        assert (len(pred_batching_shape) == 3)
 
         return self.model.predict(self.sess, inputs, pred_batching_shape, mirror_inputs=False)
