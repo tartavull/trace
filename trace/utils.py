@@ -45,17 +45,14 @@ def expand_3d_to_5d(data):
     return data
 
 
-def run_watershed_on_affinities(affinities, relabel2d=False, low=0.3, hi=0.9):
+def run_watershed_on_affinities(affinities, relabel2d=False, low=0.9, hi=0.95):
     tmp_aff_file = 'tmp-affinities.h5'
     tmp_label_file = 'tmp-labels.h5'
 
     base = './tmp/' + str(int(round(time.time() * 1000))) + '/'
+
     os.makedirs(base)
 
-    if not os.path.exists('./tmp/'):
-        os.mkdir('./tmp/')
-
-    os.mkdir(base)
 
     # Move to the front
     reshaped_aff = np.einsum('zyxd->dzyx', affinities)
