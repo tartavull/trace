@@ -139,7 +139,7 @@ def __maybe_split_cremi(folder, train_fraction):
 def __maybe_create_isbi(dest_folder, train_frac):
     base_url = 'http://brainiac2.mit.edu/isbi_challenge/sites/default/files/'
 
-    if os.path.exists(dest_folder):
+    if not os.path.exists(dest_folder):
         os.mkdir(dest_folder)
 
     # Since we rename from *-volume to *-input, we check to see if we've performed the rename already
@@ -179,7 +179,7 @@ def __maybe_create_isbi(dest_folder, train_frac):
 def __maybe_create_snemi3d(dest_folder, train_frac):
     base_url = 'http://brainiac2.mit.edu/SNEMI3D/sites/default/files/'
 
-    if os.path.exists(dest_folder):
+    if not os.path.exists(dest_folder):
         os.mkdir(dest_folder)
 
     __maybe_download(base_url, TRAIN_INPUT + ZIP, dest_folder, TRAIN_INPUT + ZIP)
@@ -202,7 +202,7 @@ def __maybe_create_snemi3d(dest_folder, train_frac):
 def __maybe_create_cremi(dest_folder, train_frac):
     base_url = 'https://cremi.org/static/data/'
 
-    if os.path.exists(dest_folder):
+    if not os.path.exists(dest_folder):
         os.mkdir(dest_folder)
 
     # For now, only download the un-padded versions
