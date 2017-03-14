@@ -133,8 +133,8 @@ class ValidationHook(Hook):
             summary_writer.add_summary(validation_image_summary, step)
 
             # Calculate rand and VI scores
-            scores = evaluation.rand_error_from_prediction(self.val_targets[0, :8, :80, :80, :],
-                                                           validation_prediction,
+            scores = evaluation.rand_error_from_prediction(self.val_labels[0],
+                                                           validation_prediction[0],
                                                            pred_type=model.architecture.output_mode)
 
             score_summary = session.run(self.validation_summaries,
@@ -286,18 +286,23 @@ class Learner:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.sess.close()
 
-    def train(self, training_params, dset_sampler, hooks):
+    def train(self, training_params, dset_sampler, hooks, continue_training=False):
         sess = self.sess
         model = self.model
 
         # We will write our summaries here
         summary_writer = tf.summary.FileWriter(self.ckpt_folder + '/events', graph=sess.graph)
 
-        # Definte an optimizer
-        optimize_step = training_params.optimizer(training_params.learning_rate).minimize(model.cross_entropy)
+        global_step = tf.Variable(64500, name='global_step', trainable=False)
+
+        # Define an optimizer
+        optimize_step = training_params.optimizer(training_params.learning_rate).minimize(model.cross_entropy, global_step=global_step)
 
         # Initialize the variables
         sess.run(tf.global_variables_initializer())
+        if continue_training:
+            self.restore()
+            print(sess.run(global_step))
         dset_sampler.initialize_session_variables(sess)
 
         # Create enqueue op and a QueueRunner to handle queueing of training examples
@@ -342,7 +347,8 @@ class Learner:
         '''
 
         # Iterate through the dataset
-        for step in range(training_params.n_iter):
+        begin_step = sess.run(global_step)
+        for step in range(begin_step, training_params.n_iter):
             if coord.should_stop():
                 break
             print(step)

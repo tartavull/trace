@@ -317,8 +317,10 @@ class EMDatasetSampler(object):
             elastically_deformed_sample = rotated_sample
 
             # Separate the image from the labels
-            deformed_inputs = elastically_deformed_sample[:, :, :, :, :1]
-            deformed_labels = elastically_deformed_sample[:, :, :, :, 1:]
+            #deformed_inputs = elastically_deformed_sample[:, :, :, :, :1]
+            #deformed_labels = elastically_deformed_sample[:, :, :, :, 1:]
+            deformed_inputs = samples[:, :, :, :, :1]
+            deformed_labels = samples[:, :, :, :, 1:]
 
             # Apply random gaussian blurring to the image
             def apply_random_blur_to_stack(stack):
