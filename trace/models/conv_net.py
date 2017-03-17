@@ -282,9 +282,9 @@ class ConvNet(Model):
         for i, _ in enumerate(inputs):
 
             # Iterate over each batch
-            for z in range(0, stop=all_preds.shape[1], step=z_patch):
-                for y in range(0, stop=all_preds.shape[2], step=y_patch):
-                    for x in range(0, stop=all_preds.shape[3], step=x_patch):
+            for z in range(0, all_preds.shape[1], z_patch):
+                for y in range(0, all_preds.shape[2], y_patch):
+                    for x in range(0, all_preds.shape[3], x_patch):
                         print('z=%d, y=%d, x=%d' % (z, y, x))
                         # Get the appropriate patch
                         input_image = np.expand_dims(inputs[i,
