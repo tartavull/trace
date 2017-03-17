@@ -106,9 +106,9 @@ def train(model_type, params_type, dataset_name, n_iter, run_name, cont):
 
     training_params = learner.TrainingParams(
         optimizer=tf.train.AdamOptimizer,
-        learning_rate=0.00005,
+        learning_rate=0.0002,
         n_iter=n_iter,
-        output_size=120,
+        output_size=160,
         z_output_size=16,
         batch_size=batch_size
     )
@@ -128,9 +128,9 @@ def train(model_type, params_type, dataset_name, n_iter, run_name, cont):
 
     hooks = [
         learner.LossHook(50, model),
-        learner.ModelSaverHook(5000, ckpt_folder),
+        learner.ModelSaverHook(500, ckpt_folder),
         learner.ValidationHook(1000, dset_sampler, model, data_folder, params.output_mode, [training_params.z_output_size, training_params.output_size, training_params.output_size]),
-        learner.ImageVisualizationHook(5000, model),
+        learner.ImageVisualizationHook(2000, model),
         # learner.HistogramHook(100, model),
         # learner.LayerVisualizationHook(500, model),
     ]
@@ -178,7 +178,7 @@ def predict(model_type, params_type, dataset_name, split, run_name):
     classifier.restore()
 
     # Predict on the classifier
-    predictions = classifier.predict(inputs, [16, 120, 120])
+    predictions = classifier.predict(inputs, [16, 160, 160])
 
     # Save the predicted affinities for viewing in neuroglancer.
     dataset.prepare_predictions_for_neuroglancer_affinities(ckpt_folder, split, predictions, params.output_mode)
@@ -243,7 +243,7 @@ def ens_predict(ensemble_method, ensemble_params, dataset_name, split, run_name)
     classifier = ens.EnsembleLearner(ensemble_params, p_name, ensemble_method, data_folder, run_name)
 
     # Make the predictions
-    predictions = classifier.predict(inputs, [16, 120, 120])
+    predictions = classifier.predict(inputs, [16, 160, 160])
 
     # Prepare the predictions for submission for this particular dataset
     # Only take the first of the predictions

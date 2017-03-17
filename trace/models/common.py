@@ -393,7 +393,7 @@ class Model(object):
         self.model_name = self.architecture.model_name
         self.fov = architecture.fov
         self.z_fov = architecture.z_fov
-        #self.global_step = tf.Variable(28120, name='global_step', trainable=False)
+        self.global_step = tf.Variable(0, name='global_step', trainable=False)
 
         # Create an input queue
         with tf.device('/cpu:0'):

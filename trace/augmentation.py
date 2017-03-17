@@ -4,6 +4,7 @@ import os.path
 import configparser as cp
 import numpy as np
 import tensorflow as tf
+from utils import *
 
 import h5py
 from scipy.ndimage.interpolation import map_coordinates
@@ -102,3 +103,35 @@ def tf_gaussian_blur(image, sigma, size=5):
     squeezed_image = tf.squeeze(filtered_image, axis=0)
 
     return squeezed_image
+
+
+# seg is the batch of segmentations to be affinitized. seg should be a 5D tensor
+# dst is the stride of the affinity in each diretion
+def affinitize(seg, dst=(1, 1, 1)):
+    seg_shape = tf.shape(seg)
+    (dz, dy, dx) = dst
+
+    # z-affinity
+    if dz > 0:
+        connected = tf.equal(seg[:, dz:, :, :, :], seg[:, :-dz, :, :, :])
+        background = tf.greater(seg[:, dz:, :, :, :], 0)
+        zero_pad = tf.zeros(tf.concat([(seg_shape[BATCH_AXIS], dz), seg_shape[Y_AXIS:]], axis=0))
+        z_aff = tf.concat([zero_pad, tf.cast(tf.logical_and(connected, background), tf.float32)], axis=Z_AXIS)
+
+    # y-affinity
+    if dy > 0:
+        connected = tf.equal(seg[:, :, dy:, :, :], seg[:, :, :-dy, :, :])
+        background = tf.greater(seg[:, :, dy:, :, :], 0)
+        zero_pad = tf.zeros(tf.concat([seg_shape[:Y_AXIS], (dy,), seg_shape[X_AXIS:]], axis=0))
+        y_aff = tf.concat([zero_pad, tf.cast(tf.logical_and(connected, background), tf.float32)], axis=Y_AXIS)
+
+    # x-affinity
+    if dx > 0:
+        connected = tf.equal(seg[:, :, :, dx:, :], seg[:, :, :, :-dx, :])
+        background = tf.greater(seg[:, :, :, dx:, :], 0)
+        zero_pad = tf.zeros(tf.concat([seg_shape[:X_AXIS], (dx, seg_shape[CHANNEL_AXIS])], axis=0))
+        x_aff = tf.concat([zero_pad, tf.cast(tf.logical_and(connected, background), tf.float32)], axis=X_AXIS)
+
+    aff = tf.concat([x_aff, y_aff, z_aff], axis=CHANNEL_AXIS)
+
+    return aff

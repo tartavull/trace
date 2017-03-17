@@ -1,5 +1,4 @@
-import subprocess
-import os
+import subprocess import os
 
 import numpy as np
 
@@ -45,7 +44,7 @@ def expand_3d_to_5d(data):
     return data
 
 
-def run_watershed_on_affinities(affinities, relabel2d=False, low=0.9, hi=0.9997):
+def run_watershed_on_affinities(affinities, relabel2d=False, low=0.9, hi=0.9995):
     tmp_aff_file = 'tmp-affinities.h5'
     tmp_label_file = 'tmp-labels.h5'
 

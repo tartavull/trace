@@ -242,15 +242,15 @@ class EMDatasetSampler(object):
         self.__train_targets = convert_between_label_types(dataset.label_type, label_output_type,
                                                            expand_3d_to_5d(dataset.train_labels))
 
-        self.__validation_inputs = expand_3d_to_5d(dataset.validation_inputs)
+        self.__validation_inputs = expand_3d_to_5d(dataset.validation_inputs)[:, 1:, 1:, 1:, :]
         self.__validation_labels = expand_3d_to_5d(dataset.validation_labels)
         self.__validation_targets = convert_between_label_types(dataset.label_type, label_output_type,
-                                                                expand_3d_to_5d(dataset.validation_labels))
+                expand_3d_to_5d(dataset.validation_labels))[:, 1:, 1:, 1:, :]
 
         self.__test_inputs = expand_3d_to_5d(dataset.test_inputs)
 
         # Stack the inputs and labels, so when we sample we sample corresponding labels and inputs
-        train_stacked = np.concatenate((self.__train_inputs, self.__train_targets), axis=CHANNEL_AXIS)
+        train_stacked = np.concatenate((self.__train_inputs, self.__train_labels), axis=CHANNEL_AXIS)
 
         # Define inputs to the graph
         crop_pad = input_size // 10 * 4
@@ -259,11 +259,7 @@ class EMDatasetSampler(object):
         z_patch_size = z_input_size + z_crop_pad
 
         # Create dataset, and pad the dataset with mirroring
-        pad = input_size // 2
-        z_pad = z_input_size // 2
-
-        # Pad in 5 dimensions
-        self.__padded_dataset = np.pad(train_stacked, [[0, 0], [z_pad, z_pad], [pad, pad], [pad, pad], [0, 0]], mode='reflect')
+        self.__padded_dataset = np.pad(train_stacked, [[0, 0], [z_crop_pad, z_crop_pad], [crop_pad, crop_pad], [crop_pad, crop_pad], [0, 0]], mode='reflect')
 
         with tf.device('/cpu:0'):
             # The dataset is loaded into a constant variable from a placeholder
@@ -338,10 +334,13 @@ class EMDatasetSampler(object):
             # leveled_image = tf.image.random_contrast(leveled_image, lower=0.5, upper=1.5)
             leveled_inputs = blurred_inputs
 
-            # Crop the image, to remove the padding that was added to allow safe augmentation.
+            # Affinitize the labels if applicable
+            # TODO (ffjiang): Do the if applicable part
+            aff_labels = affinitize(deformed_labels)
 
+            # Crop the image, to remove the padding that was added to allow safe augmentation.
             cropped_inputs = leveled_inputs[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
-            cropped_labels = deformed_labels[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
+            cropped_labels = aff_labels[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
 
             # Re-stack the image and labels
             self.training_example_op = tf.concat([tf.concat([cropped_inputs, cropped_labels], axis=CHANNEL_AXIS)] * batch_size, axis=BATCH_AXIS)

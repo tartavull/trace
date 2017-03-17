@@ -121,7 +121,6 @@ class ValidationHook(Hook):
             # Make the prediction
             validation_prediction = model.predict(session, self.val_inputs, self.pred_batch_shape, mirror_inputs=False)
 
-
             validation_binary_prediction = np.round(validation_prediction)
             validation_pixel_error = np.mean(np.absolute(validation_binary_prediction - self.val_targets))
 
@@ -293,16 +292,14 @@ class Learner:
         # We will write our summaries here
         summary_writer = tf.summary.FileWriter(self.ckpt_folder + '/events', graph=sess.graph)
 
-        global_step = tf.Variable(64500, name='global_step', trainable=False)
-
         # Define an optimizer
-        optimize_step = training_params.optimizer(training_params.learning_rate).minimize(model.cross_entropy, global_step=global_step)
+        optimize_step = training_params.optimizer(training_params.learning_rate).minimize(model.cross_entropy, global_step=model.global_step)
 
         # Initialize the variables
         sess.run(tf.global_variables_initializer())
         if continue_training:
             self.restore()
-            print(sess.run(global_step))
+            print('Starting training at step: ' + str(sess.run(model.global_step)))
         dset_sampler.initialize_session_variables(sess)
 
         # Create enqueue op and a QueueRunner to handle queueing of training examples
@@ -347,7 +344,7 @@ class Learner:
         '''
 
         # Iterate through the dataset
-        begin_step = sess.run(global_step)
+        begin_step = sess.run(model.global_step)
         for step in range(begin_step, training_params.n_iter):
             if coord.should_stop():
                 break
