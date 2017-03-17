@@ -183,7 +183,7 @@ class UNet(Model):
                 for y in range(0, y_inp_size - y_in_patch + 1, y_out_patch - 10) + [y_inp_size - y_in_patch]:
                     print('y: ' + str(y) + '/' + str(y_inp_size))
                     for x in range(0, x_inp_size - x_in_patch + 1, x_out_patch - 10) + [x_inp_size - x_in_patch]:
-                        pred = session.run(self.prediction, 
+                        pred= session.run(self.prediction,
                                            feed_dict={
                                                self.example: inputs[stack:stack + 1, 
                                                                     z:z + z_in_patch, 
@@ -192,10 +192,12 @@ class UNet(Model):
                                                                     :]
                                            }) 
 
+                        '''
                         prev = combined_pred[stack, 
                                                  z:z + z_out_patch,
                                                  y:y + y_out_patch,
                                                  x:x + x_out_patch, :]
+
                         combined_pred[stack, 
                                       z:z + z_out_patch,
                                       y:y + y_out_patch,
@@ -205,7 +207,6 @@ class UNet(Model):
                                       z:z + z_out_patch,
                                       y:y + y_out_patch,
                                       x:x + x_out_patch, :] += pred[0]
-                        '''
                         overlaps[stack,
                                  z:z + z_out_patch,
                                  y:y + y_out_patch,
