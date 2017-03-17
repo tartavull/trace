@@ -54,15 +54,10 @@ def visualize(dataset_name, split, params_type, run_name, aff, ip, port, remote)
         
     vu.add_file(data_folder, split + '-input', viewer)
     if aff:
-        if split == 'test':
-            vu.add_file(data_folder + 'results/' + params_type + '/' +  'run-' + run_name + '/', split+'-pred-affinities', viewer)
-        else:
-            vu.add_affinities(data_folder, split + '-pred-affinities', viewer)
-    if split == 'test':
-        vu.add_file(data_folder + 'results/' + params_type + '/' +  'run-' + run_name + '/', split+'-predictions', viewer)
-        vu.add_file(data_folder + 'results/' + params_type + '/' +  'run-' + run_name + '/', split+'-segmentation', viewer)
-    else:
-        vu.add_file(data_folder, split + '-labels', viewer)
+        vu.add_affinities(data_folder + 'results/' + params_type + '/' +  'run-' + run_name + '/', split+'-pred-affinities', viewer)
+    vu.add_labels(data_folder + 'results/' + params_type + '/' +  'run-' + run_name + '/', split+'-predictions', viewer)
+    if split != 'test':
+        vu.add_labels(data_folder, split, viewer)
 
     print('open your brower at:')
     print(viewer.__str__().replace('172.17.0.2', remote))
@@ -96,7 +91,8 @@ def watershed(dataset_name, split, high, low, dust):
 @click.argument('dataset_name', type=click.Choice(DATASET_DICT.keys()))
 @click.argument('n_iter', type=int, default=10000)
 @click.argument('run_name', type=str, default='1')
-def train(model_type, params_type, dataset_name, n_iter, run_name):
+@click.option('--cont/--no-cont', default=False, help="Continue training using a saved model.")
+def train(model_type, params_type, dataset_name, n_iter, run_name, cont):
     """
     Train an N4 models to predict affinities
     """
@@ -110,9 +106,9 @@ def train(model_type, params_type, dataset_name, n_iter, run_name):
 
     training_params = learner.TrainingParams(
         optimizer=tf.train.AdamOptimizer,
-        learning_rate=0.0002,
+        learning_rate=0.0001,
         n_iter=n_iter,
-        output_size=120,
+        output_size=160,
         z_output_size=16,
         batch_size=batch_size
     )
@@ -131,9 +127,9 @@ def train(model_type, params_type, dataset_name, n_iter, run_name):
     classifier = learner.Learner(model, ckpt_folder)
 
     hooks = [
-        learner.LossHook(10, model),
-        learner.ModelSaverHook(5000, ckpt_folder),
-        learner.ValidationHook(500, dset_sampler, model, data_folder, params.output_mode, [training_params.z_output_size, training_params.output_size, training_params.output_size]),
+        learner.LossHook(50, model),
+        learner.ModelSaverHook(500, ckpt_folder),
+        learner.ValidationHook(1000, dset_sampler, model, data_folder, params.output_mode, [training_params.z_output_size, training_params.output_size, training_params.output_size]),
         learner.ImageVisualizationHook(2000, model),
         # learner.HistogramHook(100, model),
         # learner.LayerVisualizationHook(500, model),
@@ -141,7 +137,7 @@ def train(model_type, params_type, dataset_name, n_iter, run_name):
 
     # Train the model
     print('Training for %d iterations' % n_iter)
-    classifier.train(training_params, dset_sampler, hooks)
+    classifier.train(training_params, dset_sampler, hooks, continue_training=cont)
 
 
 @cli.command()
@@ -168,9 +164,9 @@ def predict(model_type, params_type, dataset_name, split, run_name):
     dset_sampler = em.EMDatasetSampler(dataset, input_size=model.fov + 1, z_input_size=model.z_fov + 1, label_output_type=params.output_mode)
 
     if split == 'train':
-        inputs, _ = dset_sampler.get_full_training_set()
+        inputs, _, _ = dset_sampler.get_full_training_set()
     elif split == 'validation':
-        inputs, _ = dset_sampler.get_validation_set()
+        inputs, _, _ = dset_sampler.get_validation_set()
     else:
         inputs = dset_sampler.get_test_set()
 
@@ -182,12 +178,10 @@ def predict(model_type, params_type, dataset_name, split, run_name):
     classifier.restore()
 
     # Predict on the classifier
-    predictions = classifier.predict(inputs, [16, 120, 120])
+    predictions = classifier.predict(inputs, [16, 160, 160])
 
-    # Save the predicted affinities and lables for viewing in neuroglancer
+    # Save the predicted affinities for viewing in neuroglancer.
     dataset.prepare_predictions_for_neuroglancer_affinities(ckpt_folder, split, predictions, params.output_mode)
-    dataset.prepare_predictions_for_neuroglancer(ckpt_folder, split, predictions, params.output_mode)
-
 
     # Prepare the predictions for submission for this particular dataset
     # Only send in the first dimension of predictions, because theoretically predict can predict on many stacks
@@ -249,7 +243,7 @@ def ens_predict(ensemble_method, ensemble_params, dataset_name, split, run_name)
     classifier = ens.EnsembleLearner(ensemble_params, p_name, ensemble_method, data_folder, run_name)
 
     # Make the predictions
-    predictions = classifier.predict(inputs, [16, 120, 120])
+    predictions = classifier.predict(inputs, [16, 160, 160])
 
     # Prepare the predictions for submission for this particular dataset
     # Only take the first of the predictions

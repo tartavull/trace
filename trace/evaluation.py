@@ -26,7 +26,7 @@ def __rand_error(true_seg, pred_seg, calc_rand_score=True, calc_rand_error=False
                  other=None):
 
     # Segascorus demands uint32
-    true_seg = true_seg.astype(dtype=np.uint32)
+    true_seg = np.squeeze(true_seg.astype(dtype=np.uint32))
     pred_seg = pred_seg.astype(dtype=np.uint32)
 
     # Preprocess
@@ -40,8 +40,8 @@ def __rand_error(true_seg, pred_seg, calc_rand_score=True, calc_rand_error=False
 
     # Determine which metrics to execute
     # TODO(beisner): fix VOI
-    calc_variation_information = False
-    calc_variation_score = False
+    calc_variation_information = True
+    calc_variation_score = True
     metrics = utils.parse_fns(utils.metric_fns, [calc_rand_score, calc_rand_error, calc_variation_score,
                                                  calc_variation_information])
 
@@ -146,8 +146,8 @@ def rand_error_from_prediction(true_labels, pred_values, pred_type=BOUNDARIES):
     :param pred_type: The label format of the prediction, either BOUNDARIES, AFFINITIES, or SEGMENTATION
     :return: A list of all the calculated scores
     """
-    assert(len(true_labels.shape) == 3)
-    assert(len(pred_values.shape) == 4)
+    #assert(len(true_labels.shape) == 3)
+    #assert(len(pred_values.shape) == 4)
 
     if pred_type == BOUNDARIES:
         pred_values = np.squeeze(pred_values, axis=3)

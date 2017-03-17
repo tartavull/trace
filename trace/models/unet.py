@@ -1,6 +1,7 @@
 import tensorflow as tf
 from .common import *
 from collections import OrderedDict
+import numpy as np
 
 from utils import *
 
@@ -170,14 +171,14 @@ class UNet(Model):
         x_outp_size  = x_inp_size - self.fov + 1
 
         # Create accumulator for output.
-        combined_pred = np.zeros((inputs.shape[0],
+        combined_pred = np.ones((inputs.shape[0],
                                   z_outp_size, y_outp_size, x_outp_size, 3))
         # Create accumulator for overlaps.
         overlaps = np.zeros((inputs.shape[0], z_outp_size, y_outp_size, x_outp_size, 3))
 
         for stack, _ in enumerate(inputs):
             # Iterate through the overlapping tiles.
-            for z in range(0, z_inp_size - z_in_patch + 1, z_out_patch - 1) + [z_inp_size - z_in_patch]:
+            for z in range(0, z_inp_size - z_in_patch + 1, z_out_patch - 2) + [z_inp_size - z_in_patch]:
                 print('z: ' + str(z) + '/' + str(z_inp_size))
                 for y in range(0, y_inp_size - y_in_patch + 1, y_out_patch - 10) + [y_inp_size - y_in_patch]:
                     print('y: ' + str(y) + '/' + str(y_inp_size))
@@ -190,10 +191,21 @@ class UNet(Model):
                                                                     x:x + x_in_patch,
                                                                     :]
                                            }) 
+
+                        prev = combined_pred[stack, 
+                                                 z:z + z_out_patch,
+                                                 y:y + y_out_patch,
+                                                 x:x + x_out_patch, :]
+                        combined_pred[stack, 
+                                      z:z + z_out_patch,
+                                      y:y + y_out_patch,
+                                      x:x + x_out_patch, :] = np.minimum(prev, pred[0])
+                        '''
                         combined_pred[stack, 
                                       z:z + z_out_patch,
                                       y:y + y_out_patch,
                                       x:x + x_out_patch, :] += pred[0]
+                        '''
                         overlaps[stack,
                                  z:z + z_out_patch,
                                  y:y + y_out_patch,
@@ -202,7 +214,8 @@ class UNet(Model):
 
             # Normalize the combined prediction by the number of times each
             # voxel was computed in the overlapping computation.
-            validation_prediction = np.divide(combined_pred, overlaps)
+            #validation_prediction = np.divide(combined_pred, overlaps)
+            validation_prediction = combined_pred
 
             return validation_prediction
 
