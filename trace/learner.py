@@ -75,11 +75,6 @@ class ValidationHook(Hook):
         self.val_examples = np.concatenate([self.val_inputs, self.val_targets], axis=CHANNEL_AXIS)
         self.mirrored_val_examples = aug.mirror_across_borders_3d(self.val_examples, model.fov, model.z_fov)
 
-        self.val_examples = np.concatenate([self.val_inputs, self.val_targets], axis=CHANNEL_AXIS)
-
-        # Mirror the inputs
-        self.mirrored_val_examples = aug.mirror_across_borders_3d(self.val_examples, model.fov, model.z_fov)
-
         # Set up placeholders for other metrics
         self.validation_pixel_error = tf.placeholder(tf.float32)
         self.rand_f_score = tf.placeholder(tf.float32)
@@ -119,7 +114,7 @@ class ValidationHook(Hook):
     def eval(self, step, model, session, summary_writer):
         if step % self.frequency == 0:
             # Make the prediction
-            validation_prediction = model.predict(session, self.val_inputs, self.pred_batch_shape, mirror_inputs=False)
+            validation_prediction = model.predict(session, self.mirrored_val_examples, self.pred_batch_shape, mirror_inputs=False)
 
             validation_binary_prediction = np.round(validation_prediction)
             validation_pixel_error = np.mean(np.absolute(validation_binary_prediction - self.val_targets))
