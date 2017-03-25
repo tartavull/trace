@@ -40,8 +40,6 @@ def __rand_error(true_seg, pred_seg, calc_rand_score=True, calc_rand_error=False
 
     # Determine which metrics to execute
     # TODO(beisner): fix VOI
-    calc_variation_information = True
-    calc_variation_score = True
     metrics = utils.parse_fns(utils.metric_fns, [calc_rand_score, calc_rand_error, calc_variation_score,
                                                  calc_variation_information])
 
@@ -132,7 +130,7 @@ def __rand_error_affinities(pred_affinities, true_seg, aff_type=AFFINITIES_3D):
     pred_segmentation = convert_between_label_types(input_type=aff_type, output_type=SEGMENTATION_3D,
                                                     original_labels=pred_affinities)
 
-    return __rand_error(true_seg, pred_segmentation, relabel2d=relabel2d)
+    return __rand_error(true_seg, pred_segmentation, calc_variation_information=False, calc_variation_score=False, relabel2d=relabel2d)
 
 
 def rand_error_from_prediction(true_labels, pred_values, pred_type=BOUNDARIES):

@@ -78,7 +78,6 @@ class ValidationHook(Hook):
         # Set up placeholders for other metrics
         self.validation_cross_entropy = tf.placeholder(tf.float32)
         self.validation_pixel_error = tf.placeholder(tf.float32)
-        self.validation_cross_entropy = tf.placeholder(tf.float32)
         self.rand_f_score = tf.placeholder(tf.float32)
         self.rand_f_score_merge = tf.placeholder(tf.float32)
         self.rand_f_score_split = tf.placeholder(tf.float32)
@@ -90,13 +89,12 @@ class ValidationHook(Hook):
         self.validation_summaries = tf.summary.merge([
             tf.summary.scalar('validation_cross_entropy', self.validation_cross_entropy),
             tf.summary.scalar('validation_pixel_error', self.validation_pixel_error),
-            tf.summary.scalar('validation_cross_entropy', self.validation_cross_entropy),
             tf.summary.scalar('rand_score', self.rand_f_score),
             tf.summary.scalar('rand_merge_score', self.rand_f_score_merge),
             tf.summary.scalar('rand_split_score', self.rand_f_score_split),
-            tf.summary.scalar('vi_score', self.vi_f_score),
-            tf.summary.scalar('vi_merge_score', self.vi_f_score_merge),
-            tf.summary.scalar('vi_split_score', self.vi_f_score_split),
+            #tf.summary.scalar('vi_score', self.vi_f_score),
+            #tf.summary.scalar('vi_merge_score', self.vi_f_score_merge),
+            #tf.summary.scalar('vi_split_score', self.vi_f_score_split),
         ])
 
         # Create image summaries
@@ -144,9 +142,9 @@ class ValidationHook(Hook):
                                                    self.rand_f_score: scores['Rand F-Score Full'],
                                                    self.rand_f_score_merge: scores['Rand F-Score Merge'],
                                                    self.rand_f_score_split: scores['Rand F-Score Split'],
-                                                   self.vi_f_score: scores['VI F-Score Full'],
-                                                   self.vi_f_score_merge: scores['VI F-Score Merge'],
-                                                   self.vi_f_score_split: scores['VI F-Score Split'],
+                                                   #self.vi_f_score: scores['VI F-Score Full'],
+                                                   #self.vi_f_score_merge: scores['VI F-Score Merge'],
+                                                   #self.vi_f_score_split: scores['VI F-Score Split'],
                                                    })
 
             summary_writer.add_summary(score_summary, step)

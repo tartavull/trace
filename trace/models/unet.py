@@ -215,8 +215,7 @@ class UNet(Model):
 
             # Normalize the combined prediction by the number of times each
             # voxel was computed in the overlapping computation.
-            #validation_prediction = np.divide(combined_pred, overlaps)
-            validation_prediction = combined_pred
+            validation_prediction = np.divide(combined_pred, overlaps)
 
             return validation_prediction
 
