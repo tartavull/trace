@@ -242,10 +242,20 @@ class EMDatasetSampler(object):
         self.__train_targets = convert_between_label_types(dataset.label_type, label_output_type,
                                                            expand_3d_to_5d(dataset.train_labels))
 
+        # Crop to get rid of edge affinities
+        self.__train_inputs = self.__train_inputs[:, 1:, 1:, 1:, :]
+        self.__train_labels = self.__train_labels[:, 1:, 1:, 1:, :]
+        self.__train_targets = self.__train_targets[:, 1:, 1:, 1:, :]
+
         self.__validation_inputs = expand_3d_to_5d(dataset.validation_inputs)
         self.__validation_labels = expand_3d_to_5d(dataset.validation_labels)
         self.__validation_targets = convert_between_label_types(dataset.label_type, label_output_type,
                 expand_3d_to_5d(dataset.validation_labels))
+
+        # Crop to get rid of edge affinities
+        self.__validation_inputs = self.__validation_inputs[:, 1:, 1:, 1:, :]
+        self.__validation_labels = self.__validation_labels[:, 1:, 1:, 1:, :]
+        self.__validation_targets = self.__validation_targets[:, 1:, 1:, 1:, :]
 
         self.__test_inputs = expand_3d_to_5d(dataset.test_inputs)
 

@@ -76,6 +76,7 @@ class ValidationHook(Hook):
         self.mirrored_val_examples = aug.mirror_across_borders_3d(self.val_examples, model.fov, model.z_fov)
 
         # Set up placeholders for other metrics
+        self.validation_cross_entropy = tf.placeholder(tf.float32)
         self.validation_pixel_error = tf.placeholder(tf.float32)
         self.rand_f_score = tf.placeholder(tf.float32)
         self.rand_f_score_merge = tf.placeholder(tf.float32)
@@ -86,6 +87,7 @@ class ValidationHook(Hook):
 
         # Create validation summaries
         self.validation_summaries = tf.summary.merge([
+            tf.summary.scalar('validation_cross_entropy', self.validation_cross_entropy),
             tf.summary.scalar('validation_pixel_error', self.validation_pixel_error),
             tf.summary.scalar('rand_score', self.rand_f_score),
             tf.summary.scalar('rand_merge_score', self.rand_f_score_merge),
@@ -116,6 +118,8 @@ class ValidationHook(Hook):
             # Make the prediction
             validation_prediction = model.predict(session, self.mirrored_val_examples, self.pred_batch_shape, mirror_inputs=False)
 
+            diff = validation_prediction - self.val_targets
+            validation_cross_entropy = -np.mean(diff * np.log(diff))
             validation_binary_prediction = np.round(validation_prediction)
             validation_pixel_error = np.mean(np.absolute(validation_binary_prediction - self.val_targets))
 
@@ -132,7 +136,8 @@ class ValidationHook(Hook):
                                                            pred_type=model.architecture.output_mode)
 
             score_summary = session.run(self.validation_summaries,
-                                        feed_dict={self.validation_pixel_error: validation_pixel_error,
+                                        feed_dict={self.validation_cross_entropy: validation_cross_entropy,
+                                                   self.validation_pixel_error: validation_pixel_error,
                                                    self.rand_f_score: scores['Rand F-Score Full'],
                                                    self.rand_f_score_merge: scores['Rand F-Score Merge'],
                                                    self.rand_f_score_split: scores['Rand F-Score Split'],
