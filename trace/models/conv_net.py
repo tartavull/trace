@@ -3,7 +3,6 @@ from utils import *
 from augmentation import *
 
 
-
 class ConvArchitecture(Architecture):
     def __init__(self, model_name, output_mode, layers, architecture_type='2D'):
         super(ConvArchitecture, self).__init__(model_name, output_mode, architecture_type)
@@ -287,11 +286,11 @@ class ConvNet(Model):
                     for x in range(0, all_preds.shape[3], x_patch):
                         print('z=%d, y=%d, x=%d' % (z, y, x))
                         # Get the appropriate patch
-                        input_image = np.expand_dims(inputs[i:i+1,
-                                                            z: z + z_inp_patch,
-                                                            y: y + y_inp_patch,
-                                                            x: x + x_inp_patch,
-                                                            :], axis=0)
+                        input_image = inputs[i:i + 1,
+                                             z: z + z_inp_patch,
+                                             y: y + y_inp_patch,
+                                             x: x + x_inp_patch,
+                                             :]
 
                         pred = session.run(self.prediction, feed_dict={self.example: input_image})
 
