@@ -46,16 +46,18 @@ def visualize(dataset_name, split, params_type, run_name, aff, ip, port, remote)
     """
     import neuroglancer
 
+    params = PARAMS_DICT[params_type]
+
     data_folder = os.path.dirname(os.path.abspath(__file__)) + '/' + dataset_name + '/'
 
     neuroglancer.set_static_content_source(url='https://neuroglancer-demo.appspot.com')
     neuroglancer.set_server_bind_address(bind_address=ip, bind_port=port)
     viewer = neuroglancer.Viewer(voxel_size=[6, 6, 30])
-        
+
     vu.add_file(data_folder, split + '-input', viewer)
     if aff:
-        vu.add_affinities(data_folder + 'results/' + params_type + '/' +  'run-' + run_name + '/', split+'-pred-affinities', viewer)
-    vu.add_labels(data_folder + 'results/' + params_type + '/' +  'run-' + run_name + '/', split+'-predictions', viewer)
+        vu.add_affinities(data_folder + 'results/' + params.model_name + '/' + 'run-' + run_name + '/', split+'-pred-affinities', viewer)
+    vu.add_labels(data_folder + 'results/' + params.model_name + '/' +  'run-' + run_name + '/', split+'-predictions', viewer)
     if split != 'test':
         vu.add_labels(data_folder, split, viewer)
 
@@ -181,6 +183,7 @@ def predict(model_type, params_type, dataset_name, split, run_name):
     predictions = classifier.predict(inputs, [16, 160, 160])
 
     # Save the predicted affinities for viewing in neuroglancer.
+    dataset.prepare_predictions_for_neuroglancer()
     dataset.prepare_predictions_for_neuroglancer_affinities(ckpt_folder, split, predictions, params.output_mode)
 
     # Prepare the predictions for submission for this particular dataset
