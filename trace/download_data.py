@@ -107,6 +107,9 @@ def __maybe_split(folder,
 def __maybe_create_isbi(dest_folder, train_frac):
     base_url = 'http://brainiac2.mit.edu/isbi_challenge/sites/default/files/'
 
+    if not os.path.exists(dest_folder):
+        os.mkdir(dest_folder)
+
     # Since we rename from *-volume to *-input, we check to see if we've performed the rename already
     __maybe_download(base_url, 'train-volume.tif', dest_folder, TRAIN_INPUT + TIF)
     __maybe_download(base_url, 'train-labels.tif', dest_folder, TRAIN_LABELS + TIF)
@@ -143,6 +146,9 @@ def __maybe_create_isbi(dest_folder, train_frac):
 
 def __maybe_create_snemi3d(dest_folder, train_frac):
     base_url = 'http://brainiac2.mit.edu/SNEMI3D/sites/default/files/'
+
+    if not os.path.exists(dest_folder):
+        os.mkdir(dest_folder)
 
     __maybe_download(base_url, TRAIN_INPUT + ZIP, dest_folder, TRAIN_INPUT + ZIP)
     __maybe_download(base_url, TRAIN_LABELS + ZIP, dest_folder, TRAIN_LABELS + ZIP)
@@ -204,6 +210,9 @@ def __maybe_split_cremi(folder, train_fraction):
 def __maybe_create_cremi(dest_folder, train_frac):
     base_url = 'https://cremi.org/static/data/'
 
+    if not os.path.exists(dest_folder):
+        os.makedirs(dest_folder)
+
     # For now, only download the un-padded versions
     a_train_fn = 'sample_A_20160501.hdf'
     a_test_fn = 'sample_A%2B_20160601.hdf'
@@ -254,7 +263,7 @@ def __maybe_create_cremi(dest_folder, train_frac):
     __maybe_split_cremi(dest_folder + 'c/', train_frac)
 
 def maybe_create_all_datasets(trace_folder, train_frac):
-    __maybe_create_snemi3d(trace_folder + SNEMI3D + '/', train_frac)
+    __maybe_create_snemi3d(trace_folder + SNEMI3D + '/', 0.75)
     __maybe_create_isbi(trace_folder + ISBI + '/', train_frac)
     __maybe_create_cremi(trace_folder + CREMI + '/', 0.8)
 

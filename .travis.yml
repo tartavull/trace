@@ -12,12 +12,12 @@ before_install:
 - export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "latest"; else echo $TRAVIS_BRANCH
   ; fi`
 install:
-- docker build -f Dockerfile -t $REPO:$TAG .
+- docker build -f Dockerfile -t $REPO:$TAG --build-arg BRANCH=$TRAVIS_BRANCH .
 - docker images
 script: docker run $REPO:$TAG /bin/sh -c "cd /home/trace && make test"
 after_success:
 - docker push $REPO:$TAG
-- docker build -f Dockerfile.gpu -t $REPOGPU:$TAG .
+- docker build -f Dockerfile.gpu -t $REPOGPU:$TAG --build-arg BRANCH=$TRAVIS_BRANCH .
 - docker push $REPOGPU:$TAG
 env:
   global:

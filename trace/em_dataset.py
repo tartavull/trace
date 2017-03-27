@@ -27,7 +27,7 @@ class Dataset(object):
         :param split: The name of partition of the dataset we are predicting on ['train', 'validation', 'split']
         :param predictions: Predictions for labels in some format, dictated by label_type
         """
-        predictions = convert_between_label_types(label_type, SEGMENTATION_3D, predictions)
+        predictions = convert_between_label_types(label_type, SEGMENTATION_3D, predictions[0])
         # Create an affinities file
         with h5py.File(results_folder + split + '-predictions.h5', 'w') as output_file:
             output_file.create_dataset('main', shape=predictions.shape)
@@ -36,9 +36,12 @@ class Dataset(object):
             out = output_file['main']
 
             # Reshape and set in out
+            '''
             for i in range(predictions.shape[0]):
                 reshaped_pred = np.einsum('zyxd->dzyx', np.expand_dims(predictions[i], axis=0))
                 out[0:2, i] = reshaped_pred[:, 0]
+            '''
+            out[:] = predictions
 
     @staticmethod
     def prepare_predictions_for_neuroglancer_affinities(results_folder, split, predictions, label_type):
@@ -48,7 +51,7 @@ class Dataset(object):
         :param split: The name of partition of the dataset we are predicting on ['train', 'validation', 'split']
         :param predictions: Predictions for labels in some format, dictated by label_type
         """
-        pred_affinities = convert_between_label_types(label_type, AFFINITIES_3D, predictions)
+        pred_affinities = convert_between_label_types(label_type, AFFINITIES_3D, predictions[0])
         sha = pred_affinities.shape
         # Create an affinities file
         with h5py.File(results_folder + split + '-pred-affinities.h5', 'w') as output_file:
@@ -60,10 +63,15 @@ class Dataset(object):
             # Reformat our predictions
             out = output_file['main']
 
+            '''
             for i in range(pred_affinities.shape[0]):
                 reshaped_pred = np.einsum('zyxd->dzyx', np.expand_dims(pred_affinities[i], axis=0))
                 # Copy over as many affinities as we got
                 out[0:sha[3], i] = reshaped_pred[:, 0]
+            '''
+            reshaped_pred = np.einsum('zyxd->dzyx', pred_affinities)
+            # Copy over as many affinities as we got
+            out[0:sha[3]] = reshaped_pred[:]
 
 
 class ISBIDataset(Dataset):
@@ -212,15 +220,25 @@ class EMDatasetSampler(object):
         self.__train_targets = convert_between_label_types(dataset.label_type, label_output_type,
                                                            expand_3d_to_5d(dataset.train_labels))
 
+        # Crop to get rid of edge affinities
+        self.__train_inputs = self.__train_inputs[:, 1:, 1:, 1:, :]
+        self.__train_labels = self.__train_labels[:, 1:, 1:, 1:, :]
+        self.__train_targets = self.__train_targets[:, 1:, 1:, 1:, :]
+
         self.__validation_inputs = expand_3d_to_5d(dataset.validation_inputs)
         self.__validation_labels = expand_3d_to_5d(dataset.validation_labels)
         self.__validation_targets = convert_between_label_types(dataset.label_type, label_output_type,
-                                                                expand_3d_to_5d(dataset.validation_labels))
+                expand_3d_to_5d(dataset.validation_labels))
+
+        # Crop to get rid of edge affinities
+        self.__validation_inputs = self.__validation_inputs[:, 1:, 1:, 1:, :]
+        self.__validation_labels = self.__validation_labels[:, 1:, 1:, 1:, :]
+        self.__validation_targets = self.__validation_targets[:, 1:, 1:, 1:, :]
 
         self.__test_inputs = expand_3d_to_5d(dataset.test_inputs)
 
         # Stack the inputs and labels, so when we sample we sample corresponding labels and inputs
-        train_stacked = np.concatenate((self.__train_inputs, self.__train_targets), axis=CHANNEL_AXIS)
+        train_stacked = np.concatenate((self.__train_inputs, self.__train_labels), axis=CHANNEL_AXIS)
 
         # Define inputs to the graph
         crop_pad = input_size // 10 * 4
@@ -229,11 +247,7 @@ class EMDatasetSampler(object):
         z_patch_size = z_input_size + z_crop_pad
 
         # Create dataset, and pad the dataset with mirroring
-        pad = input_size // 2
-        z_pad = z_input_size // 2
-
-        # Pad in 5 dimensions
-        self.__padded_dataset = np.pad(train_stacked, [[0, 0], [z_pad, z_pad], [pad, pad], [pad, pad], [0, 0]], mode='reflect')
+        self.__padded_dataset = np.pad(train_stacked, [[0, 0], [z_crop_pad, z_crop_pad], [crop_pad, crop_pad], [crop_pad, crop_pad], [0, 0]], mode='reflect')
 
         with tf.device('/cpu:0'):
             # The dataset is loaded into a constant variable from a placeholder
@@ -288,8 +302,10 @@ class EMDatasetSampler(object):
 
 
             # Separate the image from the labels
-            deformed_inputs = elastically_deformed_sample[:, :, :, :, :1]
-            deformed_labels = elastically_deformed_sample[:, :, :, :, 1:]
+            #deformed_inputs = elastically_deformed_sample[:, :, :, :, :1]
+            #deformed_labels = elastically_deformed_sample[:, :, :, :, 1:]
+            deformed_inputs = samples[:, :, :, :, :1]
+            deformed_labels = samples[:, :, :, :, 1:]
 
             # Apply random gaussian blurring to the image
             def apply_random_blur_to_stack(stack):
@@ -307,10 +323,13 @@ class EMDatasetSampler(object):
             # leveled_image = tf.image.random_contrast(leveled_image, lower=0.5, upper=1.5)
             leveled_inputs = blurred_inputs
 
-            # Crop the image, to remove the padding that was added to allow safe augmentation.
+            # Affinitize the labels if applicable
+            # TODO (ffjiang): Do the if applicable part
+            aff_labels = affinitize(deformed_labels)
 
+            # Crop the image, to remove the padding that was added to allow safe augmentation.
             cropped_inputs = leveled_inputs[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
-            cropped_labels = deformed_labels[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
+            cropped_labels = aff_labels[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
 
             # Re-stack the image and labels
             self.training_example_op = tf.concat([tf.concat([cropped_inputs, cropped_labels], axis=CHANNEL_AXIS)] * batch_size, axis=BATCH_AXIS)

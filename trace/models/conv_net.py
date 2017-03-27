@@ -256,6 +256,7 @@ class ConvNet(Model):
     #     if mirror_inputs:
     #         inputs = mirror_across_borders_3d(inputs, self.fov, self.z_fov)
 
+
     def predict(self, session, inputs, pred_batch_shape, mirror_inputs=True):
         if mirror_inputs:
             inputs = mirror_across_borders_3d(inputs, self.fov, self.z_fov)
@@ -263,10 +264,7 @@ class ConvNet(Model):
         return self.__predict_with_evaluation(session, inputs, None, pred_batch_shape, mirror_inputs)
 
     def __predict_with_evaluation(self, session, inputs, metrics, pred_batch_shape, mirror_inputs=True):
-        if mirror_inputs:
-            inputs = mirror_across_borders_3d(inputs, self.fov, self.z_fov)
-
-        # Extract the batch sizes from the argument
+        # Extract the tile sizes from the argument
         z_patch, y_patch, x_patch = pred_batch_shape[0], pred_batch_shape[1], pred_batch_shape[2]
         z_inp_patch, y_inp_patch, x_inp_patch = z_patch + self.z_fov - 1, y_patch + self.fov - 1, x_patch + self.fov - 1
 
@@ -277,16 +275,17 @@ class ConvNet(Model):
         all_preds = np.zeros(
             shape=[inputs.shape[0], z_inp_size - self.z_fov + 1, y_inp_size - self.fov + 1,
                    x_inp_size - self.fov + 1,
-                   inputs.shape[4]])
+                   self.architecture.n_outputs], dtype=np.float16)
 
-        for stack in inputs:
+        for i, _ in enumerate(inputs):
 
             # Iterate over each batch
-            for z in range(0, stop=all_preds.shape[1], step=z_patch):
-                for y in range(0, stop=all_preds.shape[2], step=y_patch):
-                    for x in range(0, stop=all_preds.shape[3], step=x_patch):
+            for z in range(0, all_preds.shape[1], z_patch):
+                for y in range(0, all_preds.shape[2], y_patch):
+                    for x in range(0, all_preds.shape[3], x_patch):
+                        print('z=%d, y=%d, x=%d' % (z, y, x))
                         # Get the appropriate patch
-                        input_image = inputs[stack,
+                        input_image = inputs[i:i + 1,
                                              z: z + z_inp_patch,
                                              y: y + y_inp_patch,
                                              x: x + x_inp_patch,
@@ -295,6 +294,6 @@ class ConvNet(Model):
                         pred = session.run(self.prediction, feed_dict={self.example: input_image})
 
                         # Fill in the output
-                        all_preds[stack, z: z + z_patch, y: y + y_patch, x: x + x_patch, :] = pred
+                        all_preds[i, z: z + z_patch, y: y + y_patch, x: x + x_patch, :] = pred
 
         return all_preds

@@ -4,6 +4,7 @@ import os.path
 import configparser as cp
 import numpy as np
 import tensorflow as tf
+from utils import *
 
 import h5py
 from scipy.ndimage.interpolation import map_coordinates
@@ -103,48 +104,33 @@ def tf_gaussian_blur(image, sigma, size=5):
 
     return squeezed_image
 
+# seg is the batch of segmentations to be affinitized. seg should be a 5D tensor
+# dst is the stride of the affinity in each diretion
+def affinitize(seg, dst=(1, 1, 1)):
+    seg_shape = tf.shape(seg)
+    (dz, dy, dx) = dst
 
-def maybe_create_affinities(dataset_prefix, num_examples):
-    """
-    Args:
-        dataset_prefix (str): either train or test
+    # z-affinity
+    if dz > 0:
+        connected = tf.equal(seg[:, dz:, :, :, :], seg[:, :-dz, :, :, :])
+        background = tf.greater(seg[:, dz:, :, :, :], 0)
+        zero_pad = tf.zeros(tf.concat([(seg_shape[BATCH_AXIS], dz), seg_shape[Y_AXIS:]], axis=0))
+        z_aff = tf.concat([zero_pad, tf.cast(tf.logical_and(connected, background), tf.float32)], axis=Z_AXIS)
 
-        It should recompute them in the case that the labels changes
-    """
-    if os.path.exists(dataset_prefix + '-affinities.h5'):
-        print('Affinties already exists.')
-        return
+    # y-affinity
+    if dy > 0:
+        connected = tf.equal(seg[:, :, dy:, :, :], seg[:, :, :-dy, :, :])
+        background = tf.greater(seg[:, :, dy:, :, :], 0)
+        zero_pad = tf.zeros(tf.concat([seg_shape[:Y_AXIS], (dy,), seg_shape[X_AXIS:]], axis=0))
+        y_aff = tf.concat([zero_pad, tf.cast(tf.logical_and(connected, background), tf.float32)], axis=Y_AXIS)
 
-    if not os.path.exists(dataset_prefix + '-labels.h5'):
-        print('No labels from where to compute affinities.')
-        return
+    # x-affinity
+    if dx > 0:
+        connected = tf.equal(seg[:, :, :, dx:, :], seg[:, :, :, :-dx, :])
+        background = tf.greater(seg[:, :, :, dx:, :], 0)
+        zero_pad = tf.zeros(tf.concat([seg_shape[:X_AXIS], (dx, seg_shape[CHANNEL_AXIS])], axis=0))
+        x_aff = tf.concat([zero_pad, tf.cast(tf.logical_and(connected, background), tf.float32)], axis=X_AXIS)
 
-    # there is a little bug in DataProvider that doesn't let us do it
-    # for the actual size of the dataset 100,1024,1024
-    patch_size = (num_examples, 1023, 1023)
+    aff = tf.concat([x_aff, y_aff, z_aff], axis=CHANNEL_AXIS)
 
-    net_spec = {
-        'label': patch_size
-    }
-
-    params = {
-        'augment': [{'type':'warp'}, {'type':'flip'}, {'type':'grey', 'mode':'2D'}],
-        'drange': [0]
-    }
-
-    spec = dataset_prefix + '.spec'
-
-    config = cp.RawConfigParser()
-    config.read(spec)
-
-    config.set('files', 'img', dataset_prefix + '-input.h5')
-    config.set('files', 'lbl', dataset_prefix + '-labels.h5')
-
-    # Writing our modified configuration file
-    with open(spec, 'wb') as f:
-        config.write(f)
-
-    dp = VolumeDataProvider(spec, net_spec, params)
-    affinities = dp.random_sample()['label']
-    with h5py.File(dataset_prefix + '-affinities.h5', 'w') as f:
-        f.create_dataset('main', data=affinities)
+    return aff

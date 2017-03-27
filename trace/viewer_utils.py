@@ -10,6 +10,15 @@ def add_file(folder, filename, viewer):
         print(filename+' not found')
 
 
+def add_labels(folder, filename, viewer):
+    try:
+        with h5py.File(folder+filename+'.hdf', 'r') as f:
+            arr = f['volumes']['labels']['neuron_ids'][:]
+            viewer.add(arr, name=filename)
+    except IOError:
+        print(filename+' not found')
+
+
 def add_affinities(folder, filename, viewer):
     """
     This is holding all the affinities in RAM,

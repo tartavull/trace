@@ -10,6 +10,7 @@ import skimage.morphology as morph
 import tifffile as tiff
 
 import cv2
+from utils import *
 
 try:
     from thirdparty.segascorus import io_utils
@@ -24,6 +25,10 @@ def __rand_error(true_seg, pred_seg, calc_rand_score=True, calc_rand_error=False
                  calc_variation_information=False, relabel2d=True, foreground_restricted=True, split_0_segment=True,
                  other=None):
 
+    # Segascorus demands uint32
+    true_seg = np.squeeze(true_seg.astype(dtype=np.uint32))
+    pred_seg = pred_seg.astype(dtype=np.uint32)
+
     # Preprocess
     # relabel2d: if True, relabel the segments such that individual slices contain unique IDs
     # foreground_restrict: if True, from both images remove the border pixels of the true segmentation
@@ -34,6 +39,7 @@ def __rand_error(true_seg, pred_seg, calc_rand_score=True, calc_rand_error=False
     om = utils.calc_overlap_matrix(pred_seg, true_seg, split_0_segment)
 
     # Determine which metrics to execute
+    # TODO(beisner): fix VOI
     metrics = utils.parse_fns(utils.metric_fns, [calc_rand_score, calc_rand_error, calc_variation_score,
                                                  calc_variation_information])
 
@@ -49,6 +55,11 @@ def __rand_error(true_seg, pred_seg, calc_rand_score=True, calc_rand_error=False
         results["{} Full".format(name)] = f
         results["{} Merge".format(name)] = m
         results["{} Split".format(name)] = s
+
+    # TODO(beisner): fix VOI
+    results["{} Full".format('VI')] = 0
+    results["{} Merge".format('VI')] = 0
+    results["{} Split".format('VI')] = 0
 
     return results
 
@@ -102,58 +113,45 @@ def __rand_error_boundaries(true_labels, pred_labels):
         pred_seg = __prepare_probabilistic_segmentation_for_rand(thresh, pred_labels)
 
         # TODO(beisner): Currently, VI doesn't work, gets a divide by zero error
-        # Convert to uint32 here because otherwise we get an error about type mismatch in the C++ code
-        scores[thresh] = __rand_error(true_seg.astype(np.uint32), pred_seg.astype(np.uint32), calc_variation_information=False)
+        scores[thresh] = __rand_error(true_seg, pred_seg, calc_variation_information=False)
 
     max_score_thresh = max(scores.iterkeys(), key=(lambda key: scores[key]['Rand F-Score Full']))
 
-    # TODO(beisner): remove when VI is fixed
-    scores[max_score_thresh]['VI F-Score Full'] = 0
-    scores[max_score_thresh]['VI F-Score Merge'] = 0
-    scores[max_score_thresh]['VI F-Score Split'] = 0
     return scores[max_score_thresh]
 
+def __rand_error_affinities(pred_affinities, true_seg, aff_type=AFFINITIES_3D):
+    # If the affinities type we're being passed in is 2D, we can only generate a 2D segmentation,
+    # so we must relabel
+    relabel2d = (aff_type == AFFINITIES_2D)
 
-def __rand_error_affinities(model, data_folder, sigmoid_prediction, num_layers, output_shape, watershed_high=0.9, watershed_low=0.3):
-    # Save affinities to temporary file
-    # TODO pad the image with zeros so that the output covers the whole dataset
+    # Generate a 3D segmentation from the affinities, regardless of whether they are 2D or 3D, because that's
+    # how segascorus works
+    pred_segmentation = convert_between_label_types(input_type=aff_type, output_type=SEGMENTATION_3D,
+                                                    original_labels=pred_affinities)
 
-    tmp_aff_file = 'validation-tmp-affinities.h5'
-    tmp_label_file = 'validation-tmp-labels.h5'
-    ground_truth_file = 'validation-labels.h5'
-
-    base = data_folder + 'results/' + model.model_name + '/'
-
-    # Write predictions to a temporary file
-    with h5py.File(base + tmp_aff_file, 'w') as output_file:
-        output_file.create_dataset('main', shape=(3, num_layers, output_shape, output_shape))
-        out = output_file['main']
-
-        reshaped_pred = np.einsum('zyxd->dzyx', sigmoid_prediction)
-        out[0:2, :, :, :] = reshaped_pred
-
-    # Do watershed segmentation
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    subprocess.call(["julia",
-                     current_dir + "/thirdparty/watershed/watershed.jl",
-                     base + tmp_aff_file,
-                     base + tmp_label_file,
-                     str(watershed_high),
-                     str(watershed_low)])
-
-    # Load the results of watershedding
-    pred_seg = io_utils.import_file(base + tmp_label_file)
-    true_seg = io_utils.import_file(data_folder + ground_truth_file)
-
-    return __rand_error(true_seg, pred_seg)
+    return __rand_error(true_seg, pred_segmentation, calc_variation_information=False, calc_variation_score=False, relabel2d=relabel2d)
 
 
-def rand_error(model, data_folder, true_labels, sigmoid_prediction, num_layers, output_shape, data_type='boundaries'):
+def rand_error_from_prediction(true_labels, pred_values, pred_type=BOUNDARIES):
+    """ Predict the rand error and variation of information from a given prediction. Based on the prediction type, we
+    generate a segmentation and evaluate based on that. Only accept one at a time, rather than in batches
 
-    if data_type == 'boundaries':
-        # Squeeze the single layer into one
-        reshaped_pred = sigmoid_prediction.squeeze(axis=(3,))
-        true_labels = true_labels.squeeze(axis=(3,))
-        return __rand_error_boundaries(true_labels, reshaped_pred)
+    :param true_labels: The true labels, either in BOUNDARIES mode or SEGMENTATION mode (depends on dataset). Shape must
+                        be [z, y, x], since labels are 1-dimensional
+    :param pred_values: The predictions, either in BOUNDARIES, SEGMENTATION, or AFFINITIES mode. Shape must be
+                        [z, y, x, chan], since labels are either 1, 2, or 3 dimensional
+    :param pred_type: The label format of the prediction, either BOUNDARIES, AFFINITIES, or SEGMENTATION
+    :return: A list of all the calculated scores
+    """
+    #assert(len(true_labels.shape) == 3)
+    #assert(len(pred_values.shape) == 4)
+
+    if pred_type == BOUNDARIES:
+        pred_values = np.squeeze(pred_values, axis=3)
+        return __rand_error_boundaries(true_labels, pred_values)
+    elif pred_type == AFFINITIES_2D or pred_type == AFFINITIES_3D:
+        return __rand_error_affinities(pred_values, true_labels, aff_type=pred_type)
+    elif pred_type == SEGMENTATION_2D or pred_type == SEGMENTATION_3D:
+        return __rand_error(true_labels, pred_values, relabel2d=(pred_type == SEGMENTATION_2D))
     else:
-        return __rand_error_affinities(model, data_folder, sigmoid_prediction, num_layers, output_shape)
+        raise NotImplementedError('Invalid pred_type %s' % pred_type)

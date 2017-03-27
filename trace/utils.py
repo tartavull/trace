@@ -1,11 +1,16 @@
 import subprocess
+import os
 
 import numpy as np
+
+import shutil
 
 import tensorflow as tf
 
 import h5py
 import time
+
+import os
 
 import dataprovider.transform as trans
 
@@ -40,11 +45,14 @@ def expand_3d_to_5d(data):
     return data
 
 
-def run_watershed_on_affinities(affinities, relabel2d=False, low=0.3, hi=0.9):
+def run_watershed_on_affinities(affinities, relabel2d=False, low=0.9, hi=0.9995):
     tmp_aff_file = 'tmp-affinities.h5'
     tmp_label_file = 'tmp-labels.h5'
 
     base = './tmp/' + str(int(round(time.time() * 1000))) + '/'
+
+    os.makedirs(base)
+
 
     # Move to the front
     reshaped_aff = np.einsum('zyxd->dzyx', affinities)
@@ -72,6 +80,8 @@ def run_watershed_on_affinities(affinities, relabel2d=False, low=0.3, hi=0.9):
     prep = utils.parse_fns(utils.prep_fns, [relabel2d, False])
     pred_seg, _ = utils.run_preprocessing(pred_seg, pred_seg, prep)
 
+    shutil.rmtree('./tmp/')
+
     return pred_seg
 
 
@@ -79,6 +89,7 @@ def convert_between_label_types(input_type, output_type, original_labels):
     # No augmentation needed, as we're basically doing e2e learning
     if input_type == output_type:
         return original_labels
+
 
     # This looks like a shit show, but conversion is hard.
     # Also, we will implement this as we go.
@@ -151,7 +162,7 @@ def convert_between_label_types(input_type, output_type, original_labels):
                 # Affinitize takes a 3d tensor, so we just take the first index
                 return np.einsum('dzyx->zyxd', trans.affinitize(labs[:, :, :, 0]))
 
-            return map(aff_and_reshape, original_labels)
+            return np.array(map(aff_and_reshape, original_labels))
 
         elif output_type == SEGMENTATION_2D:
             raise NotImplementedError('Seg3d->Seg2d not implemented')
