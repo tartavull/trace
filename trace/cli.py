@@ -60,7 +60,7 @@ def visualize(dataset_name, split, params_type, run_name, aff, ip, port, remote)
         vu.add_labels(data_folder, split, viewer)
 
     print('open your brower at:')
-    print(viewer.__str__().replace('172.17.0.2', remote))
+    print(viewer.__str__().replace(ip, remote))
     webbrowser.open(viewer.__str__())
     print("press any key to exit")
     input()
@@ -106,10 +106,10 @@ def train(model_type, params_type, dataset_name, n_iter, run_name, cont):
 
     training_params = learner.TrainingParams(
         optimizer=tf.train.AdamOptimizer,
-        learning_rate=0.0001,
+        learning_rate=0.0002,
         n_iter=n_iter,
-        output_size=160,
-        z_output_size=16,
+        output_size=98,
+        z_output_size=18,
         batch_size=batch_size
     )
 
@@ -129,8 +129,8 @@ def train(model_type, params_type, dataset_name, n_iter, run_name, cont):
     hooks = [
         learner.LossHook(50, model),
         learner.ModelSaverHook(500, ckpt_folder),
-        learner.ValidationHook(100, dset_sampler, model, data_folder, params.output_mode, [training_params.z_output_size, training_params.output_size, training_params.output_size]),
-        learner.ImageVisualizationHook(2000, model),
+        learner.ValidationHook(1000, dset_sampler, model, data_folder, params.output_mode, [training_params.z_output_size, training_params.output_size, training_params.output_size]),
+        learner.ImageVisualizationHook(1000, model),
         # learner.HistogramHook(100, model),
         # learner.LayerVisualizationHook(500, model),
     ]

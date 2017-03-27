@@ -144,6 +144,7 @@ class UNet3DLayer(Layer):
     def __init__(self, *args, **kwargs):
         self.layer_name = kwargs['layer_name']
         self.is_valid = kwargs['is_valid']
+        self.is_z_valid = kwargs['is_z_valid']
         self.is_residual = kwargs['is_residual']
         self.uses_max_pool = kwargs['uses_max_pool']
         self.num_convs = kwargs['num_convs']
@@ -152,6 +153,7 @@ class UNet3DLayer(Layer):
         self.is_training = kwargs['is_training']
         del kwargs['layer_name']
         del kwargs['is_valid']
+        del kwargs['is_z_valid']
         del kwargs['is_residual']
         del kwargs['uses_max_pool']
         del kwargs['num_convs']
@@ -183,24 +185,40 @@ class UNet3DLayer(Layer):
         # Set up each convolution in the layer.
         for i in range(self.num_convs):
             # Create the weights and biases.
+
+            # Use a factored convolution so that the z direction can be a same
+            # convolution whilst xy can be valid.
             if i == 0:
-                w_i = get_weight_variable(self.layer_name + '_w0',
-                                          [self.z_filter_size, self.filter_size, self.filter_size, in_n_feature_maps,
+                w_xy = get_weight_variable(self.layer_name + '_w0_xy',
+                                          [1, self.filter_size, self.filter_size, in_n_feature_maps,
                                            self.n_feature_maps])
             else:
-                w_i = get_weight_variable(self.layer_name + '_w' + str(i),
-                                          [self.z_filter_size, self.filter_size, self.filter_size, self.n_feature_maps,
+                w_xy = get_weight_variable(self.layer_name + '_w' + str(i) + '_xy',
+                                          [1, self.filter_size, self.filter_size, self.n_feature_maps,
                                            self.n_feature_maps])
-            b_i = get_bias_variable(self.layer_name + '_b' + str(i), [self.n_feature_maps])
-            weights.append(w_i)
-            biases.append(b_i)
 
-            # Perform the convolution
-            if self.is_valid:
+            w_z = get_weight_variable(self.layer_name + '_w' + str(i) + '_z',
+                                      [self.z_filter_size, 1, 1, self.n_feature_maps, self.n_feature_maps])
+
+            b = get_bias_variable(self.layer_name + '_b' + str(i), [self.n_feature_maps])
+            weights.append(w_xy)
+            weights.append(w_z)
+            biases.append(b)
+
+            # Perform the xy convolution
+            if self.is_valid and i == self.num_convs - 1:
                 convFn = conv3d
             else:
                 convFn = same_conv3d
-            cur_node = tf.nn.elu(convFn(cur_node, w_i) + b_i)
+            cur_node = convFn(cur_node, w_xy)
+
+            if self.is_z_valid and i == self.num_convs - 1:
+                # Only the last convolution is valid to ensure the image size
+                # doesnt decrease too rapidly
+                convFn = conv3d
+            else:
+                convFn = same_conv3d
+            cur_node = tf.nn.elu(convFn(cur_node, w_z) + b)
             convs.append(cur_node)
 
         # If applicable, add the residual connection.
@@ -209,8 +227,8 @@ class UNet3DLayer(Layer):
                 residual = prev_layer
             else:
                 residual = skip_connect
-            if self.is_valid:
-                residual = crop(residual, cur_node, batch_size)
+            if self.is_valid or self.is_z_valid:
+                residual = crop_3d(residual, cur_node, batch_size)
             if prev_n_feature_maps != self.n_feature_maps:
                 residual = tf.tile(residual, (1, 1, 1, 1, self.n_feature_maps // prev_n_feature_maps))
             final_node = cur_node + residual

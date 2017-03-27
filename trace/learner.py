@@ -119,7 +119,8 @@ class ValidationHook(Hook):
             validation_prediction = model.predict(session, self.mirrored_val_examples, self.pred_batch_shape, mirror_inputs=False)
 
             diff = np.absolute(validation_prediction - self.val_targets)
-            validation_cross_entropy = -np.mean(diff * np.log(diff))
+            epsilon = 1e-30
+            validation_cross_entropy = -np.mean(diff * np.log(diff + epsilon))
 
             validation_binary_prediction = np.round(validation_prediction)
             validation_pixel_error = np.mean(np.absolute(validation_binary_prediction - self.val_targets))

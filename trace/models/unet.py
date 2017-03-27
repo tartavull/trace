@@ -11,14 +11,14 @@ INPT = 380
 
 
 class UNetArchitecture(Architecture):
-    def __init__(self, model_name, output_mode, layers):
+    def __init__(self, model_name, output_mode, layers, fov=1, z_fov=1):
         super(UNetArchitecture, self).__init__(model_name, output_mode, '2D')
         self.receptive_field = FOV
 
         self.layers = layers
 
-        self.fov = 1
-        self.z_fov = 1
+        self.fov = fov
+        self.z_fov = z_fov
         
        # for layer in layers:
 
@@ -39,41 +39,90 @@ UNET_3D = UNetArchitecture(
     model_name='unet_3d',
     output_mode=AFFINITIES_3D,
     layers=[
-        UNet3DLayer(layer_name='layer_d1', is_valid=False, is_residual=True, 
+        UNet3DLayer(layer_name='layer_d1', is_valid=False, is_z_valid=False, is_residual=True, 
                     uses_max_pool=True, filter_size=3, z_filter_size=3,
                     n_feature_maps=64, num_convs=3, is_contracting=True, 
                     is_expanding=False, is_training=False),
-        UNet3DLayer(layer_name='layer_d2', is_valid=False, is_residual=True, 
+        UNet3DLayer(layer_name='layer_d2', is_valid=False, is_z_valid=False, is_residual=True, 
                     uses_max_pool=True, filter_size=3, z_filter_size=3,
                     n_feature_maps=128, num_convs=3, is_contracting=True, 
                     is_expanding=False, is_training=False),
-        UNet3DLayer(layer_name='layer_d3', is_valid=False, is_residual=True, 
+        UNet3DLayer(layer_name='layer_d3', is_valid=False, is_z_valid=False, is_residual=True, 
                     uses_max_pool=True, filter_size=3, z_filter_size=3,
                     n_feature_maps=256, num_convs=3, is_contracting=True, 
                     is_expanding=False, is_training=False),
-        UNet3DLayer(layer_name='layer_d4', is_valid=False, is_residual=True, 
+        UNet3DLayer(layer_name='layer_d4', is_valid=False, is_z_valid=False, is_residual=True, 
                     uses_max_pool=True, filter_size=3, z_filter_size=3,
                     n_feature_maps=512, num_convs=3, is_contracting=True, 
                     is_expanding=False, is_training=False),
-        UNet3DLayer(layer_name='layer_5', is_valid=False, is_residual=True, 
+        UNet3DLayer(layer_name='layer_5', is_valid=False, is_z_valid=False, is_residual=True, 
                     uses_max_pool=True, filter_size=3, z_filter_size=3,
                     n_feature_maps=1024, num_convs=3, is_contracting=False, 
                     is_expanding=True, is_training=False),
-        UNet3DLayer(layer_name='layer_u4', is_valid=False, is_residual=True, 
+        UNet3DLayer(layer_name='layer_u4', is_valid=False, is_z_valid=False, is_residual=True, 
                     uses_max_pool=True, filter_size=3, z_filter_size=3,
                     n_feature_maps=512, num_convs=3, is_contracting=False, 
                     is_expanding=True, is_training=False),
-        UNet3DLayer(layer_name='layer_u3', is_valid=False, is_residual=True, 
+        UNet3DLayer(layer_name='layer_u3', is_valid=False, is_z_valid=False, is_residual=True, 
                     uses_max_pool=True, filter_size=3, z_filter_size=3,
                     n_feature_maps=256, num_convs=3, is_contracting=False, 
                     is_expanding=True, is_training=False),
-        UNet3DLayer(layer_name='layer_u2', is_valid=False, is_residual=True, 
+        UNet3DLayer(layer_name='layer_u2', is_valid=False, is_z_valid=False, is_residual=True, 
                     uses_max_pool=True, filter_size=3, z_filter_size=3,
                     n_feature_maps=128, num_convs=3, is_contracting=False, 
                     is_expanding=True, is_training=False),
-        UNet3DLayer(layer_name='layer_u1', is_valid=False, is_residual=True, 
+        UNet3DLayer(layer_name='layer_u1', is_valid=False, is_z_valid=False, is_residual=True, 
                     uses_max_pool=True, filter_size=3, z_filter_size=3,
                     n_feature_maps=64, num_convs=3, is_contracting=False, 
+                    is_expanding=False, is_training=False),
+    ]
+)
+
+
+# INPUTS = (32, 190, 190)
+# OUTPUTS = (18, 98, 98)
+# FOV = (15, 93, 93)
+UNET_3D_VALID = UNetArchitecture(
+    model_name='unet_3d_valid',
+    output_mode=AFFINITIES_3D,
+    fov=93,
+    z_fov=15,
+    layers=[
+        UNet3DLayer(layer_name='layer_d1', is_valid=True, is_z_valid=False, is_residual=True, 
+                    uses_max_pool=True, filter_size=3, z_filter_size=3,
+                    n_feature_maps=64, num_convs=2, is_contracting=True, 
+                    is_expanding=False, is_training=False),
+        UNet3DLayer(layer_name='layer_d2', is_valid=True, is_z_valid=False, is_residual=True, 
+                    uses_max_pool=True, filter_size=3, z_filter_size=3,
+                    n_feature_maps=128, num_convs=2, is_contracting=True, 
+                    is_expanding=False, is_training=False),
+        UNet3DLayer(layer_name='layer_d3', is_valid=True, is_z_valid=False, is_residual=True, 
+                    uses_max_pool=True, filter_size=3, z_filter_size=3,
+                    n_feature_maps=256, num_convs=2, is_contracting=True, 
+                    is_expanding=False, is_training=False),
+        UNet3DLayer(layer_name='layer_d4', is_valid=True, is_z_valid=False, is_residual=True, 
+                    uses_max_pool=True, filter_size=3, z_filter_size=3,
+                    n_feature_maps=512, num_convs=2, is_contracting=True, 
+                    is_expanding=False, is_training=False),
+        UNet3DLayer(layer_name='layer_5', is_valid=True, is_z_valid=False, is_residual=True, 
+                    uses_max_pool=True, filter_size=3, z_filter_size=3,
+                    n_feature_maps=1024, num_convs=2, is_contracting=False, 
+                    is_expanding=True, is_training=False),
+        UNet3DLayer(layer_name='layer_u4', is_valid=True, is_z_valid=False, is_residual=True, 
+                    uses_max_pool=True, filter_size=3, z_filter_size=3,
+                    n_feature_maps=512, num_convs=2, is_contracting=False, 
+                    is_expanding=True, is_training=False),
+        UNet3DLayer(layer_name='layer_u3', is_valid=True, is_z_valid=True, is_residual=True, 
+                    uses_max_pool=True, filter_size=3, z_filter_size=3,
+                    n_feature_maps=256, num_convs=2, is_contracting=False, 
+                    is_expanding=True, is_training=False),
+        UNet3DLayer(layer_name='layer_u2', is_valid=True, is_z_valid=True, is_residual=True, 
+                    uses_max_pool=True, filter_size=3, z_filter_size=3,
+                    n_feature_maps=128, num_convs=2, is_contracting=False, 
+                    is_expanding=True, is_training=False),
+        UNet3DLayer(layer_name='layer_u1', is_valid=True, is_z_valid=True, is_residual=True, 
+                    uses_max_pool=True, filter_size=3, z_filter_size=3,
+                    n_feature_maps=64, num_convs=2, is_contracting=False, 
                     is_expanding=False, is_training=False),
     ]
 )
@@ -82,31 +131,31 @@ UNET_3D_4LAYERS = UNetArchitecture(
     model_name='unet_3d_4layers',
     output_mode=AFFINITIES_3D,
     layers=[
-        UNet3DLayer(layer_name='layer_d1', is_valid=False, is_residual=True, 
+        UNet3DLayer(layer_name='layer_d1', is_valid=False, is_z_valid=False, is_residual=True, 
                     uses_max_pool=True, filter_size=3, z_filter_size=3,
                     n_feature_maps=64, num_convs=3, is_contracting=True, 
                     is_expanding=False, is_training=False),
-        UNet3DLayer(layer_name='layer_d2', is_valid=False, is_residual=True, 
+        UNet3DLayer(layer_name='layer_d2', is_valid=False, is_z_valid=False, is_residual=True, 
                     uses_max_pool=True, filter_size=3, z_filter_size=3,
                     n_feature_maps=128, num_convs=3, is_contracting=True, 
                     is_expanding=False, is_training=False),
-        UNet3DLayer(layer_name='layer_d3', is_valid=False, is_residual=True, 
+        UNet3DLayer(layer_name='layer_d3', is_valid=False, is_z_valid=False, is_residual=True, 
                     uses_max_pool=True, filter_size=3, z_filter_size=3,
                     n_feature_maps=256, num_convs=3, is_contracting=True, 
                     is_expanding=False, is_training=False),
-        UNet3DLayer(layer_name='layer_4', is_valid=False, is_residual=True, 
+        UNet3DLayer(layer_name='layer_4', is_valid=False, is_z_valid=False, is_residual=True, 
                     uses_max_pool=True, filter_size=3, z_filter_size=3,
                     n_feature_maps=512, num_convs=3, is_contracting=False, 
                     is_expanding=True, is_training=False),
-        UNet3DLayer(layer_name='layer_u3', is_valid=False, is_residual=True, 
+        UNet3DLayer(layer_name='layer_u3', is_valid=False, is_z_valid=False, is_residual=True, 
                     uses_max_pool=True, filter_size=3, z_filter_size=3,
                     n_feature_maps=256, num_convs=3, is_contracting=False, 
                     is_expanding=True, is_training=False),
-        UNet3DLayer(layer_name='layer_u2', is_valid=False, is_residual=True, 
+        UNet3DLayer(layer_name='layer_u2', is_valid=False, is_z_valid=False, is_residual=True, 
                     uses_max_pool=True, filter_size=3, z_filter_size=3,
                     n_feature_maps=128, num_convs=3, is_contracting=False, 
                     is_expanding=True, is_training=False),
-        UNet3DLayer(layer_name='layer_u1', is_valid=False, is_residual=True, 
+        UNet3DLayer(layer_name='layer_u1', is_valid=False, is_z_valid=False, is_residual=True, 
                     uses_max_pool=True, filter_size=3, z_filter_size=3,
                     n_feature_maps=64, num_convs=3, is_contracting=False, 
                     is_expanding=False, is_training=False),
@@ -171,7 +220,7 @@ class UNet(Model):
         x_outp_size  = x_inp_size - self.fov + 1
 
         # Create accumulator for output.
-        combined_pred = np.ones((inputs.shape[0],
+        combined_pred = np.zeros((inputs.shape[0],
                                   z_outp_size, y_outp_size, x_outp_size, 3))
         # Create accumulator for overlaps.
         overlaps = np.zeros((inputs.shape[0], z_outp_size, y_outp_size, x_outp_size, 3))
@@ -183,7 +232,7 @@ class UNet(Model):
                 for y in range(0, y_inp_size - y_in_patch + 1, y_out_patch - 10) + [y_inp_size - y_in_patch]:
                     print('y: ' + str(y) + '/' + str(y_inp_size))
                     for x in range(0, x_inp_size - x_in_patch + 1, x_out_patch - 10) + [x_inp_size - x_in_patch]:
-                        pred= session.run(self.prediction,
+                        pred = session.run(self.prediction,
                                            feed_dict={
                                                self.example: inputs[stack:stack + 1, 
                                                                     z:z + z_in_patch, 
