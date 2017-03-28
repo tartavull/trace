@@ -35,7 +35,10 @@ CREMI = 'cremi'
 CREMI_A = 'cremi/a'
 CREMI_B = 'cremi/b'
 CREMI_C = 'cremi/c'
-CLEFTS = '/clefts/'
+CREMI_A_CLEFTS = 'cremi/a/clefts'
+CREMI_B_CLEFTS = 'cremi/b/clefts'
+CREMI_C_CLEFTS = 'cremi/c/clefts'
+CLEFTS = 'clefts/'
 DATASET_NAMES = [SNEMI3D, ISBI, CREMI]
 
 
