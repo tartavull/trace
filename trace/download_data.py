@@ -35,7 +35,7 @@ CREMI = 'cremi'
 CREMI_A = 'cremi/a'
 CREMI_B = 'cremi/b'
 CREMI_C = 'cremi/c'
-
+CLEFTS = '/clefts/'
 DATASET_NAMES = [SNEMI3D, ISBI, CREMI]
 
 
@@ -167,7 +167,7 @@ def __maybe_create_snemi3d(dest_folder, train_frac):
     __maybe_create_hdf5_from_tif(dest_folder, TEST_INPUT)
 
 def __maybe_split_cremi(folder, train_fraction):
-    if not os.path.exists(folder + 'validation.hdf'):
+    if not os.path.exists(folder + 'validation.hdf') or not os.path.exists(folder + CLEFTS + 'valdiation.hdf'):
         print(str.format('splitting {} into {}% training,  {}% into validation, and adding borders',
                          folder + 'train-full.hdf', 100 * train_fraction, 100 * (1 - train_fraction)))
 
@@ -180,6 +180,10 @@ def __maybe_split_cremi(folder, train_fraction):
         o_labels_volume = o_train_file.read_neuron_ids()
         o_labels = o_labels_volume.data.value
         o_labels_res = o_input_volume.resolution
+
+        o_clefts_volume = o_train_file.read_clefts()
+        o_clefts = o_clefts_volume.data.value
+        o_clefts_res = o_clefts_volume.resolution
 
         # Add a boundary to original labels (with id 0), so that we can train well on affinities
         o_bounded_labels = np.zeros(o_labels.shape, dtype=np.int32)
@@ -197,47 +201,34 @@ def __maybe_split_cremi(folder, train_fraction):
         train_labels = o_bounded_labels[:train_slices, :, :]
         validation_labels = o_bounded_labels[train_slices:, :, :]
 
+        train_clefts = o_clefts[:train_slices, :, :]
+        validation_clefts = o_clefts[train_slices: , : , :]
+
         train_file = cremiio.CremiFile(folder + 'train.hdf', 'w')
         train_file.write_raw(cremiio.Volume(train_input, resolution=o_input_res))
         train_file.write_neuron_ids(cremiio.Volume(train_labels, resolution=o_labels_res))
         train_file.close()
+
+        train_clefts_file = cremiio.CremiFile(folder + CLEFTS + 'train.hdf', 'w')
+        train_clefts_file.write_raw(cremiio.Volume(train_input, resolution=o_input_res))
+        train_clefts_file.write_clefts(cremiio.Volume(train_clefts, resolution=o_clefts_res))
+        train_clefts_file.close()
 
         validation_file = cremiio.CremiFile(folder + 'validation.hdf', 'w')
         validation_file.write_raw(cremiio.Volume(validation_input, resolution=o_input_res))
         validation_file.write_neuron_ids(cremiio.Volume(validation_labels, resolution=o_labels_res))
         validation_file.close()
 
+        validation_clefts_file = cremiio.CremiFile(folder + CLEFTS + 'validation.hdf', 'w')
+        validation_clefts_file.write_raw(cremiio.Volume(validation_input, resolution=o_input_res))
+        validation_clefts_file.write_clefts(cremiio.Volume(validation_clefts, resolution=o_clefts_res))
+        validation_clefts_file.close()
+
 def __maybe_create_cremi(dest_folder, train_frac):
     base_url = 'https://cremi.org/static/data/'
 
     if not os.path.exists(dest_folder):
         os.makedirs(dest_folder)
-
-    # For now, only download the un-padded versions
-    a_train_fn = 'sample_A_20160501.hdf'
-    a_test_fn = 'sample_A%2B_20160601.hdf'
-
-    b_train_fn = 'sample_B_20160501.hdf'
-    b_test_fn = 'sample_B%2B_20160601.hdf'
-
-    c_train_fn = 'sample_C_20160501.hdf'
-    c_test_fn = 'sample_C%2B_20160601.hdf'
-
-    __maybe_download(base_url, a_train_fn, dest_folder + 'a/', 'train-full.hdf')
-    __maybe_download(base_url, a_test_fn, dest_folder + 'a/', 'test.hdf')
-
-    __maybe_download(base_url, b_train_fn, dest_folder + 'b/', 'train-full.hdf')
-    __maybe_download(base_url, b_test_fn, dest_folder + 'b/', 'test.hdf')
-
-    __maybe_download(base_url, c_train_fn, dest_folder + 'c/', 'train-full.hdf')
-    __maybe_download(base_url, c_test_fn, dest_folder + 'c/', 'test.hdf')
-
-    __maybe_split_cremi(dest_folder + 'a/', train_frac)
-    __maybe_split_cremi(dest_folder + 'b/', train_frac)
-    __maybe_split_cremi(dest_folder + 'c/', train_frac)
-
-def __maybe_create_cremi(dest_folder, train_frac):
-    base_url = 'https://cremi.org/static/data/'
 
     # For now, only download the un-padded versions
     a_train_fn = 'sample_A_20160501.hdf'

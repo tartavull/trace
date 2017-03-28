@@ -351,6 +351,9 @@ DATASET_DICT = {
     down.CREMI_A: CREMIDataset,
     down.CREMI_B: CREMIDataset,
     down.CREMI_C: CREMIDataset,
+    down.CREMI_A + down.CLEFTS: CREMIDataset,
+    down.CREMI_B + down.CLEFTS: CREMIDataset,
+    down.CREMI_C + down.CLEFTS: CREMIDataset,
     down.ISBI: ISBIDataset,
     down.SNEMI3D: SNEMI3DDataset,
 }
