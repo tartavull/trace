@@ -162,12 +162,18 @@ class CREMIDataset(Dataset):
 
         train_file = cremiio.CremiFile(data_folder + 'train.hdf', 'r')
         self.train_inputs = train_file.read_raw().data.value
-        self.train_labels = train_file.read_neuron_ids().data.value
+        if down.CLEFTS in self.data_folder:
+            self.train_labels = train_file.read_clefts().data.value
+        else:
+            self.train_labels = train_file.read_neuron_ids().data.value
         train_file.close()
 
         validation_file = cremiio.CremiFile(data_folder + 'validation.hdf', 'r')
         self.validation_inputs = validation_file.read_raw().data.value
-        self.validation_labels = validation_file.read_neuron_ids().data.value
+        if down.CLEFTS in self.data_folder:
+            self.validation_labels = validation_file.read_clefts().data.value
+        else:
+            self.validation_labels = validation_file.read_neuron_ids().data.value
         validation_file.close()
 
         # TODO(beisner): Decide if we need to load the test file every time (probably don't)

@@ -35,9 +35,9 @@ CREMI = 'cremi'
 CREMI_A = 'cremi/a'
 CREMI_B = 'cremi/b'
 CREMI_C = 'cremi/c'
-CREMI_A_CLEFTS = 'cremi/a/clefts'
-CREMI_B_CLEFTS = 'cremi/b/clefts'
-CREMI_C_CLEFTS = 'cremi/c/clefts'
+CREMI_A_CLEFTS = 'cremi/a/clefts/'
+CREMI_B_CLEFTS = 'cremi/b/clefts/'
+CREMI_C_CLEFTS = 'cremi/c/clefts/'
 CLEFTS = 'clefts/'
 DATASET_NAMES = [SNEMI3D, ISBI, CREMI]
 
@@ -192,6 +192,9 @@ def __maybe_split_cremi(folder, train_fraction):
         o_bounded_labels = np.zeros(o_labels.shape, dtype=np.int32)
         cremival.create_border_mask(input_data=o_labels, target=o_bounded_labels, max_dist=2, background_label=0)
 
+        o_bounded_clefts = np.zeros(o_clefts.shape, dtype=np.int32)
+        cremival.create_border_mask(input_data=o_clefts, target=o_bounded_clefts, max_dist=2, background_label=0)
+
         o_train_file.close()
 
         # Split
@@ -204,8 +207,8 @@ def __maybe_split_cremi(folder, train_fraction):
         train_labels = o_bounded_labels[:train_slices, :, :]
         validation_labels = o_bounded_labels[train_slices:, :, :]
 
-        train_clefts = o_clefts[:train_slices, :, :]
-        validation_clefts = o_clefts[train_slices: , : , :]
+        train_clefts = o_bounded_clefts[:train_slices, :, :]
+        validation_clefts = o_bounded_clefts[train_slices: , : , :]
 
         train_file = cremiio.CremiFile(folder + 'train.hdf', 'w')
         train_file.write_raw(cremiio.Volume(train_input, resolution=o_input_res))
