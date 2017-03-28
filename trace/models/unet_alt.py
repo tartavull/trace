@@ -263,3 +263,70 @@ class UNet_Alt_Wider(Model):
 
         self.saver = tf.train.Saver()
         self.model_name = "unet3d_wider"
+    def predict(self, session, inputs, pred_batch_shape, mirror_inputs=True):
+        if mirror_inputs:
+            inputs = mirror_aross_borders_3d(inputs, self.fov, self.z_fov)
+
+        return self.__predict_with_evaluation(session, inputs, None, pred_batch_shape, mirror_inputs)
+
+
+    def __predict_with_evaluation(self, session, inputs, metrics, pred_tile_shape, mirror_inputs=True):
+        # Extract the tile sizes from the argument
+        z_out_patch, y_out_patch, x_out_patch = pred_tile_shape[0], pred_tile_shape[1], pred_tile_shape[2]
+        z_in_patch = z_out_patch + self.z_fov - 1
+        y_in_patch = y_out_patch + self.fov - 1
+        x_in_patch = x_out_patch + self.fov - 1
+
+        # Extract the overall input size.
+        z_inp_size, y_inp_size, x_inp_size = inputs.shape[1], inputs.shape[2], inputs.shape[3]
+        z_outp_size = z_inp_size - self.z_fov + 1
+        y_outp_size = y_inp_size - self.fov + 1
+        x_outp_size  = x_inp_size - self.fov + 1
+
+        # Create accumulator for output.
+        combined_pred = np.ones((inputs.shape[0],
+                                  z_outp_size, y_outp_size, x_outp_size, 3))
+        # Create accumulator for overlaps.
+        overlaps = np.zeros((inputs.shape[0], z_outp_size, y_outp_size, x_outp_size, 3))
+
+        for stack, _ in enumerate(inputs):
+            # Iterate through the overlapping tiles.
+            for z in range(0, z_inp_size - z_in_patch + 1, z_out_patch - 2) + [z_inp_size - z_in_patch]:
+                print('z: ' + str(z) + '/' + str(z_inp_size))
+                for y in range(0, y_inp_size - y_in_patch + 1, y_out_patch - 10) + [y_inp_size - y_in_patch]:
+                    print('y: ' + str(y) + '/' + str(y_inp_size))
+                    for x in range(0, x_inp_size - x_in_patch + 1, x_out_patch - 10) + [x_inp_size - x_in_patch]:
+                        pred= session.run(self.prediction,
+                                           feed_dict={
+                                               self.example: inputs[stack:stack + 1, 
+                                                                    z:z + z_in_patch, 
+                                                                    y:y + y_in_patch,
+                                                                    x:x + x_in_patch,
+                                                                    :]
+                                           }) 
+
+                        '''
+                        prev = combined_pred[stack, 
+                                                 z:z + z_out_patch,
+                                                 y:y + y_out_patch,
+                                                 x:x + x_out_patch, :]
+                        combined_pred[stack, 
+                                      z:z + z_out_patch,
+                                      y:y + y_out_patch,
+                                      x:x + x_out_patch, :] = np.minimum(prev, pred[0])
+                        '''
+                        combined_pred[stack, 
+                                      z:z + z_out_patch,
+                                      y:y + y_out_patch,
+                                      x:x + x_out_patch, :] += pred[0]
+                        overlaps[stack,
+                                 z:z + z_out_patch,
+                                 y:y + y_out_patch,
+                                 x:x + x_out_patch, 
+                                 :] += np.ones((z_out_patch, y_out_patch, x_out_patch, 3))
+
+            # Normalize the combined prediction by the number of times each
+            # voxel was computed in the overlapping computation.
+            validation_prediction = np.divide(combined_pred, overlaps)
+
+            return validation_prediction

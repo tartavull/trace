@@ -1,5 +1,6 @@
 from .common import *
 from utils import *
+from augmentation import *
 
 
 class ConvArchitecture(Architecture):
@@ -54,6 +55,7 @@ class ConvArchitecture(Architecture):
             layer_num += 1
             print("Layer %d,\ttype: %s,\tfilter: [%d, %d],\tFOV: %d" % (layer_num, layer.layer_type, layer.filter_size,
                                                                         layer.filter_size, receptive_field))
+
 
 N4 = ConvArchitecture(
     model_name='n4',
@@ -126,7 +128,6 @@ N4_DEEPER = ConvArchitecture(
         Conv2DLayer(filter_size=1, n_feature_maps=2, is_valid=True),
     ]
 )
-
 
 VD2D = ConvArchitecture(
     model_name='VD2D',
@@ -223,7 +224,7 @@ class ConvNet(Model):
 
         n_poolings = 0
 
-        prev_layer = self.standardized_image
+        prev_layer = self.image
         prev_n_feature_maps = 1
 
         z_dilation_rate = 1
@@ -250,3 +251,49 @@ class ConvNet(Model):
         self.pixel_error = tf.reduce_mean(tf.cast(tf.abs(self.binary_prediction - self.target), tf.float32))
 
         self.saver = tf.train.Saver()
+
+    # def predict_with_evaluation(self, session, inputs, metrics, labels, pred_batch_shape, mirror_inputs=True):
+    #     if mirror_inputs:
+    #         inputs = mirror_across_borders_3d(inputs, self.fov, self.z_fov)
+
+
+    def predict(self, session, inputs, pred_batch_shape, mirror_inputs=True):
+        if mirror_inputs:
+            inputs = mirror_across_borders_3d(inputs, self.fov, self.z_fov)
+
+        return self.__predict_with_evaluation(session, inputs, None, pred_batch_shape, mirror_inputs)
+
+    def __predict_with_evaluation(self, session, inputs, metrics, pred_batch_shape, mirror_inputs=True):
+        # Extract the tile sizes from the argument
+        z_patch, y_patch, x_patch = pred_batch_shape[0], pred_batch_shape[1], pred_batch_shape[2]
+        z_inp_patch, y_inp_patch, x_inp_patch = z_patch + self.z_fov - 1, y_patch + self.fov - 1, x_patch + self.fov - 1
+
+        # Extract the input size, so we can reduce to output
+        z_inp_size, y_inp_size, x_inp_size = inputs.shape[1], inputs.shape[2], inputs.shape[3]
+
+        # Create a holder for the output
+        all_preds = np.zeros(
+            shape=[inputs.shape[0], z_inp_size - self.z_fov + 1, y_inp_size - self.fov + 1,
+                   x_inp_size - self.fov + 1,
+                   self.architecture.n_outputs], dtype=np.float16)
+
+        for i, _ in enumerate(inputs):
+
+            # Iterate over each batch
+            for z in range(0, all_preds.shape[1], z_patch):
+                for y in range(0, all_preds.shape[2], y_patch):
+                    for x in range(0, all_preds.shape[3], x_patch):
+                        print('z=%d, y=%d, x=%d' % (z, y, x))
+                        # Get the appropriate patch
+                        input_image = inputs[i:i + 1,
+                                             z: z + z_inp_patch,
+                                             y: y + y_inp_patch,
+                                             x: x + x_inp_patch,
+                                             :]
+
+                        pred = session.run(self.prediction, feed_dict={self.example: input_image})
+
+                        # Fill in the output
+                        all_preds[i, z: z + z_patch, y: y + y_patch, x: x + x_patch, :] = pred
+
+        return all_preds

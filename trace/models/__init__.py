@@ -22,4 +22,5 @@ PARAMS_DICT = {
     'vd2d_bound': VD2D_BOUNDARIES,
     'res_vnet': RES_VNET,
     'unet_3d': UNET_3D,
+    'unet_3d_4layers': UNET_3D_4LAYERS,
 }

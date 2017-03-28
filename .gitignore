@@ -69,4 +69,6 @@ trace/thirdparty/DataProvider
 
 /trace/.ipynb_checkpoints/
 
+.DS_Store
+
 /trace/Experimentation.ipynb
