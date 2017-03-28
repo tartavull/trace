@@ -230,4 +230,5 @@ def maybe_create_all_datasets(trace_folder, train_frac):
 
 if __name__ == '__main__':
     current_folder = os.path.dirname(os.path.abspath(__file__)) + '/'
-    maybe_create_all_datasets(current_folder, 0.9)
+#    maybe_create_all_datasets(current_folder, 0.9)
+    maybe_create_cremi(current_folder + CREMI + '/', 0.9)
