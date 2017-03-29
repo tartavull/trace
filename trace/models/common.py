@@ -46,7 +46,7 @@ def down_conv2d(x, W, dilation=1):
 
 
 def down_conv3d(x, W, dilation=1, z_dilation=1):
-    return tf.nn.convolution(x, W, strides=[1, 2, 2], padding='SAME', dilation_rate=[z_dilation, dilation, dilation])
+    return tf.nn.convolution(x, W, strides=[2, 2, 2], padding='SAME', dilation_rate=[z_dilation, dilation, dilation])
 
 
 def conv2d_transpose(x, W, stride):
