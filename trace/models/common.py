@@ -128,19 +128,19 @@ def batch_norm_layer(inputs, is_training, decay=0.9):
 class Layer(object):
     depth = 0
 
-    def __init__(self, dim, filter_size, n_feature_maps, activation_fn=lambda x: x, z_filter_size=1):
-        self.dim = dim
+    def __init__(self, filter_size, n_feature_maps, activation_fn=lambda x: x, z_filter_size=1):
         self.filter_size = filter_size
         self.z_filter_size = z_filter_size
         self.n_feature_maps = n_feature_maps
         self.activation_fn = activation_fn
 
-    def connect(self, prev_layer, prev_n_feature_maps, dilation_rate, is_training, z_dilation_rate=1,
-                skip_connect=None):
+    def connect(self, prev_layer, prev_n_feature_maps, dilation_rate, is_training, z_dilation_rate=1):
         raise NotImplementedError("Abstract Class!")
 
 
 class UNet3DLayer(Layer):
+    layer_type = 'unet3d'
+
     def __init__(self, *args, **kwargs):
         self.layer_name = kwargs['layer_name']
         self.is_valid = kwargs['is_valid']
@@ -158,8 +158,6 @@ class UNet3DLayer(Layer):
         del kwargs['is_contracting']
         del kwargs['is_expanding']
         del kwargs['is_training']
-
-        kwargs['dim'] = 3
 
         super(UNet3DLayer, self).__init__(*args, **kwargs)
 
@@ -261,15 +259,12 @@ class ConvLayer(Layer):
         self.is_valid = kwargs['is_valid']
         del kwargs['is_valid']
         super(ConvLayer, self).__init__(*args, **kwargs)
-        self.layer_type = 'conv' + str(self.dim) + 'd'
 
     def connect(self, prev_layer, prev_n_feature_maps, dilation_rate, is_training, z_dilation_rate=1):
         # Create the tensorflow variables
-        filter_dims = [self.filter_size, self.filter_size]
-        dilation_shape = [dilation_rate, dilation_rate]
-        if self.dim == 3:
-            filter_dims = [self.z_filter_size] + filter_dims
-            dilation_shape = [z_dilation_rate] + dilation_shape
+        filter_dims = [self.z_filter_size, self.filter_size, self.filter_size]
+        dilation_shape = [z_dilation_rate, dilation_rate, dilation_rate]
+
         filters_shape = filter_dims + [prev_n_feature_maps, self.n_feature_maps]
         self.weights = tf.Variable(tf.truncated_normal(filters_shape, stddev=0.1))
         self.biases = tf.Variable(tf.constant(0.1, shape=[self.n_feature_maps]))
@@ -280,7 +275,7 @@ class ConvLayer(Layer):
             validity = 'VALID'
         else:
             validity = 'SAME'
-        convolution = tf.nn.convolution(prev_layer, self.weights, strides=[1] * self.dim, padding=validity,
+        convolution = tf.nn.convolution(prev_layer, self.weights, strides=[1, 1, 1], padding=validity,
                                         dilation_rate=dilation_shape)
 
         # Apply the activation function
@@ -293,8 +288,10 @@ class ConvLayer(Layer):
 
 
 class Conv2DLayer(ConvLayer):
+    layer_type = 'conv2d'
+
     def __init__(self, *args, **kwargs):
-        kwargs['dim'] = 2
+        kwargs['z_filter_size'] = 1
         super(Conv2DLayer, self).__init__(*args, **kwargs)
 
     def connect(self, *args, **kwargs):
@@ -302,8 +299,9 @@ class Conv2DLayer(ConvLayer):
 
 
 class Conv3DLayer(ConvLayer):
+    layer_type = 'conv3d'
+
     def __init__(self, *args, **kwargs):
-        kwargs['dim'] = 3
         super(Conv3DLayer, self).__init__(*args, **kwargs)
 
     def connect(self, *args, **kwargs):
@@ -313,19 +311,17 @@ class Conv3DLayer(ConvLayer):
 class PoolLayer(Layer):
     layer_type = 'pool'
 
-    def __init__(self, dim, filter_size):
-        super(PoolLayer, self).__init__(dim, filter_size, 0)
+    def __init__(self, filter_size):
+        super(PoolLayer, self).__init__(filter_size, 0)
 
     def connect(self, prev_layer, prev_n_feature_maps, dilation_rate, is_training, z_dilation_rate=1):
         # Max pool
-        filter_shape = [self.filter_size, self.filter_size]
-        dilation_shape = [dilation_rate, dilation_rate]
-        if self.dim == 3:
-            filter_shape = [1] + filter_shape
-            dilation_shape = [z_dilation_rate] + dilation_shape
+        filter_shape = [self.z_filter_size, self.filter_size, self.filter_size]
+        dilation_shape = [z_dilation_rate, dilation_rate, dilation_rate]
+
         self.activations = tf.nn.pool(prev_layer, window_shape=filter_shape,
                                       dilation_rate=dilation_shape,
-                                      strides=[1] * self.dim,
+                                      strides=[1, 1, 1],
                                       padding='VALID',
                                       pooling_type='MAX')
 
@@ -338,7 +334,7 @@ class PoolLayer(Layer):
 
 class Pool2DLayer(PoolLayer):
     def __init__(self, filter_size):
-        super(Pool2DLayer, self).__init__(2, filter_size)
+        super(Pool2DLayer, self).__init__(filter_size)
 
     def connect(self, *args, **kwargs):
         return super(Pool2DLayer, self).connect(*args, **kwargs)
@@ -347,7 +343,7 @@ class Pool2DLayer(PoolLayer):
 class Pool3DLayer(PoolLayer):
     def __init__(self, filter_size):
         self.z_filter_size = 1
-        super(Pool3DLayer, self).__init__(3, filter_size)
+        super(Pool3DLayer, self).__init__(filter_size)
 
     def connect(self, *args, **kwargs):
         return super(Pool3DLayer, self).connect(*args, **kwargs)
@@ -406,7 +402,8 @@ class Model(object):
         self.raw_image = self.example[:, :, :, :, :1]
 
         # Standardize each input image, using map because per_image_standardization takes one image at a time
-        self.image = tf.map_fn(lambda stack: tf.map_fn(lambda img: tf.image.per_image_standardization(img), stack), self.raw_image)
+        self.image = tf.map_fn(lambda stack: tf.map_fn(lambda img: tf.image.per_image_standardization(img), stack),
+                               self.raw_image)
 
         # Comment out if we want to have averaged
         # mean, var = tf.nn.moments(self.raw_image, axes=[0, 1, 2, 3, 4], keep_dims=False)
@@ -429,15 +426,15 @@ class Model(object):
         """
         raise NotImplementedError('Abstract model does not implement prediction')
 
-    # def predict_with_evaluation(self, session, inputs, metrics, labels, pred_batch_shape, mirror_inputs=True):
-    #     """Predict on a set of inputs, and evaluate the model-specific metrics specified in metrics against labels
-    #
-    #     :param pred_batch_shape: When predicting, break into pieces of this shape for evaluation
-    #     :param session: Tensorflow session
-    #     :param mirror_inputs: Decide to mirror the inputs every time
-    #     :param inputs: A tensor of input stacks with dimension [batch, z, y, x, 1]
-    #     :param labels: Labels with dimension [batch, z, y, x, 1], against which we will evaluate our predictions
-    #     :param metrics: A list of metrics on which we will evaluate
-    #     """
-    #     raise NotImplementedError('Abstract model does not implement prediction with evaluation')
-    #
+        # def predict_with_evaluation(self, session, inputs, metrics, labels, pred_batch_shape, mirror_inputs=True):
+        #     """Predict on a set of inputs, and evaluate the model-specific metrics specified in metrics against labels
+        #
+        #     :param pred_batch_shape: When predicting, break into pieces of this shape for evaluation
+        #     :param session: Tensorflow session
+        #     :param mirror_inputs: Decide to mirror the inputs every time
+        #     :param inputs: A tensor of input stacks with dimension [batch, z, y, x, 1]
+        #     :param labels: Labels with dimension [batch, z, y, x, 1], against which we will evaluate our predictions
+        #     :param metrics: A list of metrics on which we will evaluate
+        #     """
+        #     raise NotImplementedError('Abstract model does not implement prediction with evaluation')
+        #
