@@ -177,7 +177,8 @@ class CREMIDataset(Dataset):
         validation_file.close()
 
         # TODO(beisner): Decide if we need to load the test file every time (probably don't)
-        test_file = cremiio.CremiFile(data_folder + 'test.hdf', 'r')
+        test_dir = data_folder.replace(down.CLEFTS, '')
+        test_file = cremiio.CremiFile(test_dir + 'test.hdf', 'r')
         self.test_inputs = test_file.read_raw().data.value
         test_file.close()
 
