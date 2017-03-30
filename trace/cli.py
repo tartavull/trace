@@ -70,7 +70,7 @@ def visualize(dataset_name, split, params_type, run_name, aff, ip, port, remote)
 @cli.command()
 @click.argument('split', type=click.Choice(SPLIT))
 @click.argument('dataset_name', type=click.Choice(DATASET_DICT.keys()))
-@click.option('--high', type=float, default=0.9)
+@click.option('--high', type=float, default=0.995)
 @click.option('--low', type=float, default=0.3)
 @click.option('--dust', type=int, default=250)
 def watershed(dataset_name, split, high, low, dust):

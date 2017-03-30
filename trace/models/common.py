@@ -43,8 +43,8 @@ def down_conv2d(x, W, dilation=1):
     return tf.nn.convolution(x, W, strides=[2, 2], padding='SAME', dilation_rate=[dilation, dilation])
 
 
-def down_conv2d(x, W, dilation=1, z_dilation_rate=1):
-    return tf.nn.convolution(x, W, strides=[2, 2, 2], padding='SAME', dilation_rate=[z_dilation, dilation, dilation])
+def down_conv3d(x, W, dilation=1, z_dilation_rate=1):
+    return tf.nn.convolution(x, W, strides=[1, 2, 2], padding='SAME', dilation_rate=[z_dilation, dilation, dilation])
 
 
 def conv2d_transpose(x, W, stride):
@@ -55,8 +55,8 @@ def conv2d_transpose(x, W, stride):
 
 def conv3d_transpose(x, W, stride):
     x_shape = tf.shape(x)
-    output_shape = tf.stack([x_shape[0], x_shape[1] * 2, x_shape[2] * 2, x_shape[3] * 2, x_shape[4] // 2])
-    return tf.nn.conv3d_transpose(x, W, output_shape, strides=[1, stride, stride, stride, 1], padding='SAME')
+    output_shape = tf.stack([x_shape[0], x_shape[1], x_shape[2] * 2, x_shape[3] * 2, x_shape[4] // 2])
+    return tf.nn.conv3d_transpose(x, W, output_shape, strides=[1, 1, stride, stride, 1], padding='SAME')
 
 
 def max_pool(x, dilation=1, strides=[2, 2], window_shape=[2, 2]):
@@ -64,7 +64,7 @@ def max_pool(x, dilation=1, strides=[2, 2], window_shape=[2, 2]):
                       strides=strides, padding='VALID', pooling_type='MAX')
 
 
-def max_pool_3d(x, dilation=1, z_dilation=1, strides=[2, 2, 2], window_shape=[2, 2, 2]):
+def max_pool_3d(x, dilation=1, z_dilation=1, strides=[1, 2, 2], window_shape=[1, 2, 2]):
     return tf.nn.pool(x, window_shape=window_shape, dilation_rate=[z_dilation, dilation, dilation],
                       strides=strides, padding='VALID', pooling_type='MAX')
 

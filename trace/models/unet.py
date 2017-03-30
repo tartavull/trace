@@ -83,19 +83,19 @@ UNET_3D_4LAYERS = UNetArchitecture(
     output_mode=AFFINITIES_3D,
     layers=[
         UNet3DLayer(layer_name='layer_d1', is_valid=False, is_residual=True, 
-                    uses_max_pool=True, filter_size=3, z_filter_size=3,
+                    uses_max_pool=True, filter_size=3, z_filter_size=1,
                     n_feature_maps=64, num_convs=3, is_contracting=True, 
                     is_expanding=False, is_training=False),
         UNet3DLayer(layer_name='layer_d2', is_valid=False, is_residual=True, 
-                    uses_max_pool=True, filter_size=3, z_filter_size=3,
+                    uses_max_pool=True, filter_size=3, z_filter_size=1,
                     n_feature_maps=128, num_convs=3, is_contracting=True, 
                     is_expanding=False, is_training=False),
         UNet3DLayer(layer_name='layer_d3', is_valid=False, is_residual=True, 
-                    uses_max_pool=True, filter_size=3, z_filter_size=3,
+                    uses_max_pool=True, filter_size=3, z_filter_size=1,
                     n_feature_maps=256, num_convs=3, is_contracting=True, 
                     is_expanding=False, is_training=False),
         UNet3DLayer(layer_name='layer_4', is_valid=False, is_residual=True, 
-                    uses_max_pool=True, filter_size=3, z_filter_size=3,
+                    uses_max_pool=True, filter_size=3, z_filter_size=1,
                     n_feature_maps=512, num_convs=3, is_contracting=False, 
                     is_expanding=True, is_training=False),
         UNet3DLayer(layer_name='layer_u3', is_valid=False, is_residual=True, 
@@ -171,7 +171,7 @@ class UNet(Model):
         x_outp_size  = x_inp_size - self.fov + 1
 
         # Create accumulator for output.
-        combined_pred = np.ones((inputs.shape[0],
+        combined_pred = np.zeros((inputs.shape[0],
                                   z_outp_size, y_outp_size, x_outp_size, 3))
         # Create accumulator for overlaps.
         overlaps = np.zeros((inputs.shape[0], z_outp_size, y_outp_size, x_outp_size, 3))
