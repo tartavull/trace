@@ -84,13 +84,16 @@ def crop(x1, x2, batch_size):
 
 def crop_3d(x1, x2, batch_size):
     x2_shape = tf.shape(x2)
-    x2_shape = tf.Print(x2_shape, [x2_shape, tf.shape(x1)])
+    x2_shape = tf.Print(x2_shape, [tf.shape(x1), x2_shape], summarize=10, message='crop_3d shapes')
     offsets = tf.zeros(tf.stack([x2_shape[1], 2]), dtype=tf.float32)
     size = tf.stack([x2_shape[2], x2_shape[3]])
 
     z_crop = tf.shape(x1)[1] - x2_shape[1]
-    return tf.map_fn(lambda img: tf.image.extract_glimpse(img, size=size, offsets=offsets, centered=True), x1)[
-           z_crop // 2: -(z_crop // 2)]
+    z_crop = tf.Print(z_crop, [z_crop], summarize=10, message='z_crop')
+    return tf.cond(tf.equal(z_crop, 0), 
+                   lambda: tf.map_fn(lambda img: tf.image.extract_glimpse(img, size=size, offsets=offsets, centered=True), x1),
+                   lambda: tf.map_fn(lambda img: tf.image.extract_glimpse(img, size=size, offsets=offsets, centered=True), x1)[:,
+                            z_crop // 2: -(z_crop // 2)])
 
 
 def crop_and_concat(x1, x2, batch_size):
@@ -178,7 +181,7 @@ class UNet3DLayer(Layer):
 
         # Add skip-connection if expanding.
         if self.is_expanding and skip_connect != None:
-            cur_node = tf.concat([skip_connect, cur_node], 4)
+            cur_node = crop_and_concat_3d(skip_connect, cur_node, 1)#cur_node[0])
             convs.append(cur_node)
             in_n_feature_maps = prev_n_feature_maps * 2
 
@@ -227,10 +230,11 @@ class UNet3DLayer(Layer):
                 residual = prev_layer
             else:
                 residual = skip_connect
-            if self.is_valid or self.is_z_valid:
-                residual = crop_3d(residual, cur_node, batch_size)
             if prev_n_feature_maps != self.n_feature_maps:
                 residual = tf.tile(residual, (1, 1, 1, 1, self.n_feature_maps // prev_n_feature_maps))
+            if self.is_valid or self.is_z_valid:
+                residual = crop_3d(residual, cur_node, batch_size)
+                residual = tf.Print(residual, [tf.shape(residual)], summarize=10, message='residual')
             final_node = cur_node + residual
 
         # If on the contracting path, down sample using either max-pooling
