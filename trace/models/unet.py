@@ -2,6 +2,7 @@ import tensorflow as tf
 from .common import *
 from collections import OrderedDict
 import numpy as np
+from scipy.ndimage.filters import gaussian_filter
 
 from utils import *
 
@@ -225,6 +226,16 @@ class UNet(Model):
         # Create accumulator for overlaps.
         overlaps = np.zeros((inputs.shape[0], z_outp_size, y_outp_size, x_outp_size, 3))
 
+        # Create gaussian kernel to weight predictions in the center of a patch
+        # more than predictions on the edge of a patch.
+        dirac = np.zeros((z_out_patch, y_out_patch, x_out_patch, 3))
+        dirac[z_out_patch // 2, y_out_patch // 2, x_out_patch // 2, 1] = 1
+        # Setting the standard deviation to be a 6th of each dimension means
+        # that the entire patch will be captured in 3 standard deviations.
+        # Setting the channel standard deviation to a large number means that
+        # it will be roughly uniform.
+        gaussian_kernel = gaussian_filter(dirac, (z_out_patch // 6, y_out_patch // 6, x_out_patch // 6, 100))
+
         for stack, _ in enumerate(inputs):
             # Iterate through the overlapping tiles.
             for z in range(0, z_inp_size - z_in_patch + 1, z_out_patch - 2) + [z_inp_size - z_in_patch]:
@@ -252,15 +263,16 @@ class UNet(Model):
                                       y:y + y_out_patch,
                                       x:x + x_out_patch, :] = np.minimum(prev, pred[0])
                         '''
+
                         combined_pred[stack, 
                                       z:z + z_out_patch,
                                       y:y + y_out_patch,
-                                      x:x + x_out_patch, :] += pred[0]
+                                      x:x + x_out_patch, :] += pred[0] * gaussian_kernel
                         overlaps[stack,
                                  z:z + z_out_patch,
                                  y:y + y_out_patch,
                                  x:x + x_out_patch, 
-                                 :] += np.ones((z_out_patch, y_out_patch, x_out_patch, 3))
+                                 :] += gaussian_kernel
 
             # Normalize the combined prediction by the number of times each
             # voxel was computed in the overlapping computation.
