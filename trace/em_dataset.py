@@ -221,14 +221,13 @@ class CREMIDataset(Dataset):
 
 class EMDatasetSampler(object):
 
-    def __init__(self, dataset, input_size, z_input_size, batch_size=1, label_output_type=BOUNDARIES):
+    def __init__(self, dataset, sample_shape, batch_size, label_output_type=BOUNDARIES):
         """Helper for sampling an EM dataset. The field self.training_example_op is the only field that should be
         accessed outside this class for training.
 
-        :param input_size: The size of the field of view
-        :param z_input_size: The size of the field of view in the z-direction
-        :param batch_size: The number of images to stack together in a batch
+        :param sample_shape: The shape of output of a sample in the form [z_size, y_size, x_size]
         :param dataset: An instance of Dataset, namely SNEMI3DDataset, ISBIDataset, or CREMIDataset
+        :param batch_size: The number of samples produced with each execution of the example op
         :param label_output_type: The format in which the dataset labels should be sampled, i.e. for training, taking
         on values 'boundaries', 'affinities-2d', etc.
         """
@@ -262,11 +261,13 @@ class EMDatasetSampler(object):
         # Stack the inputs and labels, so when we sample we sample corresponding labels and inputs
         train_stacked = np.concatenate((self.__train_inputs, self.__train_labels), axis=CHANNEL_AXIS)
 
-        # Define inputs to the graph
-        crop_pad = input_size // 10 * 4
-        z_crop_pad = z_input_size // 4 * 2
-        patch_size = input_size + crop_pad
-        z_patch_size = z_input_size + z_crop_pad
+        # Some of the augmentations we use distort at the edges, so we want to add a buffer that we can crop away
+        crop_pad = sample_shape[1] // 10 * 4
+        z_crop_pad = sample_shape[0] // 4 * 2
+
+        # Resulting in patch sizes that are a bit larger (we will strip away later)
+        patch_size = sample_shape[1] + crop_pad
+        z_patch_size = sample_shape[0] + z_crop_pad
 
         # Create dataset, and pad the dataset with mirroring
         self.__padded_dataset = np.pad(train_stacked, [[0, 0], [z_crop_pad, z_crop_pad], [crop_pad, crop_pad], [crop_pad, crop_pad], [0, 0]], mode='reflect')
@@ -283,6 +284,7 @@ class EMDatasetSampler(object):
             for i in range(batch_size):
                 samples.append(tf.random_crop(self.__dataset_constant, size=crop_size))
 
+            # samples will now have shape [batch_size, z_patch_size, patch_size, patch_size, n_channels + 1]
             samples = tf.squeeze(samples, axis=1)
 
             # Flip a coin, and apply an op to sample (sample can be 5d or 4d)
@@ -323,10 +325,10 @@ class EMDatasetSampler(object):
             elastically_deformed_sample = rotated_sample
 
             # Separate the image from the labels
-            #deformed_inputs = elastically_deformed_sample[:, :, :, :, :1]
-            #deformed_labels = elastically_deformed_sample[:, :, :, :, 1:]
-            deformed_inputs = samples[:, :, :, :, :1]
-            deformed_labels = samples[:, :, :, :, 1:]
+            deformed_inputs = elastically_deformed_sample[:, :, :, :, :1]
+            deformed_labels = elastically_deformed_sample[:, :, :, :, 1:]
+            # deformed_inputs = samples[:, :, :, :, :1]
+            # deformed_labels = samples[:, :, :, :, 1:]
 
             # Apply random gaussian blurring to the image
             def apply_random_blur_to_stack(stack):
@@ -344,16 +346,20 @@ class EMDatasetSampler(object):
             # leveled_image = tf.image.random_contrast(leveled_image, lower=0.5, upper=1.5)
             leveled_inputs = blurred_inputs
 
-            # Affinitize the labels if applicable
-            # TODO (ffjiang): Do the if applicable part
-            aff_labels = affinitize(deformed_labels)
+            converted_labels = tf_convert_between_label_types(dataset.label_type, label_output_type, deformed_labels)
 
             # Crop the image, to remove the padding that was added to allow safe augmentation.
-            cropped_inputs = leveled_inputs[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
-            cropped_labels = aff_labels[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
+            z_begin = z_crop_pad // 2
+            z_end = tf.shape(leveled_inputs)[1] - z_begin
+
+            xy_begin = crop_pad // 2
+            xy_end = tf.shape(leveled_inputs)[2] - xy_begin
+
+            cropped_inputs = leveled_inputs[:, z_begin:z_end, xy_begin:xy_end, xy_begin:xy_end, :]
+            cropped_labels = converted_labels[:, z_begin:z_end, xy_begin:xy_end, xy_begin:xy_end, :]
 
             # Re-stack the image and labels
-            self.training_example_op = tf.concat([tf.concat([cropped_inputs, cropped_labels], axis=CHANNEL_AXIS)] * batch_size, axis=BATCH_AXIS)
+            self.training_example_op = tf.concat([cropped_inputs, cropped_labels], axis=CHANNEL_AXIS)
 
     def initialize_session_variables(self, sess):
         sess.run(self.__dataset_constant.initializer, feed_dict={self.__image_ph: self.__padded_dataset})

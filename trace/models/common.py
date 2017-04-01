@@ -399,27 +399,39 @@ class Model(object):
         # Inputs are tensor of shape [batch, z, y, x, n_chan]
         self.example = tf.placeholder_with_default(self.queue.dequeue(), shape=[None, None, None, None, None])
 
-        self.raw_image = self.example[:, :, :, :, :1]
+        # self.example = tf.Print(self.example, [tf.shape(self.example)], summarize=5, message='EXAMPLE-first')
+
+        self.raw_image = tf.placeholder_with_default(self.example[:, :, :, :, :1], shape=[None, None, None, None, 1])
+
+        # self.raw_image = tf.Print(self.raw_image, [tf.shape(self.raw_image)[3]], summarize=5, message='RAWIMAGE')
 
         # Standardize each input image, using map because per_image_standardization takes one image at a time
         self.image = tf.map_fn(lambda stack: tf.map_fn(lambda img: tf.image.per_image_standardization(img), stack),
                                self.raw_image)
 
+        # self.image = tf.Print(self.image, [tf.shape(self.image)[3]], message='IMAGE')
+
         # Comment out if we want to have averaged
         # mean, var = tf.nn.moments(self.raw_image, axes=[0, 1, 2, 3, 4], keep_dims=False)
         # self.image = (self.raw_image - mean) / tf.sqrt(var)
 
+        # self.example = tf.Print(self.example, [tf.shape(self.example)[3]], message="EXAMPLE")
+
         # Crop the labels to the appropriate field of view
         if self.fov == 1 and self.z_fov == 1:
             self.target = self.example[:, :, :, :, 1:]
+        elif self.z_fov == 1:
+            self.target = self.example[:, :, self.fov // 2:-(self.fov // 2), self.fov // 2:-(self.fov // 2), 1:]
         else:
             self.target = self.example[:, self.z_fov // 2:-(self.z_fov // 2), self.fov // 2:-(self.fov // 2),
                           self.fov // 2:-(self.fov // 2), 1:]
 
-    def predict(self, session, inputs, pred_batch_shape, mirror_inputs=True):
+        # self.target = tf.Print(self.target, [tf.shape(self.target)], message="TARGET")
+
+    def predict(self, session, inputs, inference_params, mirror_inputs=True):
         """Predict on a set of inputs, producing a tensor with the same shape.
 
-        :param pred_batch_shape: When predicting, break into pieces of this shape for evaluation (3D tensor [z, y, x])
+        :param inference_params: Parameters for inference
         :param session: Tensorflow session
         :param mirror_inputs: Decide to mirror the inputs every time
         :param inputs: A tensor of input stacks with dimension [batch, z, y, x, 1]

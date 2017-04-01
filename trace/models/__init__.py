@@ -7,7 +7,7 @@ MODEL_DICT = {
     'res_vnet': ResVNet,
 }
 
-PARAMS_DICT = {
+ARCH_DICT = {
     'n4': N4,
     'n4_3d': N4_3D,
     'n4_widened': N4_WIDENED,

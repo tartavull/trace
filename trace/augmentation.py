@@ -107,7 +107,7 @@ def tf_gaussian_blur(image, sigma, size=5):
 
 # seg is the batch of segmentations to be affinitized. seg should be a 5D tensor
 # dst is the stride of the affinity in each diretion
-def affinitize(seg, dst=(1, 1, 1)):
+def tf_affinitize(seg, dst=(1, 1, 1)):
     seg_shape = tf.shape(seg)
     (dz, dy, dx) = dst
 

@@ -32,6 +32,8 @@ class ConvArchitecture(Architecture):
         self.fov = self.receptive_field
         self.z_fov = self.z_receptive_field
 
+        self.fov_shape = [self.z_fov, self.fov, self.fov]
+
     def print_arch(self):
 
         print(self.model_name)
@@ -242,9 +244,14 @@ class ConvNet(Model):
                 if issubclass(type(layer), PoolLayer):
                     n_poolings += 1
 
+        # prev_layer = tf.Print(prev_layer, [tf.shape(prev_layer)[3]], message="HERE1")
+        # self.target = tf.Print(self.target, [tf.shape(self.target)[3]], message="HERE2")
+
         # Predictions
         self.prediction = tf.nn.sigmoid(prev_layer)
         self.binary_prediction = tf.round(self.prediction)
+
+
 
         # Loss
         self.cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=prev_layer,
@@ -257,12 +264,11 @@ class ConvNet(Model):
     #     if mirror_inputs:
     #         inputs = mirror_across_borders_3d(inputs, self.fov, self.z_fov)
 
-
-    def predict(self, session, inputs, pred_batch_shape, mirror_inputs=True):
+    def predict(self, session, inputs, inference_params, mirror_inputs=True):
         if mirror_inputs:
             inputs = mirror_across_borders_3d(inputs, self.fov, self.z_fov)
 
-        return self.__predict_with_evaluation(session, inputs, None, pred_batch_shape, mirror_inputs)
+        return self.__predict_with_evaluation(session, inputs, None, inference_params.patch_shape, mirror_inputs)
 
     def __predict_with_evaluation(self, session, inputs, metrics, pred_batch_shape, mirror_inputs=True):
         # Extract the tile sizes from the argument
@@ -273,6 +279,7 @@ class ConvNet(Model):
         z_inp_size, y_inp_size, x_inp_size = inputs.shape[1], inputs.shape[2], inputs.shape[3]
 
         # Create a holder for the output
+
         all_preds = np.zeros(
             shape=[inputs.shape[0], z_inp_size - self.z_fov + 1, y_inp_size - self.fov + 1,
                    x_inp_size - self.fov + 1,
@@ -287,12 +294,12 @@ class ConvNet(Model):
                         print('z=%d, y=%d, x=%d' % (z, y, x))
                         # Get the appropriate patch
                         input_image = inputs[i:i + 1,
-                                             z: z + z_inp_patch,
-                                             y: y + y_inp_patch,
-                                             x: x + x_inp_patch,
-                                             :]
+                                      z: z + z_inp_patch,
+                                      y: y + y_inp_patch,
+                                      x: x + x_inp_patch,
+                                      :1]
 
-                        pred = session.run(self.prediction, feed_dict={self.example: input_image})
+                        pred = session.run(self.prediction, feed_dict={self.raw_image: input_image})
 
                         # Fill in the output
                         all_preds[i, z: z + z_patch, y: y + y_patch, x: x + x_patch, :] = pred

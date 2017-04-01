@@ -80,8 +80,10 @@ def __prepare_true_segmentation_for_rand(images):
 def __prepare_probabilistic_segmentation_for_rand(thresh, images):
     # For each image in the stack
     segs = np.zeros(images.shape, dtype=np.uint8)
+    images = np.asarray(images, dtype=np.float32)
     for im in range(images.shape[0]):
         # Threshold at a given value
+
         _, threshed = cv2.threshold(images[im], thresh, 255, cv2.THRESH_BINARY)
 
         # Add a 1-px boundary
@@ -144,8 +146,9 @@ def rand_error_from_prediction(true_labels, pred_values, pred_type=BOUNDARIES):
     :param pred_type: The label format of the prediction, either BOUNDARIES, AFFINITIES, or SEGMENTATION
     :return: A list of all the calculated scores
     """
-    #assert(len(true_labels.shape) == 3)
-    #assert(len(pred_values.shape) == 4)
+    print(true_labels.shape)
+    assert(len(true_labels.shape) == 3)
+    assert(len(pred_values.shape) == 4)
 
     if pred_type == BOUNDARIES:
         pred_values = np.squeeze(pred_values, axis=3)
