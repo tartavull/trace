@@ -339,10 +339,18 @@ class EMDatasetSampler(object):
             blurred_inputs = tf.map_fn(lambda stack: apply_random_blur_to_stack(stack),
                                        deformed_inputs)
 
+            # Apply missing data augmentation (black slices)
+            def apply_random_missing_data(stack):
+                def apply_missing_slice(img):
+                    return tf.zeros(tf.shape(img))
+                return tf.map_fn(lambda img: randomly_apply_op(img, apply_missing_slice, prob=50), stack)
+
+            missing_data_inputs = tf.map_fn(lambda stack: apply_random_missing_data(stack), blurred_inputs)
+
             # Mess with the levels
             # leveled_image = tf.image.random_brightness(deformed_image, max_delta=0.15)
             # leveled_image = tf.image.random_contrast(leveled_image, lower=0.5, upper=1.5)
-            leveled_inputs = blurred_inputs
+            leveled_inputs = missing_data_inputs
 
             # Affinitize the labels if applicable
             # TODO (ffjiang): Do the if applicable part

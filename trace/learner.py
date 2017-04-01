@@ -7,6 +7,7 @@ import math
 import tensorflow as tf
 import augmentation as aug
 import threading
+import tifffile
 
 from tensorflow.python.client import timeline
 
@@ -48,6 +49,7 @@ class Hook(object):
 class LossHook(Hook):
     def __init__(self, frequency, model):
         self.frequency = frequency
+        self.cross_entropy = model.cross_entropy
         self.training_summaries = tf.summary.merge([
             tf.summary.scalar('cross_entropy', model.cross_entropy),
             tf.summary.scalar('pixel_error', model.pixel_error),
@@ -58,8 +60,12 @@ class LossHook(Hook):
             print('step :' + str(step))
 
             summary = session.run(self.training_summaries)
-
             summary_writer.add_summary(summary, step)
+
+            cross_entropy = session.run(self.cross_entropy)
+            if cross_entropy > 1:
+                bad_img = session.run(model.raw_image)
+                tifffile.imsave('bad_image', bad_img)
 
 
 class ValidationHook(Hook):
@@ -119,7 +125,7 @@ class ValidationHook(Hook):
             validation_prediction = model.predict(session, self.mirrored_val_examples, self.pred_batch_shape, mirror_inputs=False)
 
             diff = np.absolute(validation_prediction - self.val_targets)
-            epsilon = 1e-30
+            epsilon = 1e-50
             validation_cross_entropy = -np.mean(diff * np.log(diff + epsilon))
 
             validation_binary_prediction = np.round(validation_prediction)

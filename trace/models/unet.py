@@ -238,11 +238,11 @@ class UNet(Model):
 
         for stack, _ in enumerate(inputs):
             # Iterate through the overlapping tiles.
-            for z in range(0, z_inp_size - z_in_patch + 1, z_out_patch - 2) + [z_inp_size - z_in_patch]:
+            for z in range(0, z_inp_size - z_in_patch + 1, z_out_patch - 5) + [z_inp_size - z_in_patch]:
                 print('z: ' + str(z) + '/' + str(z_inp_size))
-                for y in range(0, y_inp_size - y_in_patch + 1, y_out_patch - 10) + [y_inp_size - y_in_patch]:
+                for y in range(0, y_inp_size - y_in_patch + 1, y_out_patch - 50) + [y_inp_size - y_in_patch]:
                     print('y: ' + str(y) + '/' + str(y_inp_size))
-                    for x in range(0, x_inp_size - x_in_patch + 1, x_out_patch - 10) + [x_inp_size - x_in_patch]:
+                    for x in range(0, x_inp_size - x_in_patch + 1, x_out_patch - 50) + [x_inp_size - x_in_patch]:
                         pred = session.run(self.prediction,
                                            feed_dict={
                                                self.example: inputs[stack:stack + 1, 
