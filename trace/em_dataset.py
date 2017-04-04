@@ -163,6 +163,7 @@ class CREMIDataset(Dataset):
         train_file = cremiio.CremiFile(data_folder + 'train.hdf', 'r')
         self.train_inputs = train_file.read_raw().data.value
         if down.CLEFTS in self.data_folder:
+            self.train_masks = validation_file.read_neuron_ids().data.value
             self.train_labels = train_file.read_clefts().data.value
         else:
             self.train_labels = train_file.read_neuron_ids().data.value
@@ -247,6 +248,12 @@ class EMDatasetSampler(object):
         # Stack the inputs and labels, so when we sample we sample corresponding labels and inputs
         train_stacked = np.concatenate((self.__train_inputs, self.__train_labels), axis=CHANNEL_AXIS)
 
+        # If computing for clefts, include ops for masks as well
+        if dataset.train_masks:
+            self.__train_masks = expand_3d_to_5d(dataset.train_masks)
+            self.__train_masks = self.__train_masks[:, 1:, 1:, 1:, :]
+            train_stacked = np.concatenate((train_stacked, self.__train_masks), axis=CHANNEL_AXIS)
+            
         # Define inputs to the graph
         crop_pad = input_size // 10 * 4
         z_crop_pad = z_input_size // 4 * 2

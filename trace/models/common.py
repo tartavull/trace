@@ -97,6 +97,7 @@ def crop_3d(x1, x2, batch_size):
 def crop_and_concat(x1, x2, batch_size):
     return tf.concat([crop(x1, x2, batch_size), x2], 3)
 
+
 def crop_and_concat_3d(x1, x2, batch_size):
     return tf.concat([crop_3d(x1, x2, batch_size), x2], 4)
 

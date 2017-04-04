@@ -192,6 +192,9 @@ def __maybe_split_cremi(folder, train_fraction):
         o_bounded_labels = np.zeros(o_labels.shape, dtype=np.int32)
         cremival.create_border_mask(input_data=o_labels, target=o_bounded_labels, max_dist=2, background_label=0)
 
+        o_bounded_masks = np.zeros(o_labels.shape, detype=np.int32)
+        cremival.create_border_mask(input_data=o_labels, target=o_bounded_labels, max_dist=5, background_label=0)
+
         o_bounded_clefts = np.zeros(o_clefts.shape, dtype=np.int32)
         cremival.create_border_mask(input_data=o_clefts, target=o_bounded_clefts, max_dist=2, background_label=0)
 
@@ -210,6 +213,8 @@ def __maybe_split_cremi(folder, train_fraction):
         train_clefts = o_bounded_clefts[:train_slices, :, :]
         validation_clefts = o_bounded_clefts[train_slices: , : , :]
 
+        train_masks = o_bounded_masks[:train_slices, :, :]
+
         train_file = cremiio.CremiFile(folder + 'train.hdf', 'w')
         train_file.write_raw(cremiio.Volume(train_input, resolution=o_input_res))
         train_file.write_neuron_ids(cremiio.Volume(train_labels, resolution=o_labels_res))
@@ -218,6 +223,7 @@ def __maybe_split_cremi(folder, train_fraction):
         train_clefts_file = cremiio.CremiFile(folder + CLEFTS + 'train.hdf', 'w')
         train_clefts_file.write_raw(cremiio.Volume(train_input, resolution=o_input_res))
         train_clefts_file.write_clefts(cremiio.Volume(train_clefts, resolution=o_clefts_res))
+        train_clefts_file.write_neuron_ids(cremiio.Volume(train_labels, resolution=o_labels_res))
         train_clefts_file.close()
 
         validation_file = cremiio.CremiFile(folder + 'validation.hdf', 'w')
