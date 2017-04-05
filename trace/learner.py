@@ -294,10 +294,6 @@ class Learner:
         summary_writer = tf.summary.FileWriter(self.ckpt_folder + 'events', graph=sess.graph)
 
         # Initialize the variables
-        sess.run(tf.global_variables_initializer())
-        if continue_training:
-            self.restore()
-            print('Starting training at step: ' + str(sess.run(model.global_step)))
         dset_sampler.initialize_session_variables(sess)
 
         # Create enqueue op and a QueueRunner to handle queueing of training examples
@@ -315,6 +311,10 @@ class Learner:
             print('AhshitHappened')
             optimize_step = optimizer.minimize(model.cross_entropy, global_step=model.global_step)
 
+        sess.run(tf.global_variables_initializer())
+        if continue_training:
+            self.restore()
+            print('Starting training at step: ' + str(sess.run(model.global_step)))
         '''
         sess.run(enqueue_op)
         sess.run(enqueue_op)
