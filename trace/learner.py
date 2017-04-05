@@ -306,14 +306,14 @@ class Learner:
 
         # Define an optimizer
         optimizer = training_params.optimizer(training_params.learning_rate).minimize(model.cross_entropy, global_step=model.global_step)
-        # if model.apply_mask:
-        #     print('Happened')
-        #     gvs = optimizer.compute_gradients(model.cross_entropy)
-        #     masked_gvs = [(tf.mul(gvs[0], model.mask), gv[1]) for gv in gvs]
-        #     optimize_step = optimizer.apply_gradients(masked_gvs, global_step=model.global_step)
-        # else:
-        #     print('AhshitHappened')
-        #     optimize_step = optimizer.minimize(model.cross_entropy, global_step=model.global_step)
+        if model.apply_mask:
+            print('Happened')
+            gvs = optimizer.compute_gradients(model.cross_entropy)
+            masked_gvs = [(tf.mul(gvs[0], model.mask), gv[1]) for gv in gvs]
+            optimize_step = optimizer.apply_gradients(masked_gvs, global_step=model.global_step)
+        else:
+            print('AhshitHappened')
+            optimize_step = optimizer.minimize(model.cross_entropy, global_step=model.global_step)
 
         '''
         sess.run(enqueue_op)
