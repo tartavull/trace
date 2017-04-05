@@ -13,7 +13,10 @@ def add_file(folder, filename, viewer):
 def add_labels(folder, filename, viewer):
     try:
         with h5py.File(folder+filename+'.hdf', 'r') as f:
-            arr = f['volumes']['labels']['neuron_ids'][:]
+            if folder.contains("clefts"):
+              arr = f['volumes']['labels']['clefts'][:]
+            else:
+              arr = f['volumes']['labels']['neuron_ids'][:]
             viewer.add(arr, name=filename)
     except IOError:
         print(filename+' not found')
