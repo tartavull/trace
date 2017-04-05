@@ -427,7 +427,7 @@ class Architecture(object):
 
 
 class Model(object):
-    def __init__(self, architecture):
+    def __init__(self, architecture, apply_mask=False):
         # Save the architecture
         self.architecture = architecture
         self.model_name = self.architecture.model_name
@@ -453,10 +453,15 @@ class Model(object):
 
         # Crop the labels to the appropriate field of view
         if self.fov == 1 and self.z_fov == 1:
-            self.target = self.example[:, :, :, :, 1:]
+            if apply_mask:
+                self.mask = self.example[:, :, :, :, 2:]
+            self.target = self.example[:, :, :, :, 1:2]
         else:
+            if apply_mask:
+                self.mask = self.example[:, self.z_fov // 2:-(self.z_fov // 2), self.fov // 2:-(self.fov // 2),
+                              self.fov // 2:-(self.fov // 2), 2:]
             self.target = self.example[:, self.z_fov // 2:-(self.z_fov // 2), self.fov // 2:-(self.fov // 2),
-                          self.fov // 2:-(self.fov // 2), 1:]
+                            self.fov // 2:-(self.fov // 2), 1:2]
 
     def predict(self, session, inputs, pred_batch_shape, mirror_inputs=True):
         """Predict on a set of inputs, producing a tensor with the same shape.

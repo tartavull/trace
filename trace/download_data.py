@@ -193,10 +193,10 @@ def __maybe_split_cremi(folder, train_fraction):
         cremival.create_border_mask(input_data=o_labels, target=o_bounded_labels, max_dist=2, background_label=0)
 
         o_bounded_masks = np.zeros(o_labels.shape, dtype=np.int32)
-        cremival.create_border_mask(input_data=o_labels, target=o_bounded_labels, max_dist=5, background_label=1)
+        cremival.create_border_mask(input_data=o_labels, target=o_bounded_labels, max_dist=6, background_label=1)
 
         o_bounded_clefts = np.zeros(o_clefts.shape, dtype=np.int32)
-        cremival.create_border_mask(input_data=o_clefts, target=o_bounded_clefts, max_dist=2, background_label=0)
+        cremival.create_border_mask(input_data=o_clefts, target=o_bounded_clefts, max_dist=4, background_label=0)
 
         o_train_file.close()
 
@@ -269,7 +269,6 @@ def maybe_create_all_datasets(trace_folder, train_frac):
     __maybe_create_snemi3d(trace_folder + SNEMI3D + '/', 0.75)
     __maybe_create_isbi(trace_folder + ISBI + '/', train_frac)
     __maybe_create_cremi(trace_folder + CREMI + '/', 0.8)
-
 
 if __name__ == '__main__':
     current_folder = os.path.dirname(os.path.abspath(__file__)) + '/'

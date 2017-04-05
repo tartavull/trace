@@ -93,6 +93,7 @@ def watershed(dataset_name, split, high, low, dust):
 @click.argument('n_iter', type=int, default=10000)
 @click.argument('run_name', type=str, default='1')
 @click.option('--cont/--no-cont', default=False, help="Continue training using a saved model.")
+@click.option('--mask/--no-mask', default=False, help="Apply boundary mask for cleft detection.")
 def train(model_type, params_type, dataset_name, n_iter, run_name, cont):
     """
     Train an N4 models to predict affinities
@@ -101,7 +102,7 @@ def train(model_type, params_type, dataset_name, n_iter, run_name, cont):
 
     model_constructor = MODEL_DICT[model_type]
     params = PARAMS_DICT[params_type]
-    model = model_constructor(params, is_training=True)
+    model = model_constructor(params, is_training=True, apply_mask=mask)
 
     batch_size = 1
 
@@ -138,7 +139,7 @@ def train(model_type, params_type, dataset_name, n_iter, run_name, cont):
 
     # Train the model
     print('Training for %d iterations' % n_iter)
-    classifier.train(training_params, dset_sampler, hooks, continue_training=cont)
+    classifier.train(training_params, dset_sampler, hooks, continue_training=cont, apply_mask=mask)
 
 
 @cli.command()
