@@ -249,7 +249,7 @@ class EMDatasetSampler(object):
         train_stacked = np.concatenate((self.__train_inputs, self.__train_labels), axis=CHANNEL_AXIS)
 
         # If computing for clefts, include ops for masks as well
-        if dataset.train_masks:
+        if dataset.train_masks.any():
             self.__train_masks = expand_3d_to_5d(dataset.train_masks)
             self.__train_masks = self.__train_masks[:, 1:, 1:, 1:, :]
             train_stacked = np.concatenate((train_stacked, self.__train_masks), axis=CHANNEL_AXIS)
@@ -346,7 +346,7 @@ class EMDatasetSampler(object):
             cropped_labels = aff_labels[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
             
             # Include masks if they exist
-            if dataset.train_masks:
+            if dataset.train_masks.any():
                 deformed_masks = samples[:, :, :, :, 2:]
                 aff_masks = affinitize(deformed_masks)
                 cropped_masks = aff_masks[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
