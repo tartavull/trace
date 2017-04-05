@@ -106,7 +106,7 @@ def train(model_type, params_type, dataset_name, n_iter, run_name, cont, mask):
     model_constructor = MODEL_DICT[model_type]
     params = PARAMS_DICT[params_type]
     model = model_constructor(params, apply_mask=mask, is_training=True)
-    print('models mask: ' + str(model.mask))
+    print('models mask: ' + str(model.apply_mask))
     batch_size = 1
 
     training_params = learner.TrainingParams(
