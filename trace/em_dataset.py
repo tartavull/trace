@@ -163,7 +163,7 @@ class CREMIDataset(Dataset):
         train_file = cremiio.CremiFile(data_folder + 'train.hdf', 'r')
         self.train_inputs = train_file.read_raw().data.value
         if down.CLEFTS in self.data_folder:
-            self.train_masks = validation_file.read_neuron_ids().data.value
+            self.train_masks = train_file.read_neuron_ids().data.value
             self.train_labels = train_file.read_clefts().data.value
         else:
             self.train_labels = train_file.read_neuron_ids().data.value
