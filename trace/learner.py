@@ -305,7 +305,7 @@ class Learner:
         qr = tf.train.QueueRunner(model.queue, [enqueue_op] * 4)
 
         # Define an optimizer
-        optimizer = training_params.optimizer(training_params.learning_rate).minimize(model.cross_entropy, global_step=model.global_step)
+        optimizer = training_params.optimizer(training_params.learning_rate)
         if model.apply_mask:
             print('Happened')
             gvs = optimizer.compute_gradients(model.cross_entropy)
