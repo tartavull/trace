@@ -101,12 +101,12 @@ def train(model_type, params_type, dataset_name, n_iter, run_name, cont, mask):
     print('Starting')
     data_folder = os.path.dirname(os.path.abspath(__file__)) + '/' + dataset_name + '/'
 
-    print 'mask: ' + str(mask)
+    print('mask: ' + str(mask))
 
     model_constructor = MODEL_DICT[model_type]
     params = PARAMS_DICT[params_type]
     model = model_constructor(params, apply_mask=mask, is_training=True)
-    print 'models mask: ' + str(model.mask)
+    print('models mask: ' + str(model.mask))
     batch_size = 1
 
     training_params = learner.TrainingParams(
