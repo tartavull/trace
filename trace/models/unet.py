@@ -164,7 +164,7 @@ UNET_3D_4LAYERS = UNetArchitecture(
 )
 
 class UNet(Model):
-    def __init__(self, architecture, is_training=False):
+    def __init__(self, architecture, is_training=False, apply_mask=False):
         super(UNet, self).__init__(architecture)
         prev_layer = self.image
         prev_n_feature_maps = 1
