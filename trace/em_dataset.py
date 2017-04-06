@@ -252,7 +252,7 @@ class EMDatasetSampler(object):
         if dataset.train_masks.any():
             self.__train_masks = expand_3d_to_5d(dataset.train_masks)
             self.__train_masks = convert_between_label_types(dataset.label_type, label_output_type,
-                                                             __train_masks)
+                                                             self.__train_masks)
             self.__train_masks = self.__train_masks[:, 1:, 1:, 1:, :]
             train_stacked = np.concatenate((train_stacked, self.__train_masks), axis=CHANNEL_AXIS)
             
