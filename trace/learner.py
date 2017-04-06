@@ -307,7 +307,7 @@ class Learner:
             gvs = optimizer.compute_gradients(model.cross_entropy)
             masked_grd = (tf.multiply(gvs[len(gvs)-1][0], model.mask), gvs[len(gvs)-1][1])
             gvs[len(gvs)-1] = masked_grd
-            optimize_step = optimizer.apply_gradients(masked_gvs, global_step=model.global_step)
+            optimize_step = optimizer.apply_gradients(gvs, global_step=model.global_step)
         else:
             print('AhshitHappened')
             optimize_step = optimizer.minimize(model.cross_entropy, global_step=model.global_step)
