@@ -301,18 +301,15 @@ class Learner:
         qr = tf.train.QueueRunner(model.queue, [enqueue_op] * 4)
 
         # Define an optimizer
-        optimizer = training_params.optimizer(training_params.learning_rate)
-        if model.apply_mask:
-            print('Happened')
-            gvs = optimizer.compute_gradients(model.cross_entropy)
-            print(gvs[len(gvs)-2][0].shape)
-            masked_grd = (tf.multiply(gvs[len(gvs)-2][0], model.mask), gvs[len(gvs)-2][1])
-            print(masked_grd[0].shape)
-            gvs[len(gvs)-2] = masked_grd
-            optimize_step = optimizer.apply_gradients(gvs, global_step=model.global_step)
-        else:
-            print('AhshitHappened')
-            optimize_step = optimizer.minimize(model.cross_entropy, global_step=model.global_step)
+        optimize_step = training_params.optimizer(training_params.learning_rate).minimize(model.cross_entropy, global_step=model.global_step)
+        
+        # if model.apply_mask:
+        #     gvs = optimizer.compute_gradients(model.cross_entropy)
+        #     masked_grd = (tf.multiply(gvs[len(gvs)-2][0], model.mask), gvs[len(gvs)-2][1])
+        #     gvs[len(gvs)-2] = masked_grd
+        #     optimize_step = optimizer.apply_gradients(gvs, global_step=model.global_step)
+        # else:
+        #     optimize_step = optimizer.minimize(model.cross_entropy, global_step=model.global_step)
 
         sess.run(tf.global_variables_initializer())
         if continue_training:
