@@ -39,7 +39,7 @@ def download():
 @click.argument('run_name', type=str, default='1')
 @click.option('--ip', default='172.17.0.2', help="IP address for serving")
 @click.option('--port', default=4125, help="Port for serving")
-@click.option('--remote', default='127.0.0.1', help="IP address of AWS machine")
+@click.option('--remote', default='54.237.230.255', help="IP address of AWS machine")
 def visualize(dataset_name, split, params_type, run_name, aff, ip, port, remote):
     """
     Opens a tab in your webbrowser showing the chosen dataset
@@ -51,7 +51,7 @@ def visualize(dataset_name, split, params_type, run_name, aff, ip, port, remote)
     neuroglancer.set_static_content_source(url='https://neuroglancer-demo.appspot.com')
     neuroglancer.set_server_bind_address(bind_address=ip, bind_port=port)
     viewer = neuroglancer.Viewer(voxel_size=[6, 6, 30])
-        
+
     vu.add_file(data_folder, split + '-input', viewer)
     if aff:
         vu.add_affinities(data_folder + 'results/' + params_type + '/' +  'run-' + run_name + '/', split+'-pred-affinities', viewer)
@@ -106,7 +106,7 @@ def train(model_type, params_type, dataset_name, n_iter, run_name, cont):
 
     training_params = learner.TrainingParams(
         optimizer=tf.train.AdamOptimizer,
-        learning_rate=0.0002,
+        learning_rate=0.0001,
         n_iter=n_iter,
         output_size=160,
         z_output_size=16,
@@ -129,7 +129,7 @@ def train(model_type, params_type, dataset_name, n_iter, run_name, cont):
     hooks = [
         learner.LossHook(50, model),
         learner.ModelSaverHook(500, ckpt_folder),
-        learner.ValidationHook(1000, dset_sampler, model, data_folder, params.output_mode, [training_params.z_output_size, training_params.output_size, training_params.output_size]),
+        learner.ValidationHook(500, dset_sampler, model, data_folder, params.output_mode, [training_params.z_output_size, training_params.output_size, training_params.output_size]),
         learner.ImageVisualizationHook(2000, model),
         # learner.HistogramHook(100, model),
         # learner.LayerVisualizationHook(500, model),
