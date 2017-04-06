@@ -455,7 +455,7 @@ class Model(object):
         # Crop the labels to the appropriate field of view
         if self.fov == 1 and self.z_fov == 1:
             if apply_mask:
-                self.mask = tf.Print(self.example[:, :, :, :, 4:], [self.example[:, :, :, :, 4:]])
+                self.mask = tf.Print(self.example[:, :, :, :, 6:], [self.example[:, :, :, :, 6:]])
             self.target = self.example[:, :, :, :, 1:4]
         else:
             if apply_mask:
