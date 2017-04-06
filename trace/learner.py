@@ -301,8 +301,8 @@ class Learner:
         qr = tf.train.QueueRunner(model.queue, [enqueue_op] * 4)
 
         # Define an optimizer
-        optimize_step = training_params.optimizer(training_params.learning_rate)
-        
+        optimizer = training_params.optimizer(training_params.learning_rate)
+
         if model.apply_mask:
             gvs = optimizer.compute_gradients(model.cross_entropy)
             masked_grd = (tf.multiply(gvs[len(gvs)-2][0], model.mask), gvs[len(gvs)-2][1])
