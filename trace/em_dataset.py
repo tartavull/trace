@@ -251,6 +251,7 @@ class EMDatasetSampler(object):
         # If computing for clefts, include ops for masks as well
         if dataset.train_masks.any():
             self.__train_masks = expand_3d_to_5d(dataset.train_masks)
+            self.__train_masks = convert_between_label_types(dataset.label_type, BOUNDARIES, self.__train_masks)
             self.__train_masks = self.__train_masks[:, 1:, 1:, 1:, :]
             train_stacked = np.concatenate((train_stacked, self.__train_masks), axis=CHANNEL_AXIS)
             
@@ -319,7 +320,7 @@ class EMDatasetSampler(object):
             #deformed_inputs = elastically_deformed_sample[:, :, :, :, :1]
             #deformed_labels = elastically_deformed_sample[:, :, :, :, 1:]
             deformed_inputs = samples[:, :, :, :, :1]
-            deformed_labels = samples[:, :, :, :, 1:2]
+            deformed_labels = samples[:, :, :, :, 1:4]
 
             # Apply random gaussian blurring to the image
             def apply_random_blur_to_stack(stack):
@@ -347,7 +348,7 @@ class EMDatasetSampler(object):
             
             # Include masks if they exist
             if dataset.train_masks.any():
-                deformed_masks = samples[:, :, :, :, 2:]
+                deformed_masks = samples[:, :, :, :, 4:]
                 aff_masks = affinitize(deformed_masks)
                 cropped_masks = aff_masks[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
                 self.training_example_op = tf.concat([tf.concat([cropped_inputs, cropped_labels, cropped_masks], axis=CHANNEL_AXIS)] * batch_size, axis=BATCH_AXIS) 
