@@ -295,22 +295,21 @@ class Learner:
 
         # Initialize the variables
         dset_sampler.initialize_session_variables(sess)
-        print(model.image.shape)
-        print(model.mask.shape)
+
         # Create enqueue op and a QueueRunner to handle queueing of training examples
         enqueue_op = model.queue.enqueue(dset_sampler.training_example_op)
         qr = tf.train.QueueRunner(model.queue, [enqueue_op] * 4)
 
         # Define an optimizer
-        optimize_step = training_params.optimizer(training_params.learning_rate).minimize(model.cross_entropy, global_step=model.global_step)
+        optimize_step = training_params.optimizer(training_params.learning_rate)
         
-        # if model.apply_mask:
-        #     gvs = optimizer.compute_gradients(model.cross_entropy)
-        #     masked_grd = (tf.multiply(gvs[len(gvs)-2][0], model.mask), gvs[len(gvs)-2][1])
-        #     gvs[len(gvs)-2] = masked_grd
-        #     optimize_step = optimizer.apply_gradients(gvs, global_step=model.global_step)
-        # else:
-        #     optimize_step = optimizer.minimize(model.cross_entropy, global_step=model.global_step)
+        if model.apply_mask:
+            gvs = optimizer.compute_gradients(model.cross_entropy)
+            masked_grd = (tf.multiply(gvs[len(gvs)-2][0], model.mask), gvs[len(gvs)-2][1])
+            gvs[len(gvs)-2] = masked_grd
+            optimize_step = optimizer.apply_gradients(gvs, global_step=model.global_step)
+        else:
+            optimize_step = optimizer.minimize(model.cross_entropy, global_step=model.global_step)
 
         sess.run(tf.global_variables_initializer())
         if continue_training:
