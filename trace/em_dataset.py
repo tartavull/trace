@@ -347,7 +347,7 @@ class EMDatasetSampler(object):
             # Crop the image, to remove the padding that was added to allow safe augmentation.
             cropped_inputs = leveled_inputs[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
             cropped_labels = aff_labels[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
-            print(BATCH_AXIS)
+            print('CHANNEL: ' + str(CHANNEL_AXIS))
             # Include masks if they exist
             if dataset.train_masks.any():
                 deformed_masks = samples[:, :, :, :, 4:]
