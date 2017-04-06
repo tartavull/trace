@@ -246,7 +246,6 @@ class EMDatasetSampler(object):
         self.__test_inputs = expand_3d_to_5d(dataset.test_inputs)
 
         # Stack the inputs and labels, so when we sample we sample corresponding labels and inputs
-        train_stacked = np.concatenate((self.__train_inputs, self.__train_labels), axis=CHANNEL_AXIS)
 
         # If computing for clefts, include ops for masks as well
         if dataset.train_masks.any():
@@ -254,8 +253,10 @@ class EMDatasetSampler(object):
             self.__train_masks = convert_between_label_types(dataset.label_type, label_output_type,
                                                              self.__train_masks)
             self.__train_masks = self.__train_masks[:, 1:, 1:, 1:, :]
-            train_stacked = np.concatenate((train_stacked, self.__train_masks), axis=CHANNEL_AXIS)
-            
+            train_stacked = np.concatenate((self.__train_inputs, self.__train_labels, self.__train_masks), axis=CHANNEL_AXIS)
+        else:
+            train_stacked = np.concatenate((self.__train_inputs, self.__train_labels), axis=CHANNEL_AXIS)
+
         # Define inputs to the graph
         crop_pad = input_size // 10 * 4
         z_crop_pad = z_input_size // 4 * 2
