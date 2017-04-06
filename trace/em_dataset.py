@@ -351,7 +351,7 @@ class EMDatasetSampler(object):
             # Include masks if they exist
             print('sizes')
             print(cropped_inputs.shape[4])
-            print(cropped_mask.shape[4])
+            print(cropped_masks.shape[4])
             print(cropped_labels.shape[4])
             if dataset.train_masks.any():
                 deformed_masks = samples[:, :, :, :, 4:]
