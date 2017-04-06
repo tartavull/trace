@@ -434,7 +434,6 @@ class Model(object):
         self.fov = architecture.fov
         self.z_fov = architecture.z_fov
         self.global_step = tf.Variable(0, name='global_step', trainable=False)
-        print apply_mask
         self.apply_mask = apply_mask
 
         # Create an input queue
