@@ -349,11 +349,16 @@ class EMDatasetSampler(object):
             cropped_labels = aff_labels[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
             print('CHANNEL: ' + str(CHANNEL_AXIS))
             # Include masks if they exist
+            print('sizes')
+            print(cropped_inputs.shape[4])
+            print(cropped_mask.shape[4])
+            print(cropped_labels.shape[4])
             if dataset.train_masks.any():
                 deformed_masks = samples[:, :, :, :, 4:]
                 aff_masks = affinitize(deformed_masks)
                 cropped_masks = aff_masks[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
-                self.training_example_op = tf.concat([tf.concat([cropped_inputs, cropped_labels, cropped_masks], axis=CHANNEL_AXIS)] * batch_size, axis=BATCH_AXIS) 
+                self.training_example_op = tf.Print(tf.concat([tf.concat([cropped_inputs, cropped_labels, cropped_masks], axis=CHANNEL_AXIS)] * batch_size, axis=BATCH_AXIS),
+                                                    [tf.concat([tf.concat([cropped_inputs, cropped_labels, cropped_masks], axis=CHANNEL_AXIS)] * batch_size, axis=BATCH_AXIS)])
             else:
             # Re-stack the image and labels
                 self.training_example_op = tf.concat([tf.concat([cropped_inputs, cropped_labels], axis=CHANNEL_AXIS)] * batch_size, axis=BATCH_AXIS)
