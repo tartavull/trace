@@ -305,7 +305,7 @@ class Learner:
         if model.apply_mask:
             print('Happened')
             gvs = optimizer.compute_gradients(model.cross_entropy)
-            print(model.mask.shape)
+            tf.Print(model.mask.shape)
             for gv in gvs:
                 print(gv[0].shape)
             masked_gvs = [(tf.multiply(gvs[0], model.mask), gv[1]) for gv in gvs]
