@@ -22,7 +22,6 @@ class Dataset(object):
     @staticmethod
     def prepare_predictions_for_neuroglancer(results_folder, split, predictions, label_type):
         """Prepare the provided labels to be visualized using Neuroglancer.
-
         :param label_type: The format of the predictions passed in
         :param results_folder: The location where we should save the h5 file
         :param split: The name of partition of the dataset we are predicting on ['train', 'validation', 'split']
@@ -47,7 +46,6 @@ class Dataset(object):
     @staticmethod
     def prepare_predictions_for_neuroglancer_affinities(results_folder, split, predictions, label_type):
         """Prepare the provided affinities to be visualized using Neuroglancer.
-
         :param label_type: The format of the predictions passed in
         :param results_folder: The location where we should save the h5 file
         :param split: The name of partition of the dataset we are predicting on ['train', 'validation', 'split']
@@ -81,18 +79,13 @@ class ISBIDataset(Dataset):
 
     def __init__(self, data_folder):
         """Wrapper for the ISBI dataset. The ISBI dataset as downloaded (via download_data.py) is as follows:
-
         train_input.tif: Training data for a stack of EM images from fish in the shape [num_images, x_size, y_size],
         where each value is found on the interval [0, 255], representing a stack of greyscale images.
-
         train_labels.tif: Training labels for the above EM images. Represent the ground truth of where the boundaries of
         all structures in the EM images exist.
-
         validation_input.tif, validation_labels.tif: Same as above, except represent a partitioned subset of the
         original training set.
-
         test_input.tif: Labelless testing images in the same format as above.
-
         :param data_folder: Path to where the ISBI data is found
         """
         self.data_folder = data_folder
@@ -107,7 +100,6 @@ class ISBIDataset(Dataset):
 
     def prepare_predictions_for_submission(self, results_folder, split, predictions, label_type):
         """Prepare the provided labels
-
         :param label_type: The type of label given in predictions (i.e. affinities-2d, boundaries, etc)
         :param split: The name of partition of the dataset we are predicting on ['train', 'validation', 'test']
         :param results_folder: The location where we should save the dataset
@@ -122,18 +114,13 @@ class SNEMI3DDataset(Dataset):
 
     def __init__(self, data_folder):
         """Wrapper for the SNEMI3D dataset. The SNEMI3D dataset as downloaded (via download_data.py) is as follows:
-
         train_input.tif: Training data for a stack of EM images from fly in the shape [num_images, x_size, y_size],
         where each value is found on the interval [0, 255], representing a stack of greyscale images.
-
         train_labels.tif: Training labels for the above EM images. Represent the ground truth segmentation for the
         training data (each region has a unique ID).
-
         validation_input.tif, validation_labels.tif: Same as above, except represent a partitioned subset of the
         original training set.
-
         test_input.tif: Labelless testing images in the same format as above.
-
         :param data_folder: Path to where the SNEMI3D data is found
         """
 
@@ -149,7 +136,6 @@ class SNEMI3DDataset(Dataset):
 
     def prepare_predictions_for_submission(self, results_folder, split, predictions, label_type):
         """Prepare the provided labels to submit on the SNEMI3D competition.
-
         :param label_type: The type of label given in predictions (i.e. affinities-2d, boundaries, etc)
         :param split: The name of partition of the dataset we are predicting on ['train', 'validation', 'test']
         :param results_folder: The location where we should save the dataset
@@ -164,16 +150,12 @@ class CREMIDataset(Dataset):
 
     def __init__(self, data_folder):
         """Wrapper for the CREMI dataset. The CREMI dataset as downloaded (via download_data.py) is as follows:
-
         train.hdf: Training data for a stack of EM images from fly. Can be used to derive the inputs,
         in the shape [num_images, x_size, y_size] where each value is found on the interval [0, 255] representing
         a stack of greyscale images, and the labels, in the shape [num_images, x_size, y_size] where each value
         represents the unique id of the object at that position.
-
         validation.hdf: Same as above, except represents a partitioned subset of the original training set.
-
         test.hdf: Labelless testing set in the same format as above.
-
         :param data_folder: Path to where the CREMI data is found
         """
         self.data_folder = data_folder
@@ -197,7 +179,6 @@ class CREMIDataset(Dataset):
 
     def prepare_predictions_for_submission(self, results_folder, split, predictions, label_type):
         """Prepare a given segmentation prediction for submission to the CREMI competiton
-
         :param label_type: The type of label given in predictions (i.e. affinities-2d, boundaries, etc)
         :param results_folder: The location where we should save the dataset.
         :param split: The name of partition of the dataset we are predicting on ['train', 'validation', 'test']
@@ -224,7 +205,6 @@ class EMDatasetSampler(object):
     def __init__(self, dataset, input_size, z_input_size, batch_size=1, label_output_type=BOUNDARIES):
         """Helper for sampling an EM dataset. The field self.training_example_op is the only field that should be
         accessed outside this class for training.
-
         :param input_size: The size of the field of view
         :param z_input_size: The size of the field of view in the z-direction
         :param batch_size: The number of images to stack together in a batch
@@ -242,10 +222,10 @@ class EMDatasetSampler(object):
         self.__train_targets = convert_between_label_types(dataset.label_type, label_output_type,
                                                            expand_3d_to_5d(dataset.train_labels))
 
-        self.__validation_inputs = expand_3d_to_5d(dataset.validation_inputs)[:, 1:, 1:, 1:, :]
+        self.__validation_inputs = expand_3d_to_5d(dataset.validation_inputs)
         self.__validation_labels = expand_3d_to_5d(dataset.validation_labels)
         self.__validation_targets = convert_between_label_types(dataset.label_type, label_output_type,
-                expand_3d_to_5d(dataset.validation_labels))[:, 1:, 1:, 1:, :]
+                expand_3d_to_5d(dataset.validation_labels))
 
         self.__test_inputs = expand_3d_to_5d(dataset.test_inputs)
 
