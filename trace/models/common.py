@@ -456,10 +456,7 @@ class Model(object):
         if self.fov == 1 and self.z_fov == 1:
             if apply_mask:
                 self.mask = self.example[:, :, :, :, 2:]
-                print self.mask.shape
-                print self.image.shape
-                self.image = tf.multiply(self.image, self.mask)
-                print self.image.shape
+                self.image = tf.Print(tf.multiply(self.image, self.mask). [tf.multiply(self.image, self.mask).shape])
             self.target = self.example[:, :, :, :, 1:2]
         else:
             if apply_mask:
