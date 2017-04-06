@@ -1,11 +1,13 @@
 from conv_net import *
 from unet import *
+from unet_mod_update import *
 
 MODEL_DICT = {
     'conv': ConvNet,
     'unet': UNet,
     'res_vnet': ResVNet,
-    'unet_mod': UNet_Mod
+    'unet_mod': UNet_Mod,
+    'unet_mod_nomax': UNet_Mod_nomax
 }
 
 PARAMS_DICT = {
@@ -19,6 +21,7 @@ PARAMS_DICT = {
     'vd2d_bound': VD2D_BOUNDARIES,
     'res_vnet': RES_VNET,
     'unet_3d': UNET_3D,
+    'unet_mod': UNET_MOD,
+    'unet_mod_nomax': UNET_MOD_NOMAX
     'unet_3d_4layers': UNET_3D_4LAYERS,
-    'unet_mod': UNET_MOD
 }
