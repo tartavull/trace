@@ -34,7 +34,7 @@ class TrainingParams:
 
 DEFAULT_TRAINING_PARAMS = TrainingParams(
     optimizer=tf.train.AdamOptimizer,
-    learning_rate=0.00001,
+    learning_rate=0.0001,
     n_iter=50000,
     output_size=101,
 )
@@ -73,11 +73,6 @@ class ValidationHook(Hook):
         # Get the inputs from dataset
         self.val_inputs, self.val_labels, self.val_targets = dset_sampler.get_validation_set()
         self.val_examples = np.concatenate([self.val_inputs, self.val_targets], axis=CHANNEL_AXIS)
-        self.mirrored_val_examples = aug.mirror_across_borders_3d(self.val_examples, model.fov, model.z_fov)
-
-        self.val_examples = np.concatenate([self.val_inputs, self.val_targets], axis=CHANNEL_AXIS)
-
-        # Mirror the inputs
         self.mirrored_val_examples = aug.mirror_across_borders_3d(self.val_examples, model.fov, model.z_fov)
 
         # Set up placeholders for other metrics
@@ -119,7 +114,7 @@ class ValidationHook(Hook):
     def eval(self, step, model, session, summary_writer):
         if step % self.frequency == 0:
             # Make the prediction
-            validation_prediction = model.predict(session, self.val_inputs, self.pred_batch_shape, mirror_inputs=False)
+            validation_prediction = model.predict(session, self.mirrored_val_examples, self.pred_batch_shape, mirror_inputs=False)
 
             validation_binary_prediction = np.round(validation_prediction)
             validation_pixel_error = np.mean(np.absolute(validation_binary_prediction - self.val_targets))
@@ -331,7 +326,6 @@ class Learner:
                 print(step)
                 sess.run(optimize_step)
                 step += 1
-
         train_threads = []
         for _ in range(8):
             th = threading.Thread(target=train_function)
@@ -371,4 +365,3 @@ class Learner:
         assert (len(pred_batching_shape) == 3)
 
         return self.model.predict(self.sess, inputs, pred_batching_shape, mirror_inputs=False)
-
