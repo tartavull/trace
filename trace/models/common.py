@@ -43,7 +43,7 @@ def down_conv2d(x, W, dilation=1):
     return tf.nn.convolution(x, W, strides=[2, 2], padding='SAME', dilation_rate=[dilation, dilation])
 
 
-def down_conv2d(x, W, dilation=1, z_dilation_rate=1):
+def down_conv3d(x, W, dilation=1, z_dilation=1):
     return tf.nn.convolution(x, W, strides=[2, 2, 2], padding='SAME', dilation_rate=[z_dilation, dilation, dilation])
 
 
@@ -195,6 +195,11 @@ class UNet3DLayer(Layer):
             weights.append(w_i)
             biases.append(b_i)
 
+            #new
+            print i
+            print w_i.get_shape()
+            print b_i.get_shape()
+
             # Perform the convolution
             if self.is_valid:
                 convFn = conv3d
@@ -227,6 +232,11 @@ class UNet3DLayer(Layer):
                 weights.append(w_d)
                 biases.append(b_d)
 
+                #new
+                print 'contracting'
+                print w_d.get_shape()
+                print b_d.get_shape()
+
                 out_node = tf.nn.elu(down_conv3d(final_node, w_d) + b_d)
                 out_n_feature_maps = self.n_feature_maps * 2
             convs.append(out_node)
@@ -242,6 +252,11 @@ class UNet3DLayer(Layer):
             weights.append(w_u)
             biases.append(b_u)
 
+            #new
+            print 'expanding'
+            print w_u.get_shape()
+            print b_u.get_shape()
+
             up_conv = tf.nn.elu(conv3d_transpose(final_node, w_u, stride=2) + b_u)
             convs.append(up_conv)
             out_n_feature_maps = self.n_feature_maps // 2
@@ -253,8 +268,16 @@ class UNet3DLayer(Layer):
                                       [self.z_filter_size, self.filter_size, self.filter_size, self.n_feature_maps, 3])
             b_o = get_bias_variable('b_o', [3])
             out_node = same_conv3d(final_node, w_o) + b_o
-            return out_node
 
+            #new
+            print 'last'
+            print w_o.get_shape()
+            print b_o.get_shape()
+
+
+
+
+            return out_node
 
 class ConvLayer(Layer):
     def __init__(self, *args, **kwargs):
@@ -421,7 +444,6 @@ class Model(object):
 
     def predict(self, session, inputs, pred_batch_shape, mirror_inputs=True):
         """Predict on a set of inputs, producing a tensor with the same shape.
-
         :param pred_batch_shape: When predicting, break into pieces of this shape for evaluation (3D tensor [z, y, x])
         :param session: Tensorflow session
         :param mirror_inputs: Decide to mirror the inputs every time
