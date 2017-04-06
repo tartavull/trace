@@ -1,4 +1,5 @@
-import subprocess import os
+import subprocess
+import os
 
 import numpy as np
 
@@ -169,6 +170,3 @@ def convert_between_label_types(input_type, output_type, original_labels):
             raise Exception('Invalid output_type')
     else:
         raise Exception('Invalid input_type')
-
-
-
