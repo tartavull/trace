@@ -295,8 +295,8 @@ class Learner:
 
         # Initialize the variables
         dset_sampler.initialize_session_variables(sess)
-        print model.image.shape 
-        print model.mask.shape
+        print(model.image.shape)
+        print(model.mask.shape)
         # Create enqueue op and a QueueRunner to handle queueing of training examples
         enqueue_op = model.queue.enqueue(dset_sampler.training_example_op)
         qr = tf.train.QueueRunner(model.queue, [enqueue_op] * 4)
