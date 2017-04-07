@@ -360,7 +360,7 @@ class EMDatasetSampler(object):
             #                                         [tf.concat([tf.concat([cropped_inputs, cropped_labels, cropped_masks], axis=CHANNEL_AXIS)] * batch_size, axis=BATCH_AXIS)])
             # else:
             # Re-stack the image and labels
-                self.training_example_op = tf.concat([tf.concat([cropped_inputs, cropped_labels], axis=CHANNEL_AXIS)] * batch_size, axis=BATCH_AXIS)
+            self.training_example_op = tf.concat([tf.concat([cropped_inputs, cropped_labels], axis=CHANNEL_AXIS)] * batch_size, axis=BATCH_AXIS)
 
     def initialize_session_variables(self, sess):
         sess.run(self.__dataset_constant.initializer, feed_dict={self.__image_ph: self.__padded_dataset})
