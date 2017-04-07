@@ -108,15 +108,15 @@ class ValidationHook(Hook):
             if model.fov == 1:
                 summary_image = model.image[0]
             else:
-                summary_image = model.image[0, model.z_fov // 2:(model.z_fov // 2) + 3,
+                summary_image = model.image[0, model.z_fov // 2:-(model.z_fov // 2),
                                 model.fov // 2:-(model.fov // 2), model.fov // 2:-(model.fov // 2), :]
 
-            val_output_patch_summary = tf.summary.image('validation_output_patch', summary_image)
+            val_output_patch_summary = tf.summary.image('validation_output_patch', summary_image, max_outputs=25)
             self.validation_image_summaries = tf.summary.merge([
                 tf.summary.image('validation_input_image', model.image[0]),
                 val_output_patch_summary,
-                tf.summary.image('validation_output_target', model.target[0, :3, :, :, :]),
-                tf.summary.image('validation_predictions', model.prediction[0, :3, :, :, :]),
+                tf.summary.image('validation_output_target', model.target[0, :, :, :, :], max_outputs=25),
+                tf.summary.image('validation_predictions', model.prediction[0, :, :, :, :], max_outputs=25),
             ])
 
     def eval(self, step, model, session, summary_writer):
@@ -173,7 +173,7 @@ class ImageVisualizationHook(Hook):
         self.frequency = frequency
         with tf.variable_scope('images'):
             if model.fov == 1:
-                output_patch_summary = tf.summary.image('output_patch', model.raw_image[0, :3, :, :, :])
+                output_patch_summary = tf.summary.image('output_patch', model.raw_image[0, :16, :, :, :], max_outputs=16)
             else:
                 output_patch_summary = tf.summary.image('output_patch',
                                                         model.raw_image[0, model.z_fov // 2:(model.z_fov // 2) + 3,
@@ -182,10 +182,10 @@ class ImageVisualizationHook(Hook):
                                                         :]),
 
             self.training_summaries = tf.summary.merge([
-                tf.summary.image('input_image', model.raw_image[0, model.z_fov // 2:(model.z_fov // 2) + 3]),
+                tf.summary.image('input_image', model.raw_image[0, model.z_fov // 2:(model.z_fov // 2) + 16], max_outputs=3),
                 output_patch_summary,
-                tf.summary.image('output_target', model.target[0, :3, :, :, :]),
-                tf.summary.image('predictions', model.prediction[0, :3, :, :, :]),
+                tf.summary.image('output_target', model.target[0, :16], max_outputs=16),
+                tf.summary.image('predictions', model.prediction[0, :16], max_outputs=16),
             ])
 
     def eval(self, step, model, session, summary_writer):

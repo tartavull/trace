@@ -6,6 +6,7 @@ import subprocess
 import click
 import tensorflow as tf
 import h5py
+import numpy as np
 
 import em_dataset as em
 import download_data
@@ -168,7 +169,7 @@ def predict(model_type, params_type, dataset_name, split, run_name):
     elif split == 'validation':
         inputs, _, _ = dset_sampler.get_validation_set()
     else:
-        inputs = dset_sampler.get_test_set()
+        inputs = dset_sampler.get_test_set()#[:, :100]
 
     # Define results folder
     ckpt_folder = data_folder + 'results/' + model.model_name + '/run-' + run_name + '/'
@@ -179,6 +180,16 @@ def predict(model_type, params_type, dataset_name, split, run_name):
 
     # Predict on the classifier
     predictions = classifier.predict(inputs, [16, 160, 160])
+
+    # Add padding to compensate for edge affinities. (Only necessary until
+    # we use padded dataset
+    shape = list(predictions.shape)
+    shape[1] += 1
+    shape[2] += 1
+    shape[3] += 1
+    tmp = np.zeros(shape)
+    tmp[:, 1:, 1:, 1:, :] = predictions
+    predictions = tmp
 
     # Save the predicted affinities for viewing in neuroglancer.
     dataset.prepare_predictions_for_neuroglancer_affinities(ckpt_folder, split, predictions, params.output_mode)

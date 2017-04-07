@@ -259,6 +259,9 @@ class EMDatasetSampler(object):
 
         self.__test_inputs = expand_3d_to_5d(dataset.test_inputs)
 
+        # Crop to get rid of edge affinities
+        self.__test_inputs = self.__test_inputs[:, 1:, 1:, 1:, :] 
+
         # Stack the inputs and labels, so when we sample we sample corresponding labels and inputs
         train_stacked = np.concatenate((self.__train_inputs, self.__train_labels), axis=CHANNEL_AXIS)
 
@@ -271,11 +274,20 @@ class EMDatasetSampler(object):
         # Create dataset, and pad the dataset with mirroring
         self.__padded_dataset = np.pad(train_stacked, [[0, 0], [z_crop_pad, z_crop_pad], [crop_pad, crop_pad], [crop_pad, crop_pad], [0, 0]], mode='reflect')
 
+        # Create dataset consisting of bad slices from the test set (for CREMI
+        # A+ only atm)
+        #bad_slices = [24, 36, 69, 115, 116, 144, 145]
+        bad_slices = [0]
+        self.__bad_data = self.__test_inputs[0, bad_slices]
+        
         with tf.device('/cpu:0'):
             # The dataset is loaded into a constant variable from a placeholder
             # because a tf.constant cannot hold a dataset that is over 2GB.
             self.__image_ph = tf.placeholder(dtype=tf.float32, shape=self.__padded_dataset.shape)
             self.__dataset_constant = tf.Variable(self.__image_ph, trainable=False, collections=[])
+
+            self.__bad_data_ph = tf.placeholder(dtype=tf.float32, shape=self.__bad_data.shape)
+            self.__bad_data_constant = tf.Variable(self.__bad_data_ph, trainable=False, collections=[])
 
             # Sample and squeeze the dataset in multiple batches, squeezing so that we can perform the distortions
             crop_size = [1, z_patch_size, patch_size, patch_size, train_stacked.shape[4]]
@@ -323,10 +335,10 @@ class EMDatasetSampler(object):
             elastically_deformed_sample = rotated_sample
 
             # Separate the image from the labels
-            #deformed_inputs = elastically_deformed_sample[:, :, :, :, :1]
-            #deformed_labels = elastically_deformed_sample[:, :, :, :, 1:]
-            deformed_inputs = samples[:, :, :, :, :1]
-            deformed_labels = samples[:, :, :, :, 1:]
+            deformed_inputs = elastically_deformed_sample[:, :, :, :, :1]
+            deformed_labels = elastically_deformed_sample[:, :, :, :, 1:]
+            #deformed_inputs = samples[:, :, :, :, :1]
+            #deformed_labels = samples[:, :, :, :, 1:]
 
             # Apply random gaussian blurring to the image
             def apply_random_blur_to_stack(stack):
@@ -347,10 +359,27 @@ class EMDatasetSampler(object):
 
             missing_data_inputs = tf.map_fn(lambda stack: apply_random_missing_data(stack), blurred_inputs)
 
+            # Apply bad data augmentation (random input slices inserted
+            # into input patch)
+            def apply_random_bad_data(stack):
+                z_size = tf.shape(stack)[0]
+                # Choose a random slice in the stack to be replaced by a bad
+                # slice.
+                slice_to_apply_to = tf.random_uniform(shape=(), minval=z_crop_pad // 2, maxval=z_size - (z_crop_pad // 2), dtype=tf.int32)
+
+                # Replace this random slice with a bad input slice taken
+                # from the test set.
+                random_slice = tf.random_crop(self.__bad_data_constant, size=tf.concat([(1,), tf.shape(stack)[1:]], axis=0))
+                return tf.concat([stack[:slice_to_apply_to], random_slice, stack[slice_to_apply_to + 1:]], axis=0)
+
+
+            bad_data_inputs = randomly_map_and_apply_op(missing_data_inputs, apply_random_bad_data, prob=10)
+
+
             # Mess with the levels
             # leveled_image = tf.image.random_brightness(deformed_image, max_delta=0.15)
             # leveled_image = tf.image.random_contrast(leveled_image, lower=0.5, upper=1.5)
-            leveled_inputs = missing_data_inputs
+            leveled_inputs = bad_data_inputs
 
             # Affinitize the labels if applicable
             # TODO (ffjiang): Do the if applicable part
@@ -366,6 +395,9 @@ class EMDatasetSampler(object):
     def initialize_session_variables(self, sess):
         sess.run(self.__dataset_constant.initializer, feed_dict={self.__image_ph: self.__padded_dataset})
         del self.__padded_dataset
+
+        sess.run(self.__bad_data_constant.initializer, feed_dict={self.__bad_data_ph: self.__bad_data})
+        del self.__bad_data
 
     def get_full_training_set(self):
         return self.__train_inputs, self.__train_labels, self.__train_targets
