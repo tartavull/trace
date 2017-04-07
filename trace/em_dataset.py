@@ -251,7 +251,7 @@ class EMDatasetSampler(object):
         if dataset.train_masks.any():
             self.__train_masks = expand_3d_to_5d(dataset.train_masks)
             self.__train_masks = convert_between_label_types(dataset.label_type, label_output_type,
-                                                             self.__train_masks)
+                                                             expand_3d_to_5d(dataset.train_masks))
             self.__train_masks = self.__train_masks[:, 1:, 1:, 1:, :]
             train_stacked = np.concatenate((self.__train_inputs, self.__train_labels, self.__train_masks), axis=CHANNEL_AXIS)
         else:
@@ -358,8 +358,8 @@ class EMDatasetSampler(object):
                 print(cropped_inputs.shape[4])
                 print(cropped_labels.shape[4])
                 print(cropped_masks.shape[4])
-                self.training_example_op = tf.Print(tf.concat([tf.concat([cropped_inputs, cropped_labels, cropped_masks], axis=CHANNEL_AXIS)] * batch_size, axis=BATCH_AXIS),
-                                                    [tf.concat([tf.concat([cropped_inputs, cropped_labels, cropped_masks], axis=CHANNEL_AXIS)] * batch_size, axis=BATCH_AXIS)])
+                self.training_example_op = tf.concat([tf.concat([cropped_inputs, cropped_labels, cropped_masks], axis=CHANNEL_AXIS)] * batch_size, axis=BATCH_AXIS)
+                                                    
             else:
             # Re-stack the image and labels
                 self.training_example_op = tf.concat([tf.concat([cropped_inputs, cropped_labels], axis=CHANNEL_AXIS)] * batch_size, axis=BATCH_AXIS)
