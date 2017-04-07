@@ -456,13 +456,13 @@ class Model(object):
         if self.fov == 1 and self.z_fov == 1:
             if apply_mask:
                 self.mask = tf.Print(self.example[:, :, :, :, 6:], [self.example[:, :, :, :, 6:]])
-            self.target = self.example[:, :, :, :, 1:4]
+            self.target = self.example[:, :, :, :, 1:]
         else:
             if apply_mask:
                 self.mask = self.example[:, self.z_fov // 2:-(self.z_fov // 2), self.fov // 2:-(self.fov // 2),
                               self.fov // 2:-(self.fov // 2), 4:]
             self.target = self.example[:, self.z_fov // 2:-(self.z_fov // 2), self.fov // 2:-(self.fov // 2),
-                            self.fov // 2:-(self.fov // 2), 1:4]
+                            self.fov // 2:-(self.fov // 2), 1:]
 
     def predict(self, session, inputs, pred_batch_shape, mirror_inputs=True):
         """Predict on a set of inputs, producing a tensor with the same shape.

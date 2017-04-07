@@ -163,7 +163,7 @@ class CREMIDataset(Dataset):
         train_file = cremiio.CremiFile(data_folder + 'train.hdf', 'r')
         self.train_inputs = train_file.read_raw().data.value
         if down.CLEFTS in self.data_folder:
-            self.train_masks = train_file.read_neuron_ids().data.value
+            # self.train_masks = train_file.read_neuron_ids().data.value
             self.train_labels = train_file.read_clefts().data.value
         else:
             self.train_labels = train_file.read_neuron_ids().data.value
@@ -251,7 +251,7 @@ class EMDatasetSampler(object):
         if dataset.train_masks.any():
             self.__train_masks = expand_3d_to_5d(dataset.train_masks)
             self.__train_masks = convert_between_label_types(dataset.label_type, label_output_type,
-                                                             self.__train_masks)
+                                                             dataset.train_masks)
             self.__train_masks = self.__train_masks[:, 1:, 1:, 1:, :]
             train_stacked = np.concatenate((self.__train_inputs, self.__train_labels, self.__train_masks), axis=CHANNEL_AXIS)
         else:
@@ -322,7 +322,7 @@ class EMDatasetSampler(object):
             #deformed_inputs = elastically_deformed_sample[:, :, :, :, :1]
             #deformed_labels = elastically_deformed_sample[:, :, :, :, 1:]
             deformed_inputs = samples[:, :, :, :, :1]
-            deformed_labels = samples[:, :, :, :, 1:4]
+            deformed_labels = samples[:, :, :, :, 1:]
 
             # Apply random gaussian blurring to the image
             def apply_random_blur_to_stack(stack):
@@ -343,7 +343,8 @@ class EMDatasetSampler(object):
             # Affinitize the labels if applicable
             # TODO (ffjiang): Do the if applicable part
             aff_labels = affinitize(deformed_labels)
-
+            print(cropped_inputs.shape[4])
+            print(cropped_labels.shape[4])
             # Crop the image, to remove the padding that was added to allow safe augmentation.
             cropped_inputs = leveled_inputs[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
             cropped_labels = aff_labels[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
@@ -354,9 +355,6 @@ class EMDatasetSampler(object):
                 deformed_masks = samples[:, :, :, :, 4:]
                 aff_masks = affinitize(deformed_masks)
                 cropped_masks = aff_masks[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
-                print(cropped_inputs.shape[4])
-                print(cropped_masks.shape[4])
-                print(cropped_labels.shape[4])
                 self.training_example_op = tf.Print(tf.concat([tf.concat([cropped_inputs, cropped_labels, cropped_masks], axis=CHANNEL_AXIS)] * batch_size, axis=BATCH_AXIS),
                                                     [tf.concat([tf.concat([cropped_inputs, cropped_labels, cropped_masks], axis=CHANNEL_AXIS)] * batch_size, axis=BATCH_AXIS)])
             else:
