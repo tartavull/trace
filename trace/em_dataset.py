@@ -250,8 +250,6 @@ class EMDatasetSampler(object):
         # If computing for clefts, include ops for masks as well
         if dataset.train_masks.any():
             self.__train_masks = expand_3d_to_5d(dataset.train_masks)
-            self.__train_masks = convert_between_label_types(dataset.label_type, label_output_type,
-                                                             expand_3d_to_5d(dataset.train_masks))
             self.__train_masks = self.__train_masks[:, 1:, 1:, 1:, :]
             train_stacked = np.concatenate((self.__train_inputs, self.__train_labels, self.__train_masks), axis=CHANNEL_AXIS)
         else:
@@ -271,7 +269,7 @@ class EMDatasetSampler(object):
             # because a tf.constant cannot hold a dataset that is over 2GB.
             self.__image_ph = tf.placeholder(dtype=tf.float32, shape=self.__padded_dataset.shape)
             self.__dataset_constant = tf.Variable(self.__image_ph, trainable=False, collections=[])
-            print("train_stacked: " + str(train_stacked.shape[4]))
+            print("train_stacked: " + str(samples.shape[4]))
             # Sample and squeeze the dataset in multiple batches, squeezing so that we can perform the distortions
             crop_size = [1, z_patch_size, patch_size, patch_size, train_stacked.shape[4]]
             samples = []
@@ -354,6 +352,7 @@ class EMDatasetSampler(object):
                 deformed_masks = samples[:, :, :, :, 4:]
                 print(deformed_masks.shape[4])
                 aff_masks = affinitize(deformed_masks)
+                print(aff_masks.shape[4])
                 cropped_masks = aff_masks[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
                 print(cropped_inputs.shape[4])
                 print(cropped_labels.shape[4])
