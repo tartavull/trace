@@ -269,12 +269,12 @@ class EMDatasetSampler(object):
             # because a tf.constant cannot hold a dataset that is over 2GB.
             self.__image_ph = tf.placeholder(dtype=tf.float32, shape=self.__padded_dataset.shape)
             self.__dataset_constant = tf.Variable(self.__image_ph, trainable=False, collections=[])
-            print("train_stacked: " + str(samples.shape[4]))
             # Sample and squeeze the dataset in multiple batches, squeezing so that we can perform the distortions
             crop_size = [1, z_patch_size, patch_size, patch_size, train_stacked.shape[4]]
             samples = []
             for i in range(batch_size):
                 samples.append(tf.random_crop(self.__dataset_constant, size=crop_size))
+            print("samples: " + str(samples.shape[4]))
 
             samples = tf.squeeze(samples, axis=1)
 
