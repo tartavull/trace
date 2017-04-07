@@ -101,7 +101,6 @@ def train(model_type, params_type, dataset_name, n_iter, run_name, cont, mask):
     print('Starting')
     data_folder = os.path.dirname(os.path.abspath(__file__)) + '/' + dataset_name + '/'
 
-
     model_constructor = MODEL_DICT[model_type]
     params = PARAMS_DICT[params_type]
     model = model_constructor(params, apply_mask=mask, is_training=True)
@@ -133,7 +132,7 @@ def train(model_type, params_type, dataset_name, n_iter, run_name, cont, mask):
         learner.LossHook(50, model),
         learner.ModelSaverHook(500, ckpt_folder),
         learner.ValidationHook(100, dset_sampler, model, data_folder, params.output_mode, [training_params.z_output_size, training_params.output_size, training_params.output_size]),
-        learner.ImageVisualizationHook(2000, model),
+        learner.ImageVisualizationHook(500, model),
         # learner.HistogramHook(100, model),
         # learner.LayerVisualizationHook(500, model),
     ]
