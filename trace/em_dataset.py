@@ -248,13 +248,13 @@ class EMDatasetSampler(object):
         # Stack the inputs and labels, so when we sample we sample corresponding labels and inputs
 
         # If computing for clefts, include ops for masks as well
-        if dataset.train_masks.any():
-            self.__train_masks = expand_3d_to_5d(dataset.train_masks)
-            self.__train_masks = convert_between_label_types(dataset.label_type, label_output_type,
-                                                             dataset.train_masks)
-            self.__train_masks = self.__train_masks[:, 1:, 1:, 1:, :]
-            train_stacked = np.concatenate((self.__train_inputs, self.__train_labels, self.__train_masks), axis=CHANNEL_AXIS)
-        else:
+        # if dataset.train_masks.any():
+        #     self.__train_masks = expand_3d_to_5d(dataset.train_masks)
+        #     self.__train_masks = convert_between_label_types(dataset.label_type, label_output_type,
+        #                                                      dataset.train_masks)
+        #     self.__train_masks = self.__train_masks[:, 1:, 1:, 1:, :]
+        #     train_stacked = np.concatenate((self.__train_inputs, self.__train_labels, self.__train_masks), axis=CHANNEL_AXIS)
+        # else:
             train_stacked = np.concatenate((self.__train_inputs, self.__train_labels), axis=CHANNEL_AXIS)
 
         # Define inputs to the graph
@@ -343,21 +343,22 @@ class EMDatasetSampler(object):
             # Affinitize the labels if applicable
             # TODO (ffjiang): Do the if applicable part
             aff_labels = affinitize(deformed_labels)
-            print(cropped_inputs.shape[4])
-            print(cropped_labels.shape[4])
+
             # Crop the image, to remove the padding that was added to allow safe augmentation.
             cropped_inputs = leveled_inputs[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
             cropped_labels = aff_labels[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
             print('CHANNEL: ' + str(CHANNEL_AXIS))
             # Include masks if they exist
             print('sizes')
-            if dataset.train_masks.any():
-                deformed_masks = samples[:, :, :, :, 4:]
-                aff_masks = affinitize(deformed_masks)
-                cropped_masks = aff_masks[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
-                self.training_example_op = tf.Print(tf.concat([tf.concat([cropped_inputs, cropped_labels, cropped_masks], axis=CHANNEL_AXIS)] * batch_size, axis=BATCH_AXIS),
-                                                    [tf.concat([tf.concat([cropped_inputs, cropped_labels, cropped_masks], axis=CHANNEL_AXIS)] * batch_size, axis=BATCH_AXIS)])
-            else:
+            print(cropped_inputs.shape[4])
+            print(cropped_labels.shape[4])
+            # if dataset.train_masks.any():
+            #     deformed_masks = samples[:, :, :, :, 4:]
+            #     aff_masks = affinitize(deformed_masks)
+            #     cropped_masks = aff_masks[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
+            #     self.training_example_op = tf.Print(tf.concat([tf.concat([cropped_inputs, cropped_labels, cropped_masks], axis=CHANNEL_AXIS)] * batch_size, axis=BATCH_AXIS),
+            #                                         [tf.concat([tf.concat([cropped_inputs, cropped_labels, cropped_masks], axis=CHANNEL_AXIS)] * batch_size, axis=BATCH_AXIS)])
+            # else:
             # Re-stack the image and labels
                 self.training_example_op = tf.concat([tf.concat([cropped_inputs, cropped_labels], axis=CHANNEL_AXIS)] * batch_size, axis=BATCH_AXIS)
 
