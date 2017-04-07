@@ -320,7 +320,7 @@ class EMDatasetSampler(object):
             #deformed_inputs = elastically_deformed_sample[:, :, :, :, :1]
             #deformed_labels = elastically_deformed_sample[:, :, :, :, 1:]
             deformed_inputs = samples[:, :, :, :, :1]
-            deformed_labels = samples[:, :, :, :, 1:4]
+            deformed_labels = samples[:, :, :, :, 1:2]
 
             # Apply random gaussian blurring to the image
             def apply_random_blur_to_stack(stack):
@@ -349,7 +349,7 @@ class EMDatasetSampler(object):
             # Include masks if they exist
             print('sizes')
             if dataset.train_masks.any():
-                deformed_masks = samples[:, :, :, :, 4:]
+                deformed_masks = samples[:, :, :, :, 2:]
                 print(deformed_masks.shape[4])
                 aff_masks = affinitize(deformed_masks)
                 print(aff_masks.shape[4])
