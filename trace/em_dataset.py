@@ -274,9 +274,9 @@ class EMDatasetSampler(object):
             samples = []
             for i in range(batch_size):
                 samples.append(tf.random_crop(self.__dataset_constant, size=crop_size))
-            print("samples: " + str(samples.shape[4]))
 
             samples = tf.squeeze(samples, axis=1)
+            print("samples: " + str(samples.shape[4]))
 
             # Flip a coin, and apply an op to sample (sample can be 5d or 4d)
             # Prob is the denominator of the probability (1 in prob chance)
