@@ -255,7 +255,7 @@ class EMDatasetSampler(object):
         #     self.__train_masks = self.__train_masks[:, 1:, 1:, 1:, :]
         #     train_stacked = np.concatenate((self.__train_inputs, self.__train_labels, self.__train_masks), axis=CHANNEL_AXIS)
         # else:
-            train_stacked = np.concatenate((self.__train_inputs, self.__train_labels), axis=CHANNEL_AXIS)
+        train_stacked = np.concatenate((self.__train_inputs, self.__train_labels), axis=CHANNEL_AXIS)
 
         # Define inputs to the graph
         crop_pad = input_size // 10 * 4
