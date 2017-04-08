@@ -240,7 +240,7 @@ class EMDatasetSampler(object):
         self.__validation_inputs = expand_3d_to_5d(dataset.validation_inputs)
         self.__validation_labels = expand_3d_to_5d(dataset.validation_labels)
         self.__validation_targets = expand_3d_to_5d(dataset.validation_labels)
-        
+
         if label_output_type != BOUNDARIES and dataset.name != down.CREMI:
             self.__validation_targets = convert_between_label_types(dataset.name, dataset.label_type, label_output_type,
                 expand_3d_to_5d(dataset.validation_labels))
@@ -347,19 +347,19 @@ class EMDatasetSampler(object):
             # Affinitize the labels if applicable
             # TODO (ffjiang): Do the if applicable part
             if label_output_type == AFFINITIES_3D:
-                aff_labels = affinitize(deformed_labels)
+                deformed_labels = affinitize(deformed_labels)
 
             # Crop the image, to remove the padding that was added to allow safe augmentation.
             cropped_inputs = leveled_inputs[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
-            cropped_labels = aff_labels[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
+            cropped_labels = deformed_labels[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
             
             # Re-stack the image and labels
             if dataset.train_masks.any():
                 # Include masks if they exist
                 deformed_masks = samples[:, :, :, :, 2:]
                 if label_output_type == AFFINITIES_3D:
-                    aff_masks = affinitize(deformed_masks)
-                cropped_masks = aff_masks[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
+                    deformed_masks = affinitize(deformed_masks)
+                cropped_masks = deformed_masks[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
                 self.training_example_op = tf.concat([tf.concat([cropped_inputs, cropped_labels, cropped_masks], axis=CHANNEL_AXIS)] * batch_size, axis=BATCH_AXIS)
                                                     
             else:
