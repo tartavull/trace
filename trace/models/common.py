@@ -435,7 +435,9 @@ class Model(object):
         self.z_fov = architecture.z_fov
         self.global_step = tf.Variable(0, name='global_step', trainable=False)
         self.apply_mask = apply_mask
-
+        self.num_output_channels = 1
+        if self.architecture.output_mode == AFFINITIES_3D:
+            self.num_output_channels = 3
         # Create an input queue
         with tf.device('/cpu:0'):
             self.queue = tf.FIFOQueue(50, tf.float32)
@@ -455,14 +457,14 @@ class Model(object):
         # Crop the labels to the appropriate field of view
         if self.fov == 1 and self.z_fov == 1:
             if apply_mask:
-                self.mask = self.example[:, :, :, :, 4:]
-            self.target = self.example[:, :, :, :, 1:4]
+                self.mask = self.example[:, :, :, :, (num_output_channels + 1):]
+            self.target = self.example[:, :, :, :, 1:(num_output_channels + 1)]
         else:
             if apply_mask:
                 self.mask = self.example[:, self.z_fov // 2:-(self.z_fov // 2), self.fov // 2:-(self.fov // 2),
-                              self.fov // 2:-(self.fov // 2), 4:]
+                              self.fov // 2:-(self.fov // 2), (num_output_channels + 1):]
             self.target = self.example[:, self.z_fov // 2:-(self.z_fov // 2), self.fov // 2:-(self.fov // 2),
-                            self.fov // 2:-(self.fov // 2), 1:4]
+                            self.fov // 2:-(self.fov // 2), 1:(num_output_channels + 1)]
 
     def predict(self, session, inputs, pred_batch_shape, mirror_inputs=True):
         """Predict on a set of inputs, producing a tensor with the same shape.

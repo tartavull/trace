@@ -276,7 +276,6 @@ class EMDatasetSampler(object):
                 samples.append(tf.random_crop(self.__dataset_constant, size=crop_size))
 
             samples = tf.squeeze(samples, axis=1)
-            print("samples: " + str(samples.shape[4]))
 
             # Flip a coin, and apply an op to sample (sample can be 5d or 4d)
             # Prob is the denominator of the probability (1 in prob chance)
@@ -340,27 +339,23 @@ class EMDatasetSampler(object):
 
             # Affinitize the labels if applicable
             # TODO (ffjiang): Do the if applicable part
-            aff_labels = affinitize(deformed_labels)
+            if label_output_type == AFFINITIES_3D:
+                aff_labels = affinitize(deformed_labels)
 
             # Crop the image, to remove the padding that was added to allow safe augmentation.
             cropped_inputs = leveled_inputs[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
             cropped_labels = aff_labels[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
-            print('CHANNEL: ' + str(CHANNEL_AXIS))
-            # Include masks if they exist
-            print('sizes')
+            
+            # Re-stack the image and labels
             if dataset.train_masks.any():
+                # Include masks if they exist
                 deformed_masks = samples[:, :, :, :, 2:]
-                print(deformed_masks.shape[4])
-                aff_masks = affinitize(deformed_masks)
-                print(aff_masks.shape[4])
+                if label_output_type == AFFINITIES_3D:
+                    aff_masks = affinitize(deformed_masks)
                 cropped_masks = aff_masks[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
-                print(cropped_inputs.shape[4])
-                print(cropped_labels.shape[4])
-                print(cropped_masks.shape[4])
                 self.training_example_op = tf.concat([tf.concat([cropped_inputs, cropped_labels, cropped_masks], axis=CHANNEL_AXIS)] * batch_size, axis=BATCH_AXIS)
                                                     
             else:
-            # Re-stack the image and labels
                 self.training_example_op = tf.concat([tf.concat([cropped_inputs, cropped_labels], axis=CHANNEL_AXIS)] * batch_size, axis=BATCH_AXIS)
 
     def initialize_session_variables(self, sess):

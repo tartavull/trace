@@ -87,7 +87,7 @@ class UNet_Jon(Model):
 
 UNET_3D = UNetArchitecture(
     model_name='unet_3d',
-    output_mode=AFFINITIES_3D,
+    output_mode=BOUNDARIES,
     layers=[
         UNet3DLayer(layer_name='layer_d1', is_valid=False, is_residual=True, 
                     uses_max_pool=True, filter_size=3, z_filter_size=3,
@@ -130,7 +130,7 @@ UNET_3D = UNetArchitecture(
 
 UNET_3D_4LAYERS = UNetArchitecture(
     model_name='unet_3d_4layers',
-    output_mode=AFFINITIES_3D,
+    output_mode=BOUNDARIES,
     layers=[
         UNet3DLayer(layer_name='layer_d1', is_valid=False, is_residual=True, 
                     uses_max_pool=True, filter_size=3, z_filter_size=3,
