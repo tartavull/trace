@@ -154,11 +154,7 @@ def convert_between_label_types(dset_name, input_type, output_type, original_lab
             raise Exception('Invalid output_type')
     elif input_type == SEGMENTATION_3D:
         if output_type == BOUNDARIES:
-            if dset_name == CREMI:
-                boundary_map = np.zeros(original_labels.shape, dtype=np.int32)
-                cremival.create_border_mask(input_data=original_labels, target=boundary_map, max_dist=4, background_label=0)
-                return boundary_map
-            else:
+            if dset_name != CREMI:
                 raise NotImplementedError('Seg3d->Boundaries not implemented')
         elif output_type == AFFINITIES_2D:
             raise NotImplementedError('Seg3d->Aff2d not implemented')
