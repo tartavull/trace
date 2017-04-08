@@ -98,7 +98,6 @@ def train(model_type, params_type, dataset_name, n_iter, run_name, cont, mask):
     """
     Train an N4 models to predict affinities
     """
-    print('Starting')
     data_folder = os.path.dirname(os.path.abspath(__file__)) + '/' + dataset_name + '/'
 
     model_constructor = MODEL_DICT[model_type]

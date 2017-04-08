@@ -457,14 +457,14 @@ class Model(object):
         # Crop the labels to the appropriate field of view
         if self.fov == 1 and self.z_fov == 1:
             if apply_mask:
-                self.mask = self.example[:, :, :, :, (num_output_channels + 1):]
-            self.target = self.example[:, :, :, :, 1:(num_output_channels + 1)]
+                self.mask = self.example[:, :, :, :, (self.num_output_channels + 1):]
+            self.target = self.example[:, :, :, :, 1:(self.num_output_channels + 1)]
         else:
             if apply_mask:
                 self.mask = self.example[:, self.z_fov // 2:-(self.z_fov // 2), self.fov // 2:-(self.fov // 2),
-                              self.fov // 2:-(self.fov // 2), (num_output_channels + 1):]
+                              self.fov // 2:-(self.fov // 2), (self.num_output_channels + 1):]
             self.target = self.example[:, self.z_fov // 2:-(self.z_fov // 2), self.fov // 2:-(self.fov // 2),
-                            self.fov // 2:-(self.fov // 2), 1:(num_output_channels + 1)]
+                            self.fov // 2:-(self.fov // 2), 1:(self.num_output_channels + 1)]
 
     def predict(self, session, inputs, pred_batch_shape, mirror_inputs=True):
         """Predict on a set of inputs, producing a tensor with the same shape.
