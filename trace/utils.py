@@ -13,6 +13,7 @@ import time
 import os
 
 import dataprovider.transform as trans
+import cremi.evaluation as cremival
 
 try:
     from thirdparty.segascorus import io_utils
@@ -27,6 +28,8 @@ AFFINITIES_2D = 'affinities-2d'
 AFFINITIES_3D = 'affinities-3d'
 SEGMENTATION_2D = 'segmentation-2d'
 SEGMENTATION_3D = 'segmentation-3d'
+
+CREMI = 'cremi'
 
 BATCH_AXIS = 0
 Z_AXIS = 1
@@ -85,7 +88,7 @@ def run_watershed_on_affinities(affinities, relabel2d=False, low=0.9, hi=0.9995)
     return pred_seg
 
 
-def convert_between_label_types(input_type, output_type, original_labels):
+def convert_between_label_types(dset_name, input_type, output_type, original_labels):
     # No augmentation needed, as we're basically doing e2e learning
     if input_type == output_type:
         return original_labels
@@ -151,7 +154,12 @@ def convert_between_label_types(input_type, output_type, original_labels):
             raise Exception('Invalid output_type')
     elif input_type == SEGMENTATION_3D:
         if output_type == BOUNDARIES:
-            raise NotImplementedError('Seg3d->Boundaries not implemented')
+            if dset_name == CREMI:
+                boundary_map = np.zeros(original_labels.shape, dtype=np.int32)
+                cremival.create_border_mask(input_data=original_labels, target=boundary_map, max_dist=4, background_label=0)
+                return boundary_map
+            else:
+                raise NotImplementedError('Seg3d->Boundaries not implemented')
         elif output_type == AFFINITIES_2D:
             raise NotImplementedError('Seg3d->Aff2d not implemented')
         elif output_type == AFFINITIES_3D:

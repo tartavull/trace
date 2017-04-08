@@ -159,6 +159,7 @@ class CREMIDataset(Dataset):
         :param data_folder: Path to where the CREMI data is found
         """
         self.data_folder = data_folder
+        self.name = down.CREMI
 
         train_file = cremiio.CremiFile(data_folder + 'train.hdf', 'r')
         self.train_inputs = train_file.read_raw().data.value
@@ -225,7 +226,7 @@ class EMDatasetSampler(object):
         # Extract the inputs and labels from the dataset
         self.__train_inputs = expand_3d_to_5d(dataset.train_inputs)
         self.__train_labels = expand_3d_to_5d(dataset.train_labels)
-        self.__train_targets = convert_between_label_types(dataset.label_type, label_output_type,
+        self.__train_targets = convert_between_label_types(dataset.name, dataset.label_type, label_output_type,
                 expand_3d_to_5d(dataset.train_labels))
 
         # Crop to get rid of edge affinities
@@ -235,7 +236,7 @@ class EMDatasetSampler(object):
 
         self.__validation_inputs = expand_3d_to_5d(dataset.validation_inputs)
         self.__validation_labels = expand_3d_to_5d(dataset.validation_labels)
-        self.__validation_targets = convert_between_label_types(dataset.label_type, label_output_type,
+        self.__validation_targets = convert_between_label_types(dataset.name, dataset.label_type, label_output_type,
                 expand_3d_to_5d(dataset.validation_labels))
 
         # Crop to get rid of edge affinities
