@@ -99,6 +99,8 @@ def __prepare_probabilistic_segmentation_for_rand(thresh, images):
 
 def __rand_error_boundaries(true_labels, pred_labels):
     # Make sure in the shape [n_images, im_dim_1, im_dim_2]
+    print(true_labels.shape)
+    print(pred_labels.shape)
     assert (len(true_labels.shape) == 3)
     assert (len(pred_labels.shape) == 3)
 
@@ -146,6 +148,7 @@ def rand_error_from_prediction(true_labels, pred_values, pred_type=BOUNDARIES):
     #assert(len(true_labels.shape) == 3)
     #assert(len(pred_values.shape) == 4)
     print(pred_values.shape)
+    print(true_labels.shape)
     if pred_type == BOUNDARIES:
         pred_values = np.squeeze(pred_values, axis=3)
         return __rand_error_boundaries(true_labels, pred_values)
