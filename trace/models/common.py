@@ -289,10 +289,10 @@ class UNet3DLayer(Layer):
 
             return up_conv, out_n_feature_maps
         else:
-            # Map back to affinites.
+            # Map to boundaries 
             w_o = get_weight_variable('w_o',
-                                      [self.z_filter_size, self.filter_size, self.filter_size, self.n_feature_maps, 3])
-            b_o = get_bias_variable('b_o', [3])
+                                      [self.z_filter_size, self.filter_size, self.filter_size, self.n_feature_maps, 1])
+            b_o = get_bias_variable('b_o', [1])
             out_node = same_conv3d(final_node, w_o) + b_o
             return out_node
 
