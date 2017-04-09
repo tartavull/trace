@@ -211,6 +211,10 @@ class UNet(Model):
 
 
     def __predict_with_evaluation(self, session, inputs, metrics, pred_tile_shape, mirror_inputs=True):
+        n_output_channels = 3
+        if self.architecture.output_mode == BOUNDARIES:
+            n_output_channels = 1
+
         # Extract the tile sizes from the argument
         z_out_patch, y_out_patch, x_out_patch = pred_tile_shape[0], pred_tile_shape[1], pred_tile_shape[2]
         z_in_patch = z_out_patch + self.z_fov - 1
@@ -225,9 +229,9 @@ class UNet(Model):
 
         # Create accumulator for output.
         combined_pred = np.ones((inputs.shape[0],
-                                  z_outp_size, y_outp_size, x_outp_size, 3))
+                                  z_outp_size, y_outp_size, x_outp_size, n_output_channels))
         # Create accumulator for overlaps.
-        overlaps = np.zeros((inputs.shape[0], z_outp_size, y_outp_size, x_outp_size, 3))
+        overlaps = np.zeros((inputs.shape[0], z_outp_size, y_outp_size, x_outp_size, n_output_channels))
 
         for stack, _ in enumerate(inputs):
             # Iterate through the overlapping tiles.
@@ -264,7 +268,7 @@ class UNet(Model):
                                  z:z + z_out_patch,
                                  y:y + y_out_patch,
                                  x:x + x_out_patch, 
-                                 :] += np.ones((z_out_patch, y_out_patch, x_out_patch, 3))
+                                 :] += np.ones((z_out_patch, y_out_patch, x_out_patch, n_output_channels))
 
             # Normalize the combined prediction by the number of times each
             # voxel was computed in the overlapping computation.
