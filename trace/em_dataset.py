@@ -253,6 +253,7 @@ class EMDatasetSampler(object):
 
         self.__test_inputs = expand_3d_to_5d(dataset.test_inputs)
 
+        print(self.__validation_labels.shape)
         # Stack the inputs and labels, so when we sample we sample corresponding labels and inputs
 
         # If computing for clefts, include ops for masks as well
