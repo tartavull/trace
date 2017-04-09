@@ -145,7 +145,7 @@ def rand_error_from_prediction(true_labels, pred_values, pred_type=BOUNDARIES):
     """
     #assert(len(true_labels.shape) == 3)
     #assert(len(pred_values.shape) == 4)
-
+    print pred_values.shape
     if pred_type == BOUNDARIES:
         pred_values = np.squeeze(pred_values, axis=3)
         return __rand_error_boundaries(true_labels, pred_values)
