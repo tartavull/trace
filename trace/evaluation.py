@@ -150,6 +150,7 @@ def rand_error_from_prediction(true_labels, pred_values, pred_type=BOUNDARIES):
     print(pred_values.shape)
     print(true_labels.shape)
     if pred_type == BOUNDARIES:
+        true_labels = np.squeeze(true_labels, axis=3)
         pred_values = np.squeeze(pred_values, axis=3)
         return __rand_error_boundaries(true_labels, pred_values)
     elif pred_type == AFFINITIES_2D or pred_type == AFFINITIES_3D:
