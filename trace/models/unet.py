@@ -189,6 +189,7 @@ class UNet(Model):
                     last_layer = layer.connect(prev_layer, prev_n_feature_maps, dilation_rate=1, is_training=False, skip_connect=skip_connections[0])
 
         # Predictions
+        self.prediction = tf.nn.sigmoid(last_layer)
         last_layer = tf.Print(last_layer, [tf.nn.sigmoid(last_layer)])
         self.target = tf.Print(self.target, [tf.reduce_max(self.target)])
         self.binary_prediction = tf.round(self.prediction)
