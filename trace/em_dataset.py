@@ -362,7 +362,7 @@ class EMDatasetSampler(object):
                     deformed_masks = affinitize(deformed_masks)
                 elif label_output_type == BOUNDARIES:
                     deformed_masks = convert_between_label_types(dataset.name, dataset.label_type, label_output_type,
-                                    expand_3d_to_5d(deformed_labels))
+                                    expand_3d_to_5d(deformed_masks))
                 cropped_masks = deformed_masks[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
                 self.training_example_op = tf.concat([tf.concat([cropped_inputs, cropped_labels, cropped_masks], axis=CHANNEL_AXIS)] * batch_size, axis=BATCH_AXIS)
                                                     
