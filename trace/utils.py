@@ -154,7 +154,7 @@ def convert_between_label_types(dset_name, input_type, output_type, original_lab
             raise Exception('Invalid output_type')
     elif input_type == SEGMENTATION_3D:
         if output_type == BOUNDARIES:
-            raise NotImplementedError('Seg3d->Boundaries not implemented')
+            return np.where(original_labels == 0, original_labels, 1)
         elif output_type == AFFINITIES_2D:
             raise NotImplementedError('Seg3d->Aff2d not implemented')
         elif output_type == AFFINITIES_3D:
