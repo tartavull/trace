@@ -345,7 +345,9 @@ class EMDatasetSampler(object):
             # TODO (ffjiang): Do the if applicable part
             if label_output_type == AFFINITIES_3D:
                 deformed_labels = affinitize(deformed_labels)
-
+            elif label_output_type == BOUNDARIES:
+                deformed_labels = convert_between_label_types(dataset.name, dataset.label_type, label_output_type,
+                            expand_3d_to_5d(deformed_labels))
             # Crop the image, to remove the padding that was added to allow safe augmentation.
             cropped_inputs = leveled_inputs[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
             cropped_labels = deformed_labels[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
@@ -358,6 +360,9 @@ class EMDatasetSampler(object):
                 deformed_masks = samples[:, :, :, :, 2:]
                 if label_output_type == AFFINITIES_3D:
                     deformed_masks = affinitize(deformed_masks)
+                elif label_output_type == BOUNDARIES:
+                    deformed_masks = convert_between_label_types(dataset.name, dataset.label_type, label_output_type,
+                                    expand_3d_to_5d(deformed_labels))
                 cropped_masks = deformed_masks[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
                 self.training_example_op = tf.concat([tf.concat([cropped_inputs, cropped_labels, cropped_masks], axis=CHANNEL_AXIS)] * batch_size, axis=BATCH_AXIS)
                                                     
