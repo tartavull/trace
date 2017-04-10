@@ -189,8 +189,10 @@ class UNet(Model):
                     last_layer = layer.connect(prev_layer, prev_n_feature_maps, dilation_rate=1, is_training=False, skip_connect=skip_connections[0])
 
         # Predictions
-        self.prediction = tf.nn.sigmoid(last_layer)
+        self.prediction = tf.Print(tf.nn.sigmoid(last_layer), [tf.nn.sigmoid(last_layer)])
+        self.target = tf.Print(self.target, [self.target])
         self.binary_prediction = tf.round(self.prediction)
+
 
         # Loss
         self.cross_entropy = tf.nn.sigmoid_cross_entropy_with_logits(logits=last_layer,
