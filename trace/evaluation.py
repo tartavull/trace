@@ -3,6 +3,7 @@ from __future__ import division
 
 import os
 
+import numpy as np
 import h5py
 import subprocess
 import skimage.measure as meas
@@ -11,6 +12,8 @@ import tifffile as tiff
 
 import cv2
 from utils import *
+from cremi import Volume
+from cremi.evaluation import *
 
 try:
     from thirdparty.segascorus import io_utils
@@ -24,9 +27,26 @@ except Exception:
 def __rand_error(true_seg, pred_seg, calc_rand_score=True, calc_rand_error=False, calc_variation_score=True,
                  calc_variation_information=False, relabel2d=True, foreground_restricted=True, split_0_segment=True,
                  other=None):
+    true_seg = np.squeeze(true_seg)
+    print(true_seg.dtype)
+    with h5py.File('evaluation_pred.h5', 'w') as f:
+        f.create_dataset('main', data=pred_seg)
+
+    # Use CREMI evaluation
+    print('Seg shapes')
+    print(true_seg.shape)
+    print(pred_seg.shape)
+    #pred_neuron_ids = Volume(pred_seg, resolution=(40.0, 4.0, 4.0))
+    #true_neuron_ids = Volume(true_seg, resolution=(40.0, 4.0, 4.0))
+    #voi_split, voi_merge = voi(pred_seg, true_seg)
+    rand_error = adapted_rand(pred_seg, true_seg)
+    print('CREMI Evaluation:')
+    #print('voi split: ' + str(voi_split))
+    #print('voi merge: ' + str(voi_merge))
+    print('Adapted RAND: ' + str(rand_error))
 
     # Segascorus demands uint32
-    true_seg = np.squeeze(true_seg.astype(dtype=np.uint32))
+    true_seg = true_seg.astype(dtype=np.uint32)
     pred_seg = pred_seg.astype(dtype=np.uint32)
 
     # Preprocess

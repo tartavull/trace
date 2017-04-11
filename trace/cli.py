@@ -107,7 +107,7 @@ def train(model_type, params_type, dataset_name, n_iter, run_name, cont):
 
     training_params = learner.TrainingParams(
         optimizer=tf.train.AdamOptimizer,
-        learning_rate=0.0001,
+        learning_rate=0.00005,
         n_iter=n_iter,
         output_size=160,
         z_output_size=16,
@@ -165,11 +165,12 @@ def predict(model_type, params_type, dataset_name, split, run_name):
     dset_sampler = em.EMDatasetSampler(dataset, input_size=model.fov + 1, z_input_size=model.z_fov + 1, label_output_type=params.output_mode)
 
     if split == 'train':
-        inputs, _, _ = dset_sampler.get_full_training_set()
+        inputs, labels, _ = dset_sampler.get_full_training_set()
     elif split == 'validation':
-        inputs, _, _ = dset_sampler.get_validation_set()
+        inputs, labels, _ = dset_sampler.get_validation_set()
     else:
-        inputs = dset_sampler.get_test_set()#[:, :100]
+        inputs = dset_sampler.get_test_set()[:, :100]
+        labels = None
 
     # Define results folder
     ckpt_folder = data_folder + 'results/' + model.model_name + '/run-' + run_name + '/'
@@ -190,13 +191,22 @@ def predict(model_type, params_type, dataset_name, split, run_name):
     tmp = np.zeros(shape)
     tmp[:, 1:, 1:, 1:, :] = predictions
     predictions = tmp
+    
+    if labels != None:
+        shape = list(labels.shape)
+        shape[1] += 1
+        shape[2] += 1
+        shape[3] += 1
+        tmp = np.zeros(shape)
+        tmp[:, 1:, 1:, 1:, :] = labels
+        labels = tmp
 
     # Save the predicted affinities for viewing in neuroglancer.
     dataset.prepare_predictions_for_neuroglancer_affinities(ckpt_folder, split, predictions, params.output_mode)
 
     # Prepare the predictions for submission for this particular dataset
     # Only send in the first dimension of predictions, because theoretically predict can predict on many stacks
-    dataset.prepare_predictions_for_submission(ckpt_folder, split, predictions[0], params.output_mode)
+    dataset.prepare_predictions_for_submission(ckpt_folder, split, predictions[0], params.output_mode, ground_truth=labels)
 
 
 @cli.command()

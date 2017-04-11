@@ -2,11 +2,11 @@ import subprocess
 import os
 
 import numpy as np
+np.set_printoptions(threshold=np.nan)
+import julia
 
 import shutil
-
 import tensorflow as tf
-
 import h5py
 import time
 
@@ -45,9 +45,13 @@ def expand_3d_to_5d(data):
     return data
 
 
-def run_watershed_on_affinities(affinities, relabel2d=False, low=0.9, hi=0.9995):
+def run_watershed_on_affinities(affinities, ground_truth=None, relabel2d=False, low=0.9, hi=0.9995):
     tmp_aff_file = 'tmp-affinities.h5'
     tmp_label_file = 'tmp-labels.h5'
+    tmp_ground_truth_file = 'tmp-ground-truth.h5'
+    tmp_dend_file = 'tmp-dend.h5'
+    tmp_dendValues_file = 'tmp-dendValues.h5'
+    tmp_rand_file = 'tmp-rand.h5'
 
     base = './tmp/' + str(int(round(time.time() * 1000))) + '/'
 
@@ -67,8 +71,8 @@ def run_watershed_on_affinities(affinities, relabel2d=False, low=0.9, hi=0.9995)
 
     # Do watershed segmentation
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    subprocess.call(["julia",
-                     current_dir + "/thirdparty/watershed/watershed.jl",
+    subprocess.call(['julia',
+                     current_dir + '/thirdparty/watershed/watershed.jl',
                      base + tmp_aff_file,
                      base + tmp_label_file,
                      str(hi),
@@ -80,16 +84,85 @@ def run_watershed_on_affinities(affinities, relabel2d=False, low=0.9, hi=0.9995)
     prep = utils.parse_fns(utils.prep_fns, [relabel2d, False])
     pred_seg, _ = utils.run_preprocessing(pred_seg, pred_seg, prep)
 
+
+    if ground_truth != None:
+        # Write ground truth to a temporary file
+        with h5py.File(base + tmp_ground_truth_file, 'w') as output_file:
+            output_file.create_dataset('main', data=np.squeeze(ground_truth).astype(np.uint32))
+
+        # Apply mean affinity agglomeration
+        subprocess.call(['julia',
+                         current_dir + '/meanAffinity.jl',
+                         base + tmp_aff_file,
+                         base + tmp_label_file,
+                         base + tmp_ground_truth_file,
+                         base + tmp_dend_file,
+                         base + tmp_dendValues_file,
+                         base + tmp_rand_file])
+
+        dend = h5py.File(base + tmp_dend_file, 'r')['main'][:]
+        dendValues = h5py.File(base + tmp_dendValues_file, 'r')['main'][:]
+        #rand = h5py.File(base + tmp_rand_file, 'r')['main'][:]
+        #print(rand)
+
+        # Sort the pairs.
+        sortedDendPairValues = sorted(zip(dend.T, dendValues), key=lambda pair: pair[1], reverse=True)
+
+        unionFind = WeightedQuickUF(np.max(pred_seg) + 1)
+
+        threshold = 0.95
+
+        for pair, val in sortedDendPairValues:
+            if val < threshold:
+                break
+            unionFind.union(pair[0], pair[1])
+
+        for z in range(pred_seg.shape[0]):
+            for y in range(pred_seg.shape[1]):
+                for x in range(pred_seg.shape[2]):
+                    pred_seg[z, y, x] = unionFind.find(pred_seg[z, y, x])
+    
     shutil.rmtree('./tmp/')
 
     return pred_seg
 
+class WeightedQuickUF(object):
+    def __init__(self, num_elem):
+        self.parents = [i for i in range(num_elem)]
+        self.rank = [0] * num_elem
+        self.num_elem = num_elem
 
-def convert_between_label_types(input_type, output_type, original_labels):
+    def connected(self, i, j):
+        return self.find(i) == self.find(j)
+
+    def find(self, i):
+        if self.parents[i] == i:
+            return i
+        else:
+            root = self.find(self.parents[i])
+            self.parents[i] = root
+            return root
+
+    def union(self, i, j):
+        rootI = self.find(i)
+        rootJ = self.find(j)
+        if rootI == rootJ:
+            return
+
+        if self.rank[rootI] < self.rank[rootJ]:
+            self.parents[rootI] = rootJ
+        elif self.rank[rootI] > self.rank[rootJ]:
+            self.parents[rootJ] = rootI
+        else:
+            self.parents[rootI] = rootJ
+            self.rank[rootJ] += 1
+
+
+
+def convert_between_label_types(input_type, output_type, original_labels, ground_truth=None):
     # No augmentation needed, as we're basically doing e2e learning
     if input_type == output_type:
         return original_labels
-
 
     # This looks like a shit show, but conversion is hard.
     # Also, we will implement this as we go.
@@ -135,7 +208,8 @@ def convert_between_label_types(input_type, output_type, original_labels):
             return run_watershed_on_affinities(original_labels, relabel2d=True)
         elif output_type == SEGMENTATION_3D:
             # Run watershed
-            return run_watershed_on_affinities(original_labels)
+            print('Running mean affinity agglomeration')
+            return run_watershed_on_affinities(original_labels, ground_truth=ground_truth, hi=0.999999)
         else:
             raise Exception('Invalid output_type')
     elif input_type == SEGMENTATION_2D:

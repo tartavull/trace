@@ -195,15 +195,16 @@ class CREMIDataset(Dataset):
         test_file.close()
 
 
-    def prepare_predictions_for_submission(self, results_folder, split, predictions, label_type):
+    def prepare_predictions_for_submission(self, results_folder, split, predictions, label_type, ground_truth=None):
         """Prepare a given segmentation prediction for submission to the CREMI competiton
 
         :param label_type: The type of label given in predictions (i.e. affinities-2d, boundaries, etc)
         :param results_folder: The location where we should save the dataset.
         :param split: The name of partition of the dataset we are predicting on ['train', 'validation', 'test']
         :param predictions: Predictions for labels in some format, dictated by label_type
+        :param ground_truth: Ground truth labels, if preparing training or validatio data.
         """
-        trans_predictions = convert_between_label_types(label_type, self.label_type, predictions)
+        trans_predictions = convert_between_label_types(label_type, self.label_type, predictions, ground_truth=ground_truth)
 
         # Get the input we used
         input_file = cremiio.CremiFile(self.data_folder + split + '.hdf', 'r')
@@ -276,8 +277,8 @@ class EMDatasetSampler(object):
 
         # Create dataset consisting of bad slices from the test set (for CREMI
         # A+ only atm)
-        #bad_slices = [24, 36, 69, 115, 116, 144, 145]
-        bad_slices = [0]
+        bad_slices = [24, 36, 69, 115, 116, 144, 145]
+        #bad_slices = [0]
         self.__bad_data = self.__test_inputs[0, bad_slices]
         
         with tf.device('/cpu:0'):
