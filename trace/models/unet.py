@@ -190,8 +190,6 @@ class UNet(Model):
 
         # Predictions
         self.prediction = tf.nn.sigmoid(last_layer)
-        last_layer = tf.Print(last_layer, [tf.nn.sigmoid(last_layer)])
-        self.target = tf.Print(self.target, [tf.reduce_max(self.target)])
         self.binary_prediction = tf.round(self.prediction)
 
         # Loss
