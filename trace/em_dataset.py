@@ -225,17 +225,25 @@ class EMDatasetSampler(object):
    
         # Extract the inputs and labels from the dataset
         self.__train_inputs = expand_3d_to_5d(dataset.train_inputs)
-        self.__train_labels = expand_3d_to_5d(dataset.train_labels)
+        self.__train_labels = convert_between_label_types(dataset.name, dataset.label_type, label_output_type,
+            dataset.train_labels)
+        self.__train_labels = expand_3d_to_5d(self.__train_labels)
+
         self.__train_targets = convert_between_label_types(dataset.name, dataset.label_type, label_output_type,
             dataset.train_labels)
         self.__train_targets = expand_3d_to_5d(self.__train_targets)
+
         # Crop to get rid of edge affinities
         self.__train_inputs = self.__train_inputs[:, 1:, 1:, 1:, :]
         self.__train_labels = self.__train_labels[:, 1:, 1:, 1:, :]
         self.__train_targets = self.__train_targets[:, 1:, 1:, 1:, :]
 
         self.__validation_inputs = expand_3d_to_5d(dataset.validation_inputs)
-        self.__validation_labels = expand_3d_to_5d(dataset.validation_labels)
+
+        self.__validation_labels = convert_between_label_types(dataset.name, dataset.label_type, label_output_type,
+            dataset.validation_labels)
+        self.__validation_labels = expand_3d_to_5d(self.__validation_labels)
+
         self.__validation_targets = convert_between_label_types(dataset.name, dataset.label_type, label_output_type,
             dataset.validation_labels)
         self.__validation_targets = expand_3d_to_5d(self.__validation_targets)
@@ -343,12 +351,7 @@ class EMDatasetSampler(object):
             # TODO (ffjiang): Do the if applicable part
             if label_output_type == AFFINITIES_3D:
                 deformed_labels = affinitize(deformed_labels)
-            elif label_output_type == BOUNDARIES:
-                print(deformed_labels.shape)
-                deformed_labels = convert_between_label_types(dataset.name, dataset.label_type, label_output_type,
-                                deformed_labels)
-                print(deformed_labels.shape)
-                print(deformed_labels)
+
             # Crop the image, to remove the padding that was added to allow safe augmentation.
             cropped_inputs = leveled_inputs[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
             cropped_labels = deformed_labels[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
@@ -361,9 +364,6 @@ class EMDatasetSampler(object):
                 deformed_masks = samples[:, :, :, :, 2:]
                 if label_output_type == AFFINITIES_3D:
                     deformed_masks = affinitize(deformed_masks)
-                elif label_output_type == BOUNDARIES:
-                    deformed_masks = convert_between_label_types(dataset.name, dataset.label_type, label_output_type,
-                                    deformed_masks)
                 cropped_masks = deformed_masks[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
                 self.training_example_op = tf.concat([tf.concat([cropped_inputs, cropped_labels, cropped_masks], axis=CHANNEL_AXIS)] * batch_size, axis=BATCH_AXIS)
                                                     
