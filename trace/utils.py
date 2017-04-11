@@ -156,6 +156,7 @@ def convert_between_label_types(dset_name, input_type, output_type, original_lab
         if output_type == BOUNDARIES:
             boundary_map = np.where(original_labels == 0., original_labels, 1)
             print("max: " + str(np.max(boundary_map)))
+            print("shape: " + str(boundary_map.shape))
             return boundary_map
         elif output_type == AFFINITIES_2D:
             raise NotImplementedError('Seg3d->Aff2d not implemented')
