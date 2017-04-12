@@ -173,7 +173,7 @@ class ImageVisualizationHook(Hook):
         self.frequency = frequency
         with tf.variable_scope('images'):
             if model.fov == 1:
-                output_patch_summary = tf.summary.image('output_patch', model.raw_image[0, :16, :, :, :], max_outputs=16)
+                output_patch_summary = tf.summary.image('output_patch', model.raw_image[0, :16, :, :, 1:4], max_outputs=16)
             else:
                 output_patch_summary = tf.summary.image('output_patch',
                                                         model.raw_image[0, model.z_fov // 2:(model.z_fov // 2) + 3,
@@ -182,7 +182,7 @@ class ImageVisualizationHook(Hook):
                                                         :]),
 
             self.training_summaries = tf.summary.merge([
-                tf.summary.image('input_image', model.raw_image[0, model.z_fov // 2:(model.z_fov // 2) + 16], max_outputs=3),
+                tf.summary.image('input_image', model.raw_image[0, model.z_fov // 2:(model.z_fov // 2) + 16, :, :, :1], max_outputs=16),
                 output_patch_summary,
                 tf.summary.image('output_target', model.target[0, :16], max_outputs=16),
                 tf.summary.image('predictions', model.prediction[0, :16], max_outputs=16),

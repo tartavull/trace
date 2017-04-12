@@ -222,7 +222,7 @@ class CREMIDataset(Dataset):
 
 class EMDatasetSampler(object):
 
-    def __init__(self, dataset, input_size, z_input_size, batch_size=1, label_output_type=BOUNDARIES):
+    def __init__(self, dataset, input_size, z_input_size, batch_size=1, label_output_type=BOUNDARIES, flood_filling_mode=False):
         """Helper for sampling an EM dataset. The field self.training_example_op is the only field that should be
         accessed outside this class for training.
 
@@ -296,7 +296,7 @@ class EMDatasetSampler(object):
             for i in range(batch_size):
                 samples.append(tf.random_crop(self.__dataset_constant, size=crop_size))
 
-            samples = tf.squeeze(samples, axis=1)
+            sample = tf.squeeze(samples, axis=1)
 
             # Flip a coin, and apply an op to sample (sample can be 5d or 4d)
             # Prob is the denominator of the probability (1 in prob chance)
@@ -316,7 +316,7 @@ class EMDatasetSampler(object):
             # Perform random mirroring, by applying the same mirroring to each image in the stack
             def mirror_each_image_in_stack_op(stack):
                 return tf.map_fn(lambda img: tf.image.flip_left_right(img), stack)
-            mirrored_sample = randomly_map_and_apply_op(samples, mirror_each_image_in_stack_op)
+            mirrored_sample = randomly_map_and_apply_op(sample, mirror_each_image_in_stack_op)
 
             # Randomly flip the 3D shape upside down
             flipped_sample = randomly_map_and_apply_op(mirrored_sample, lambda stack: tf.reverse(stack, axis=[0]))
@@ -338,8 +338,6 @@ class EMDatasetSampler(object):
             # Separate the image from the labels
             deformed_inputs = elastically_deformed_sample[:, :, :, :, :1]
             deformed_labels = elastically_deformed_sample[:, :, :, :, 1:]
-            #deformed_inputs = samples[:, :, :, :, :1]
-            #deformed_labels = samples[:, :, :, :, 1:]
 
             # Apply random gaussian blurring to the image
             def apply_random_blur_to_stack(stack):
@@ -376,22 +374,47 @@ class EMDatasetSampler(object):
 
             bad_data_inputs = randomly_map_and_apply_op(missing_data_inputs, apply_random_bad_data, prob=10)
 
+            #augmented_inputs = bad_data_inputs
+            #augmented_labels = deformed_labels
+            augmented_inputs = sample[:, :, :, :, :1]
+            augmented_labels = sample[:, :, :, :, 1:]
+
 
             # Mess with the levels
             # leveled_image = tf.image.random_brightness(deformed_image, max_delta=0.15)
             # leveled_image = tf.image.random_contrast(leveled_image, lower=0.5, upper=1.5)
-            leveled_inputs = bad_data_inputs
 
             # Affinitize the labels if applicable
             # TODO (ffjiang): Do the if applicable part
-            aff_labels = affinitize(deformed_labels)
+            if flood_filling_mode:
+                print('Using flood-filling mode')
+                shape = tf.shape(augmented_labels)
+
+                # Choose the target segment to be the central voxel, or if that
+                # is a background pixel, choose the target segment to be one of
+                # the surrounding central voxels with the maximum segment id.
+                target_segment = augmented_labels[0, shape[1] // 2, shape[2] // 2, shape[3] // 2, 0]
+                target_segment = tf.cond(tf.equal(0.0, target_segment), 
+                        lambda: tf.reduce_max(augmented_labels[0, shape[1] // 2 - 1:shape[1] // 2 + 1, shape[2] // 2 - 5:shape[2] // 2 + 5, shape[3] // 2 - 5:shape[3] // 2 + 5]), 
+                        lambda: target_segment)
+                targets = tf.cast(tf.equal(augmented_labels, target_segment), tf.float32)
+
+                affs = affinitize(augmented_labels)
+                middle_slice_gt = tf.tile(targets[:, shape[1] // 2:shape[1] // 2 + 1], multiples=[1,1,1,1,3])
+                affs = tf.concat([affs[:, :shape[1] // 2], middle_slice_gt, affs[:, shape[1] // 2 + 1:]], axis=1)
+                cropped_affs = affs[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
+            else:
+                targets = affinitize(augmented_labels)
 
             # Crop the image, to remove the padding that was added to allow safe augmentation.
-            cropped_inputs = leveled_inputs[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
-            cropped_labels = aff_labels[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
+            cropped_inputs = augmented_inputs[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
+            cropped_targets = targets[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
 
-            # Re-stack the image and labels
-            self.training_example_op = tf.concat([tf.concat([cropped_inputs, cropped_labels], axis=CHANNEL_AXIS)] * batch_size, axis=BATCH_AXIS)
+            # Re-stack the image and targets
+            if flood_filling_mode:
+                self.training_example_op = tf.concat([tf.concat([cropped_inputs, cropped_affs, cropped_targets], axis=CHANNEL_AXIS)] * batch_size, axis=BATCH_AXIS)
+            else:
+                self.training_example_op = tf.concat([tf.concat([cropped_inputs, cropped_targets], axis=CHANNEL_AXIS)] * batch_size, axis=BATCH_AXIS)
 
     def initialize_session_variables(self, sess):
         sess.run(self.__dataset_constant.initializer, feed_dict={self.__image_ph: self.__padded_dataset})

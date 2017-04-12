@@ -167,7 +167,7 @@ class UNet(Model):
     def __init__(self, architecture, is_training=False):
         super(UNet, self).__init__(architecture)
         prev_layer = self.image
-        prev_n_feature_maps = 1
+        prev_n_feature_maps = 4
 
         skip_connections = []
         

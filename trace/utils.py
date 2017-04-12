@@ -3,7 +3,6 @@ import os
 
 import numpy as np
 np.set_printoptions(threshold=np.nan)
-import julia
 
 import shutil
 import tensorflow as tf
@@ -90,37 +89,37 @@ def run_watershed_on_affinities(affinities, ground_truth=None, relabel2d=False, 
         with h5py.File(base + tmp_ground_truth_file, 'w') as output_file:
             output_file.create_dataset('main', data=np.squeeze(ground_truth).astype(np.uint32))
 
-        # Apply mean affinity agglomeration
-        subprocess.call(['julia',
-                         current_dir + '/meanAffinity.jl',
-                         base + tmp_aff_file,
-                         base + tmp_label_file,
-                         base + tmp_ground_truth_file,
-                         base + tmp_dend_file,
-                         base + tmp_dendValues_file,
-                         base + tmp_rand_file])
+    # Apply mean affinity agglomeration
+    subprocess.call(['julia',
+                     current_dir + '/meanAffinity.jl',
+                     base + tmp_aff_file,
+                     base + tmp_label_file,
+                     base + tmp_ground_truth_file,
+                     base + tmp_dend_file,
+                     base + tmp_dendValues_file,
+                     base + tmp_rand_file])
 
-        dend = h5py.File(base + tmp_dend_file, 'r')['main'][:]
-        dendValues = h5py.File(base + tmp_dendValues_file, 'r')['main'][:]
-        #rand = h5py.File(base + tmp_rand_file, 'r')['main'][:]
-        #print(rand)
+    dend = h5py.File(base + tmp_dend_file, 'r')['main'][:]
+    dendValues = h5py.File(base + tmp_dendValues_file, 'r')['main'][:]
+    #rand = h5py.File(base + tmp_rand_file, 'r')['main'][:]
+    #print(rand)
 
-        # Sort the pairs.
-        sortedDendPairValues = sorted(zip(dend.T, dendValues), key=lambda pair: pair[1], reverse=True)
+    # Sort the pairs.
+    sortedDendPairValues = sorted(zip(dend.T, dendValues), key=lambda pair: pair[1], reverse=True)
 
-        unionFind = WeightedQuickUF(np.max(pred_seg) + 1)
+    unionFind = WeightedQuickUF(np.max(pred_seg) + 1)
 
-        threshold = 0.95
+    threshold = 0.95
 
-        for pair, val in sortedDendPairValues:
-            if val < threshold:
-                break
-            unionFind.union(pair[0], pair[1])
+    for pair, val in sortedDendPairValues:
+        if val < threshold:
+            break
+        unionFind.union(pair[0], pair[1])
 
-        for z in range(pred_seg.shape[0]):
-            for y in range(pred_seg.shape[1]):
-                for x in range(pred_seg.shape[2]):
-                    pred_seg[z, y, x] = unionFind.find(pred_seg[z, y, x])
+    for z in range(pred_seg.shape[0]):
+        for y in range(pred_seg.shape[1]):
+            for x in range(pred_seg.shape[2]):
+                pred_seg[z, y, x] = unionFind.find(pred_seg[z, y, x])
     
     shutil.rmtree('./tmp/')
 

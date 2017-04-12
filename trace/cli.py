@@ -92,8 +92,9 @@ def watershed(dataset_name, split, high, low, dust):
 @click.argument('dataset_name', type=click.Choice(DATASET_DICT.keys()))
 @click.argument('n_iter', type=int, default=10000)
 @click.argument('run_name', type=str, default='1')
+@click.option('--ff/--no-ff', default=False, help="Run flood-filling training.")
 @click.option('--cont/--no-cont', default=False, help="Continue training using a saved model.")
-def train(model_type, params_type, dataset_name, n_iter, run_name, cont):
+def train(model_type, params_type, dataset_name, n_iter, run_name, ff, cont):
     """
     Train an N4 models to predict affinities
     """
@@ -107,9 +108,9 @@ def train(model_type, params_type, dataset_name, n_iter, run_name, cont):
 
     training_params = learner.TrainingParams(
         optimizer=tf.train.AdamOptimizer,
-        learning_rate=0.00005,
+        learning_rate=0.0001,
         n_iter=n_iter,
-        output_size=160,
+        output_size=120,
         z_output_size=16,
         batch_size=batch_size
     )
@@ -121,7 +122,7 @@ def train(model_type, params_type, dataset_name, n_iter, run_name, cont):
     # Construct the dataset sampler
     dset_constructor = DATASET_DICT[dataset_name]
     dataset = dset_constructor(data_folder)
-    dset_sampler = em.EMDatasetSampler(dataset, input_size, z_input_size, batch_size=batch_size, label_output_type=params.output_mode)
+    dset_sampler = em.EMDatasetSampler(dataset, input_size, z_input_size, batch_size=batch_size, label_output_type=params.output_mode, flood_filling_mode=ff)
 
     ckpt_folder = data_folder + 'results/' + model.model_name + '/run-' + run_name + '/'
 
@@ -130,8 +131,8 @@ def train(model_type, params_type, dataset_name, n_iter, run_name, cont):
     hooks = [
         learner.LossHook(50, model),
         learner.ModelSaverHook(100, ckpt_folder),
-        learner.ValidationHook(500, dset_sampler, model, data_folder, params.output_mode, [training_params.z_output_size, training_params.output_size, training_params.output_size]),
-        learner.ImageVisualizationHook(500, model),
+        #learner.ValidationHook(500, dset_sampler, model, data_folder, params.output_mode, [training_params.z_output_size, training_params.output_size, training_params.output_size]),
+        learner.ImageVisualizationHook(50, model),
         # learner.HistogramHook(100, model),
         # learner.LayerVisualizationHook(500, model),
     ]
@@ -180,7 +181,7 @@ def predict(model_type, params_type, dataset_name, split, run_name):
     classifier.restore()
 
     # Predict on the classifier
-    predictions = classifier.predict(inputs, [16, 160, 160])
+    predictions = classifier.predict(inputs, [16, 120, 120])
 
     # Add padding to compensate for edge affinities. (Only necessary until
     # we use padded dataset
