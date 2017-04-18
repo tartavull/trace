@@ -38,6 +38,13 @@ CHANNEL_AXIS = 4
 SPLIT = ['train', 'validation', 'test']
 
 
+def cond_apply(inp, fn, cond):
+    if cond:
+        return fn(inp)
+    else:
+        return inp
+
+
 def expand_3d_to_5d(data):
     # Add a batch dimension and a channel dimension
     data = np.expand_dims(data, axis=BATCH_AXIS)

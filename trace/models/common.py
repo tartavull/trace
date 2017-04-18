@@ -9,8 +9,8 @@ def weight_variable(shape):
     return tf.Variable(shape=shape, initializer=tf.contrib.layers.xavier_initializer(uniform=False))
 
 
-def get_weight_variable(name, shape):
-    return tf.get_variable(name, shape=shape, initializer=tf.contrib.layers.xavier_initializer(uniform=False))
+def get_weight_variable(name, shape, dtype=tf.float64, trainable=True):
+    return tf.get_variable(name, shape=shape, dtype=dtype, initializer=tf.contrib.layers.xavier_initializer(uniform=False), trainable=trainable)
 
 
 def bias_variable(shape):
@@ -18,9 +18,9 @@ def bias_variable(shape):
     return tf.Variable(initial)
 
 
-def get_bias_variable(name, shape):
+def get_bias_variable(name, shape, dtype=tf.float64, trainable=True):
     initial = tf.constant(0.0, shape=shape)
-    return tf.get_variable(name, initializer=initial)
+    return tf.get_variable(name, initializer=initial, dtype=dtype, trainable=trainable)
 
 
 def conv2d(x, W, dilation=1):
