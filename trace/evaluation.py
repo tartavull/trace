@@ -12,6 +12,8 @@ import tifffile as tiff
 import cv2
 from utils import *
 
+import cremi.io as cremiio
+
 try:
     from thirdparty.segascorus import io_utils
     from thirdparty.segascorus import utils
@@ -20,7 +22,39 @@ except Exception:
     print("Segascorus is not installed. Please install by going to trace/trace/thirdparty/segascorus and run 'make'."
           " If this fails, segascorus is likely not compatible with your computer (i.e. Macs).")
 
-
+def affinity_error():
+    highest_rand = 0
+    highest_rand_thres = 0
+    highest_vi = 0
+    highest_vi_thres = 0
+    for i in range(0,10):
+        file_name = 'mean_affinity_segm%.1f.h5' %(i*0.1)
+#        file_name = 'validation-labels.h5'
+        with h5py.File(file_name, 'r') as f:
+            arr = f['main'][:]
+            shape = arr.shape
+            reshaped_segm = np.einsum('zyx->xyz', arr)
+            print(arr.shape)
+        validation_file = cremiio.CremiFile('cremi/a/validation.hdf', 'r')
+        validation_labels = validation_file.read_neuron_ids().data.value
+        validation_labels = validation_labels[1:, 1:, 1:]
+        print(validation_labels.shape)
+        print ("The threshold is %f" %(i*0.1))
+        score = __rand_error(validation_labels, arr, relabel2d=False)
+        if(score["Rand F-Score Full"] > highest_rand):
+            print("finally")
+            highest_rand = score["Rand F-Score Full"]
+            highest_rand_thres = i*0.1
+        if(score["VI F-Score Full"] > highest_vi):
+            print("finally 2")
+            highest_vi = score["VI F-Score Full"]
+            highest_vi_thres = i*0.1
+        print(score)
+    print("highest rand %f" %(highest_rand))
+    print("highest_rand_thres %f" %(highest_rand_thres))
+    print("highest_vi %f" %(highest_vi))
+    print("highest_vi_thres %f" %(highest_vi_thres))
+    
 def __rand_error(true_seg, pred_seg, calc_rand_score=True, calc_rand_error=False, calc_variation_score=True,
                  calc_variation_information=False, relabel2d=True, foreground_restricted=True, split_0_segment=True,
                  other=None):

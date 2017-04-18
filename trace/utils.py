@@ -14,6 +14,10 @@ import os
 
 import dataprovider.transform as trans
 
+import cremi.io as cremiio
+#import cremi.evaluation as cremival
+from cremi.evaluation import NeuronIds
+
 try:
     from thirdparty.segascorus import io_utils
     from thirdparty.segascorus import utils
@@ -34,7 +38,7 @@ Y_AXIS = 2
 X_AXIS = 3
 CHANNEL_AXIS = 4
 
-SPLIT = ['train', 'validation', 'test']
+SPLIT = ['train', 'validation', 'test', 'aligned']
 
 
 def expand_3d_to_5d(data):
@@ -44,8 +48,116 @@ def expand_3d_to_5d(data):
 
     return data
 
+def cremi_calc():
+    test = cremiio.CremiFile('mean_affinity_segm0.298.hdf', 'r')
+    truth = cremiio.CremiFile('cremi/a/validation.hdf', 'r')
 
-def run_watershed_on_affinities(affinities, relabel2d=False, low=0.9, hi=0.995):
+    inputs = truth.read_raw().data.value
+    labels = truth.read_neuron_ids().data.value
+    res = truth.read_raw().resolution
+    inputs = inputs[1:, 1:, 1:]
+    labels = labels[1:, 1:, 1:]
+    truth_trimmed = cremiio.CremiFile('validation_trimmed.hdf', 'w')
+    truth_trimmed.write_raw(cremiio.Volume(inputs, resolution = res))
+    truth_trimmed.write_neuron_ids(cremiio.Volume(labels, resolution = res))
+    truth_trimmed.close()
+
+    truth_trimmed_read = cremiio.CremiFile('validation_trimmed.hdf', 'r')
+    print (truth_trimmed_read.read_neuron_ids().data.value.shape)
+    print(test.read_neuron_ids().data.value.shape)
+    neuron_ids_evaluation = NeuronIds(truth_trimmed_read.read_neuron_ids())
+    (voi_split, voi_merge) = neuron_ids_evaluation.voi(test.read_neuron_ids())
+    adapted_rand = neuron_ids_evaluation.adapted_rand(test.read_neuron_ids())
+    print(voi_split)
+    print(voi_merge)
+    print(adapted_rand)
+    
+def write_predictions(low=0.9, hi=0.9995):
+ #   aff_file = 'mean_affinity_segm0.298.h5'
+    segment_file = 'mean_affinity_segm0.298.h5'
+    segment_file_hdf = 'mean_affinity_segm0.298.hdf'
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+
+    o_train_file = cremiio.CremiFile('cremi/a/validation.hdf', 'r')
+    o_input_volume = o_train_file.read_raw()
+    raw = o_train_file.read_raw()
+    inputs = raw.data.value
+    o_labels_res = o_input_volume.resolution
+    o_train_file.close()
+    
+#    subprocess.call(["julia"
+#                     current_dir + "/thirdparty/watershed/watershed.jl",
+#                     aff_file,
+#                     segment_file,
+#                     str(hi),
+#                     str(low)])
+    with h5py.File(segment_file, 'r') as f:
+        arr = f['main'][:]
+        test_file = cremiio.CremiFile(segment_file_hdf, 'w')
+        test_file.write_raw(cremiio.Volume(inputs, resolution=o_labels_res))
+        test_file.write_neuron_ids(cremiio.Volume(arr, resolution=o_labels_res))
+        test_file.close()
+    
+def run_watershed_on_affinities_and_store(affinities, run_name, relabel2d=False, low=0.9, hi=0.9999995):
+    tmp_aff_file = 'cremi/a/results/unet_3d_4layers/run-' + run_name + '/test-pred-affinities.h5'
+    label_file = 'tmp-validation-labels.h5'
+    final_aff_file = 'final-affinities2.h5'
+    final_seg_file = 'validation-final.h5'
+
+#    reshaped_final_aff = np.einsum('zyxd->xyzd', affinities[0])
+#    shape_final = reshaped_final_aff.shape
+
+#    with h5py.File(final_aff_file, 'w') as output_file:
+#        output_file.create_dataset('main', shape =(shape_final[0],shape_final[1], shape_final[2], shape_final[3]))
+#        out = output_file['main']
+#        out[:, :, :, :shape_final[0]] = reshaped_final_aff
+#    print(shape_final)
+        
+    
+    # Move to the front
+
+    #temporary comment out
+#tmp    reshaped_aff = np.einsum('zyxd->dzyx', affinities)
+#tmp    shape = reshaped_aff.shape
+    
+#tmp    with h5py.File(tmp_aff_file, 'w') as output_file:
+#tmp        output_file.create_dataset('main', shape=(3, shape[1], shape[2], shape[3]))
+#tmp        out = output_file['main']
+#tmp        out[:shape[0], :, :, :] = reshaped_aff
+
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    subprocess.call(["julia",
+                     current_dir + "/thirdparty/watershed/watershed.jl",
+                     tmp_aff_file,
+                     label_file,
+                     str(hi),
+                     str(low)])
+
+#might comment out later
+    pred_seg = io_utils.import_file(label_file)
+    prep = utils.parse_fns(utils.prep_fns, [relabel2d, False])
+    pred_seg, _ = utils.run_preprocessing(pred_seg, pred_seg, prep)
+    with h5py.File('cremi/a/results/unet_3d_4layers/run-' + run_name + '/test-predictions.h5', 'w') as output_file:
+        output_file.create_dataset('main', data=pred_seg)
+
+    
+#tmp    original_shape = affinities[0].shape
+#tmp    with h5py.File(final_aff_file, 'w') as final_output:
+#tmp        final_output.create_dataset('main', shape=(shape[3], shape[2], shape[1], 3))
+#tmp        final_out = final_output['main']
+#tmp        reshaped_final_aff = np.einsum('zyxd->xyzd', affinities[0])
+#tmp        final_out[:,:,:, :3] = reshaped_final_aff
+
+#tmp    with h5py.File('validation-labels.h5', 'r') as f:
+#tmp        arr = f['main'][:]
+#tmp       with h5py.File(final_seg_file, 'w') as final_seg_output:
+#tmp            final_seg_output.create_dataset('main', shape =(shape[3], shape[2], shape[1]))
+#tmp            final_seg_out = final_seg_output['main']
+#tmp            reshaped_final_seg_aff = np.einsum('zyx->xyz', arr)
+#tmp            final_seg_out[:,:,:] = reshaped_final_seg_aff
+        
+    
+def run_watershed_on_affinities(affinities, relabel2d=False, low=0.9, hi=0.9995):
     tmp_aff_file = 'tmp-affinities.h5'
     tmp_label_file = 'tmp-labels.h5'
 

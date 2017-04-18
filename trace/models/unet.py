@@ -2,6 +2,7 @@ import tensorflow as tf
 from .common import *
 from collections import OrderedDict
 import numpy as np
+from scipy.ndimage.filters import gaussian_filter
 
 from utils import *
 
@@ -40,23 +41,23 @@ UNET_3D = UNetArchitecture(
     output_mode=AFFINITIES_3D,
     layers=[
         UNet3DLayer(layer_name='layer_d1', is_valid=False, is_residual=True, 
-                    uses_max_pool=True, filter_size=3, z_filter_size=3,
+                    uses_max_pool=True, filter_size=3, z_filter_size=1,
                     n_feature_maps=64, num_convs=3, is_contracting=True, 
                     is_expanding=False, is_training=False),
         UNet3DLayer(layer_name='layer_d2', is_valid=False, is_residual=True, 
-                    uses_max_pool=True, filter_size=3, z_filter_size=3,
+                    uses_max_pool=True, filter_size=3, z_filter_size=1,
                     n_feature_maps=128, num_convs=3, is_contracting=True, 
                     is_expanding=False, is_training=False),
         UNet3DLayer(layer_name='layer_d3', is_valid=False, is_residual=True, 
-                    uses_max_pool=True, filter_size=3, z_filter_size=3,
+                    uses_max_pool=True, filter_size=3, z_filter_size=1,
                     n_feature_maps=256, num_convs=3, is_contracting=True, 
                     is_expanding=False, is_training=False),
         UNet3DLayer(layer_name='layer_d4', is_valid=False, is_residual=True, 
-                    uses_max_pool=True, filter_size=3, z_filter_size=3,
+                    uses_max_pool=True, filter_size=3, z_filter_size=1,
                     n_feature_maps=512, num_convs=3, is_contracting=True, 
                     is_expanding=False, is_training=False),
         UNet3DLayer(layer_name='layer_5', is_valid=False, is_residual=True, 
-                    uses_max_pool=True, filter_size=3, z_filter_size=3,
+                    uses_max_pool=True, filter_size=3, z_filter_size=1,
                     n_feature_maps=1024, num_convs=3, is_contracting=False, 
                     is_expanding=True, is_training=False),
         UNet3DLayer(layer_name='layer_u4', is_valid=False, is_residual=True, 
@@ -151,13 +152,36 @@ class UNet(Model):
 
 
     def predict(self, session, inputs, pred_batch_shape, mirror_inputs=True):
+        print("inputs sizes")
+        print(inputs.shape[1])
+        print(inputs.shape[2])
+        print(inputs.shape[3])
         if mirror_inputs:
             inputs = mirror_aross_borders_3d(inputs, self.fov, self.z_fov)
 
-        return self.__predict_with_evaluation(session, inputs, None, pred_batch_shape, mirror_inputs)
+        predict_affinities = self.__predict_with_evaluation(session, inputs, None, pred_batch_shape, mirror_inputs)
+        predict_affinities_flat = predict_affinities.flatten()
+        predict_affinities_flat = sorted(predict_affinities_flat)
+        num_elements = len(predict_affinities_flat)
+        low_boundary_ind = int(0.01*num_elements)
+        high_boundary_ind = int(0.8*num_elements)
+        print(low_boundary_ind)
+        print(high_boundary_ind)
+        low_boundary = predict_affinities_flat[low_boundary_ind]
+        high_boundary = predict_affinities_flat[high_boundary_ind]
+        print (low_boundary)
+        print(high_boundary)
+        #        predict_segmentation = run_watershed_on_affinities_and_store(predict_affinities)
+        return predict_affinities
 
 
     def __predict_with_evaluation(self, session, inputs, metrics, pred_tile_shape, mirror_inputs=True):
+
+        print("inputs sizes")
+        print(inputs.shape[1])
+        print(inputs.shape[2])
+        print(inputs.shape[3])
+        
         # Extract the tile sizes from the argument
         z_out_patch, y_out_patch, x_out_patch = pred_tile_shape[0], pred_tile_shape[1], pred_tile_shape[2]
         z_in_patch = z_out_patch + self.z_fov - 1

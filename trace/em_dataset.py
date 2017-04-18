@@ -188,6 +188,10 @@ class CREMIDataset(Dataset):
         self.validation_labels = validation_file.read_neuron_ids().data.value
         validation_file.close()
 
+        with h5py.File('sampleA+_401-2900_201-2700_1-200.h5', 'r') as file:
+            data = file['/img'][:]
+            self.aligned_inputs = data
+        
         # TODO(beisner): Decide if we need to load the test file every time (probably don't)
 
         test_file = cremiio.CremiFile(data_folder + 'test.hdf', 'r')
@@ -259,6 +263,8 @@ class EMDatasetSampler(object):
 
         self.__test_inputs = expand_3d_to_5d(dataset.test_inputs)
 
+        self.__aligned_inputs = expand_3d_to_5d(dataset.aligned_inputs)
+        
         # Stack the inputs and labels, so when we sample we sample corresponding labels and inputs
         train_stacked = np.concatenate((self.__train_inputs, self.__train_labels), axis=CHANNEL_AXIS)
 
@@ -367,6 +373,9 @@ class EMDatasetSampler(object):
 
     def get_test_set(self):
         return self.__test_inputs
+
+    def get_aligned_set(self):
+        return self.__aligned_inputs
 
 DATASET_DICT = {
     down.CREMI_A: CREMIDataset,

@@ -19,12 +19,65 @@ from em_dataset import DATASET_DICT
 from models import MODEL_DICT, PARAMS_DICT
 from ensemble import ENSEMBLE_METHOD_DICT, ENSEMBLE_PARAMS_DICT
 
+import evaluation as ev
 
 @click.group()
 def cli():
     pass
 
+@cli.command()
+def cr_cremi_calc():
+    cremi_calc()
 
+@cli.command()
+def prepare_submission():
+    data_folder = os.path.dirname(os.path.abspath(__file__))+'/' + 'cremi/a' + '/'
+    dset_constructor = DATASET_DICT['cremi/a']
+    dataset = dset_constructor(data_folder)
+    ensembler_folder = os.path.dirname(os.path.abspath(__file__))+'/cremi/a/results/run-' + run_name + '/'
+    with h5py.File(ensembler_folder + 'test-pred-affinities.h5', 'r') as input_file:
+        arr = input_file['main']
+        
+        predictions = np.einsum('dzyx->zyxd', arr)
+    
+        dataset.prepare_predictions_for_submission(ensembler_folder, 'test', predictions, 'AFFINITIES_3D')
+    
+@cli.command()
+def cr_write_predictions():
+    write_predictions()
+
+@cli.command()
+def get_low_high():
+    with h5py.File('cremi/a/results/unet_3d_4layers/run-maxpoolz_2d_conv_half_0.9995/old_aff/validation-pred-affinities.h5', 'r') as input_file:
+        arr = input_file['main']
+        a = np.array(arr)
+        print("percentiles")
+        print(np.percentile(a, 80))
+        print(np.percentile(a, 1))
+    
+@cli.command()
+@click.argument('run_name', type=str, default='1')
+@click.argument('low_param', type=float, default='0.9')
+@click.argument('high_param', type=float, default='0.9995')
+def create_segm_mean_aff(run_name, low_param, high_param):
+    with h5py.File('cremi/a/results/unet_3d_4layers/run-' + run_name + '/test-pred-affinities.h5', 'r') as input_file:
+        arr = input_file['main']
+        print(arr.shape)
+        run_watershed_on_affinities_and_store(arr, run_name, low=low_param, hi=high_param)
+
+@cli.command()
+def affinity_error():
+    ev.affinity_error()
+
+@cli.command()
+def check_shape():
+    with h5py.File('validation-labels.h5', 'r') as input_file:
+        arr = input_file['main']
+        print(arr.shape)
+    with h5py.File('validation-pred-affinities.h5', 'r') as labels:
+        arr = labels['main']
+        print(arr.shape)
+        
 @cli.command()
 def download():
     current_folder = os.path.dirname(os.path.abspath(__file__)) + '/'
@@ -54,10 +107,12 @@ def visualize(dataset_name, split, params_type, run_name, aff, ip, port, remote)
     neuroglancer.set_server_bind_address(bind_address=ip, bind_port=port)
     viewer = neuroglancer.Viewer(voxel_size=[6, 6, 30])
 
-    vu.add_file(data_folder, split + '-input', viewer)
+    vu.add_file(data_folder, split +'-input', viewer)
+    print(data_folder)
     if aff:
         vu.add_affinities(data_folder + 'results/' + params.model_name + '/' + 'run-' + run_name + '/', split+'-pred-affinities', viewer)
-    vu.add_labels(data_folder + 'results/' + params.model_name + '/' +  'run-' + run_name + '/', split+'-predictions', viewer)
+#    vu.add_labels(data_folder + 'results/' + params.model_name + '/' +  'run-' + run_name + '/', split+'-predictions', viewer)
+    vu.add_file(data_folder + 'results/' + params.model_name + '/' + 'run-' + run_name + '/', split+'-predictions', viewer)
     if split != 'test':
         vu.add_labels(data_folder, split, viewer)
 
@@ -108,7 +163,7 @@ def train(model_type, params_type, dataset_name, n_iter, run_name, cont):
 
     training_params = learner.TrainingParams(
         optimizer=tf.train.AdamOptimizer,
-        learning_rate=0.0001,
+        learning_rate=0.00005,
         n_iter=n_iter,
         output_size=160,
         z_output_size=16,
@@ -129,9 +184,9 @@ def train(model_type, params_type, dataset_name, n_iter, run_name, cont):
     classifier = learner.Learner(model, ckpt_folder)
 
     hooks = [
-        learner.LossHook(50, model),
-        learner.ModelSaverHook(500, ckpt_folder),
-        learner.ValidationHook(100, dset_sampler, model, data_folder, params.output_mode, [training_params.z_output_size, training_params.output_size, training_params.output_size]),
+        learner.LossHook(100, model),
+        learner.ModelSaverHook(1000, ckpt_folder),
+        learner.ValidationHook(1000, dset_sampler, model, data_folder, params.output_mode, [training_params.z_output_size, training_params.output_size, training_params.output_size]),
         learner.ImageVisualizationHook(2000, model),
         # learner.HistogramHook(100, model),
         # learner.LayerVisualizationHook(500, model),
@@ -169,9 +224,16 @@ def predict(model_type, params_type, dataset_name, split, run_name):
         inputs, _, _ = dset_sampler.get_full_training_set()
     elif split == 'validation':
         inputs, _, _ = dset_sampler.get_validation_set()
+    elif split == 'aligned':
+        inputs = dset_sampler.get_aligned_set()
     else:
         inputs = dset_sampler.get_test_set()
 
+    print("shapes")
+    print(inputs.shape[1])
+    print(inputs.shape[2])
+    print(inputs.shape[3])
+    
     # Define results folder
     ckpt_folder = data_folder + 'results/' + model.model_name + '/run-' + run_name + '/'
 
@@ -183,7 +245,7 @@ def predict(model_type, params_type, dataset_name, split, run_name):
     predictions = classifier.predict(inputs, [16, 160, 160])
 
     # Save the predicted affinities for viewing in neuroglancer.
-    dataset.prepare_predictions_for_neuroglancer()
+#    dataset.prepare_predictions_for_neuroglancer()
     dataset.prepare_predictions_for_neuroglancer_affinities(ckpt_folder, split, predictions, params.output_mode)
 
     # Prepare the predictions for submission for this particular dataset
