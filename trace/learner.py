@@ -173,13 +173,22 @@ class ImageVisualizationHook(Hook):
                                                         model.fov // 2:-(model.fov // 2),
                                                         model.fov // 2:-(model.fov // 2),
                                                         :]),
-
-            self.training_summaries = tf.summary.merge([
+            if model.apply_mask:
+                mask_summary = tf.summary.image('image_mask', model.mask[0, :3, :, : , :])
+                self.training_summaries = tf.summary.merge([
                 tf.summary.image('input_image', model.raw_image[0, model.z_fov // 2:(model.z_fov // 2) + 3]),
                 output_patch_summary,
+                mask_summary,
                 tf.summary.image('output_target', model.target[0, :3, :, :, :]),
                 tf.summary.image('predictions', model.prediction[0, :3, :, :, :]),
             ])
+            else:
+                self.training_summaries = tf.summary.merge([
+                    tf.summary.image('input_image', model.raw_image[0, model.z_fov // 2:(model.z_fov // 2) + 3]),
+                    output_patch_summary,
+                    tf.summary.image('output_target', model.target[0, :3, :, :, :]),
+                    tf.summary.image('predictions', model.prediction[0, :3, :, :, :]),
+                ])
 
     def eval(self, step, model, session, summary_writer):
         if step % self.frequency == 0:
@@ -335,7 +344,6 @@ class Learner:
 
             # Run the optimizer
             sess.run(optimize_step)
-            print('optimizing')
             for hook in hooks:
                 hook.eval(step, model, sess, summary_writer)
 
