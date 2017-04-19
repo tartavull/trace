@@ -88,8 +88,9 @@ def run_watershed_on_affinities(affinities, relabel2d=False, low=0.9, hi=0.9995)
     return pred_seg
 
 def create_binary_mask(original_mask):
-    boundary_map = np.where(original_labels == 1., original_mask, 0)
+    boundary_map = np.where(original_mask == 1., original_mask, 0)
     return boundary_map
+    
 def convert_between_label_types(dset_name, input_type, output_type, original_labels):
     # No augmentation needed, as we're basically doing e2e learning
     if input_type == output_type:
