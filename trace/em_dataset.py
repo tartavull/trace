@@ -260,7 +260,9 @@ class EMDatasetSampler(object):
 
         # If computing for clefts, include ops for masks as well
         if dataset.train_masks.any():
+            print(np.sum(dataset.train_masks))
             self.__train_masks = create_binary_mask(dataset.train_masks)
+            print(np.sum(self.__train_masks))
             self.__train_masks = expand_3d_to_5d(self.__train_masks)
             self.__train_masks = self.__train_masks[:, 1:, 1:, 1:, :]
             train_stacked = np.concatenate((self.__train_inputs, self.__train_labels, self.__train_masks), axis=CHANNEL_AXIS)
