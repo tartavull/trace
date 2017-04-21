@@ -4,47 +4,28 @@ import math
 import tifffile as tiff
 import numpy as np
 
-# print('Loading data')
-# train_stack = np.expand_dims(tiff.imread('./isbi/train-input.tif'), axis=3)
-#
-# with tf.Graph().as_default():
-#     with tf.Session() as sess:
-#         rot = True
-#         max_angle = math.pi / 10
-#         trans = True
-#         max_shift = 25
-#         print('Creating sampler')
-#         lsamp = al.LocalizationSampler(train_stack, rotation_aug=rot, max_angle=max_angle, translation_aug=trans,
-#                                        max_shift=max_shift)
-#
-#         ref_op, sec_op, true_sec_op = lsamp.get_sample_funcs()
-#
-#         ref_op = tf.cast(ref_op, dtype=tf.float32) / 255.0
-#         sec_op = tf.cast(sec_op, dtype=tf.float32) / 255.0
-#         true_sec_op = tf.cast(true_sec_op, dtype=tf.float32) / 255.0
-#
-#         print('Creating transformer')
-#         aff_trans = al.AffineSpatialTransformer(774)
-#
-#         trans_op = aff_trans(ref_op, sec_op)
-#         print('Initializing')
-#         sess.run(tf.global_variables_initializer())
-#         #     res = sess.run(trans2)
-#         print('Running transformer')
-#         res, ref, sec, tsec = sess.run([trans_op, ref_op, sec_op, true_sec_op])
-#         print('Done')
+rotation = False
+max_angle = math.pi / 10
+translation = True
+max_shift = 10
 
 tf.reset_default_graph()
 print('load dataset')
 train_stack = np.expand_dims(tiff.imread('./isbi/train-input.tif'), axis=3) / 255.0
-dim = int(train_stack.shape[1] * (math.sqrt(2)) + 100)
+dim = int(train_stack.shape[1])
 
 print('create transformer')
-aff_trans = al.AffineSpatialTransformer(dim)
+aff_trans = al.ConvTranslationSpatialTransformer(in_dim=dim, l1_n=24, l2_n=36, l3_n=48, l4_n=64, fc1_n=512, max_shift=max_shift, trainable=True)
+# aff_trans = al.FCTranslationSpatialTransformer(in_dim=dim, fc1_n=512, max_shift=max_shift, trainable=True)
+# aff_trans = al.FCTranslationalSpatialTransformer(dim, max_shift)
+# aff_trans = al.ConvAffineSpatialTransformer(dim, 50)
+
+print('create sampler')
+sampler = al.LocalizationSampler(train_stack, rotation_aug=False, max_angle=max_angle, translation_aug=True, max_shift=max_shift)
 
 print('create trainer')
-trainer = al.LocalizationTrainer(aff_trans, './realignment/spatial_transformer/affine/test7/')
+trainer = al.LocalizationTrainer(aff_trans, './realignment/spatial_transformer/trans_conv_sm/test1')
 
 print('train')
 with tf.Session() as sess:
-    trainer.train(sess, train_stack, 1010)
+    trainer.train(sess, 100000, sampler, lr=0.00001)
