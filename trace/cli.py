@@ -60,7 +60,7 @@ def get_low_high():
 @click.argument('low_param', type=float, default='0.9')
 @click.argument('high_param', type=float, default='0.9995')
 def create_segm_mean_aff(run_name, low_param, high_param):
-    with h5py.File('cremi/a/results/unet_3d_4layers/run-' + run_name + '/test-pred-affinities.h5', 'r') as input_file:
+    with h5py.File('cremi/a/results/unet_3d_4layers/run-' + run_name + '/validation-pred-affinities.h5', 'r') as input_file:
         arr = input_file['main']
         print(arr.shape)
         run_watershed_on_affinities_and_store(arr, run_name, low=low_param, hi=high_param)

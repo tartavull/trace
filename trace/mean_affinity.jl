@@ -6,9 +6,9 @@ function load_segmentation(fn)
 	 return h5read(fn, "main")
 end
 
-aff = load_segmentation("cremi/a/results/unet_3d_4layers/run-maxpoolz_2d_conv_half0.9995_15k/test-pred-affinities.h5")
+aff = load_segmentation("cremi/a/results/unet_3d_4layers/run-maxpoolz_2d_conv_half_0.9995/prev/validation-pred-affinities.h5")
 #segm = load_segmentation("validation-labels.h5")
-segm = load_segmentation("tmp-validation-labels-new-gaussian.h5")
+segm = load_segmentation("validation-labels-new-gaussian-0.65.h5")
 
 #aff is a (X,Y,Z,3) array of affinities
 #segm is a (X,Y,Z) array containing a flat segmentation from watershed
