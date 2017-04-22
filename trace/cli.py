@@ -128,10 +128,10 @@ def train(model_type, params_type, dataset_name, n_iter, run_name, cont, mask):
     classifier = learner.Learner(model, ckpt_folder)
 
     hooks = [
-        learner.LossHook(1, model),
+        learner.LossHook(50, model),
         learner.ModelSaverHook(100, ckpt_folder),
-        learner.ValidationHook(500, dset_sampler, model, data_folder, params.output_mode, [training_params.z_output_size, training_params.output_size, training_params.output_size]),
-        learner.ImageVisualizationHook(200, model),
+        learner.ValidationHook(1000, dset_sampler, model, data_folder, params.output_mode, [training_params.z_output_size, training_params.output_size, training_params.output_size]),
+        learner.ImageVisualizationHook(500, model),
         # learner.HistogramHook(100, model),
         # learner.LayerVisualizationHook(500, model),
     ]
