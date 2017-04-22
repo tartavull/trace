@@ -427,10 +427,13 @@ class Model(object):
         # Inputs are tensor of shape [batch, z, y, x, n_chan]
         self.example = tf.placeholder_with_default(self.queue.dequeue(), shape=[None, None, None, None, None])
 
-        self.raw_image = self.example[:, :, :, :, :4]
+        self.raw_image = self.example[:, :, :, :, :2]
 
         # Standardize each input image, using map because per_image_standardization takes one image at a time
         self.image = tf.map_fn(lambda stack: tf.map_fn(lambda img: tf.image.per_image_standardization(img), stack), self.raw_image)
+
+        #self.image = tf.Print(self.image, [self.raw_image[0, 0, :10, :10, 0], self.raw_image[0, 0, :10, :10, 1]], summarize=1000, message='raw image')
+        #self.image = tf.Print(self.image, [self.image[0, 0, :10, :10, 0], self.image[0, 0, :10, :10, 1]], summarize=1000, message='standardized image')
 
         # Comment out if we want to have averaged
         # mean, var = tf.nn.moments(self.raw_image, axes=[0, 1, 2, 3, 4], keep_dims=False)
@@ -438,10 +441,10 @@ class Model(object):
 
         # Crop the labels to the appropriate field of view
         if self.fov == 1 and self.z_fov == 1:
-            self.target = self.example[:, :, :, :, 4:]
+            self.target = self.example[:, :, :, :, 2:]
         else:
             self.target = self.example[:, self.z_fov // 2:-(self.z_fov // 2), self.fov // 2:-(self.fov // 2),
-                          self.fov // 2:-(self.fov // 2), 4:]
+                          self.fov // 2:-(self.fov // 2), 2:]
 
     def predict(self, session, inputs, pred_batch_shape, mirror_inputs=True):
         """Predict on a set of inputs, producing a tensor with the same shape.

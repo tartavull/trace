@@ -108,7 +108,7 @@ def train(model_type, params_type, dataset_name, n_iter, run_name, ff, cont):
 
     training_params = learner.TrainingParams(
         optimizer=tf.train.AdamOptimizer,
-        learning_rate=0.0001,
+        learning_rate=0.00002,
         n_iter=n_iter,
         output_size=120,
         z_output_size=16,
@@ -129,10 +129,10 @@ def train(model_type, params_type, dataset_name, n_iter, run_name, ff, cont):
     classifier = learner.Learner(model, ckpt_folder)
 
     hooks = [
-        learner.LossHook(50, model),
+        learner.LossHook(10, model),
         learner.ModelSaverHook(100, ckpt_folder),
         #learner.ValidationHook(500, dset_sampler, model, data_folder, params.output_mode, [training_params.z_output_size, training_params.output_size, training_params.output_size]),
-        learner.ImageVisualizationHook(50, model),
+        learner.ImageVisualizationHook(1000, model),
         # learner.HistogramHook(100, model),
         # learner.LayerVisualizationHook(500, model),
     ]
@@ -148,9 +148,10 @@ def train(model_type, params_type, dataset_name, n_iter, run_name, ff, cont):
 @click.argument('dataset_name', type=click.Choice(DATASET_DICT.keys()))
 @click.argument('split', type=click.Choice(SPLIT))
 @click.argument('run_name', type=str, default='1')
-def predict(model_type, params_type, dataset_name, split, run_name):
+@click.option('--ff/--no-ff', default=False, help="Run flood-filling prediction.")
+def predict(model_type, params_type, dataset_name, split, run_name, ff):
     """
-    Realods a model previously trained
+    Reloads a model previously trained
     """
     data_folder = os.path.dirname(os.path.abspath(__file__)) + '/' + dataset_name + '/'
 
@@ -181,7 +182,10 @@ def predict(model_type, params_type, dataset_name, split, run_name):
     classifier.restore()
 
     # Predict on the classifier
-    predictions = classifier.predict(inputs, [16, 120, 120])
+    if ff:
+        predictions = classifier.predict(inputs, [16, 120, 120], flood_filling=True, labels=labels)
+    else:
+        predictions = classifier.predict(inputs, [16, 120, 120], ff=False)
 
     # Add padding to compensate for edge affinities. (Only necessary until
     # we use padded dataset
@@ -193,7 +197,7 @@ def predict(model_type, params_type, dataset_name, split, run_name):
     tmp[:, 1:, 1:, 1:, :] = predictions
     predictions = tmp
     
-    if labels != None:
+    if labels is not None:
         shape = list(labels.shape)
         shape[1] += 1
         shape[2] += 1
@@ -207,7 +211,7 @@ def predict(model_type, params_type, dataset_name, split, run_name):
 
     # Prepare the predictions for submission for this particular dataset
     # Only send in the first dimension of predictions, because theoretically predict can predict on many stacks
-    dataset.prepare_predictions_for_submission(ckpt_folder, split, predictions[0], params.output_mode, ground_truth=labels)
+    #dataset.prepare_predictions_for_submission(ckpt_folder, split, predictions[0], params.output_mode, ground_truth=labels)
 
 
 @cli.command()

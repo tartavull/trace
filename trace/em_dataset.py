@@ -183,6 +183,9 @@ class CREMIDataset(Dataset):
         self.train_labels = train_file.read_neuron_ids().data.value
         train_file.close()
 
+        prediction_file = data_folder + 'results/unet_3d/run-test_bad_data_aug/train-pred-affinities.h5'
+        self.train_predictions = h5py.File(prediction_file, 'r')['main'][:]
+
         validation_file = cremiio.CremiFile(data_folder + 'validation.hdf', 'r')
         self.validation_inputs = validation_file.read_raw().data.value
         self.validation_labels = validation_file.read_neuron_ids().data.value
@@ -242,6 +245,7 @@ class EMDatasetSampler(object):
         self.__train_labels = expand_3d_to_5d(dataset.train_labels)
         self.__train_targets = convert_between_label_types(dataset.label_type, label_output_type,
                                                            expand_3d_to_5d(dataset.train_labels))
+        self.__train_preds = np.expand_dims(np.einsum('dzyx->zyxd', dataset.train_predictions), axis=0)
 
         # Crop to get rid of edge affinities
         self.__train_inputs = self.__train_inputs[:, 1:, 1:, 1:, :]
@@ -399,9 +403,11 @@ class EMDatasetSampler(object):
                         lambda: target_segment)
                 targets = tf.cast(tf.equal(augmented_labels, target_segment), tf.float32)
 
-                affs = affinitize(augmented_labels)
-                middle_slice_gt = tf.tile(targets[:, shape[1] // 2:shape[1] // 2 + 1], multiples=[1,1,1,1,3])
-                affs = tf.concat([affs[:, :shape[1] // 2], middle_slice_gt, affs[:, shape[1] // 2 + 1:]], axis=1)
+                #affs = affinitize(augmented_labels) * 255.0
+                #middle_slice_gt = tf.tile(targets[:, shape[1] // 2:shape[1] // 2 + 1], multiples=[1,1,1,1,3])
+                affs = tf.concat([tf.ones((shape[0], shape[1] // 2, shape[2], shape[3],shape [4])) * 0.5, targets[:, shape[1] // 2:shape[1] // 2 + 1], tf.ones((shape[0], shape[1] // 2 - 1, shape[2], shape[3], shape[4])) * 0.5], axis=1) * 255.0
+                #affs = tf.concat([affs[:, :shape[1] // 2], middle_slice_gt, affs[:, shape[1] // 2 + 1:]], axis=1)
+                #augmented_inputs = tf.concat([augmented_inputs[:, :shape[1] // 2], targets[:, shape[1] //2: shape[1] // 2 + 1], augmented_inputs[:, shape[1] // 2 + 1:]], axis=1)
                 cropped_affs = affs[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
             else:
                 targets = affinitize(augmented_labels)

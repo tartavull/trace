@@ -173,16 +173,16 @@ class ImageVisualizationHook(Hook):
         self.frequency = frequency
         with tf.variable_scope('images'):
             if model.fov == 1:
-                output_patch_summary = tf.summary.image('output_patch', model.raw_image[0, :16, :, :, 1:4], max_outputs=16)
+                output_patch_summary = tf.summary.image('output_patch', model.image[0, :16, :, :, 1:2], max_outputs=16)
             else:
                 output_patch_summary = tf.summary.image('output_patch',
-                                                        model.raw_image[0, model.z_fov // 2:(model.z_fov // 2) + 3,
+                                                        model.image[0, model.z_fov // 2:(model.z_fov // 2) + 3,
                                                         model.fov // 2:-(model.fov // 2),
                                                         model.fov // 2:-(model.fov // 2),
-                                                        :]),
+                                                        1:2]),
 
             self.training_summaries = tf.summary.merge([
-                tf.summary.image('input_image', model.raw_image[0, model.z_fov // 2:(model.z_fov // 2) + 16, :, :, :1], max_outputs=16),
+                tf.summary.image('input_image', model.image[0, model.z_fov // 2:(model.z_fov // 2) + 16, :, :, :1], max_outputs=16),
                 output_patch_summary,
                 tf.summary.image('output_target', model.target[0, :16], max_outputs=16),
                 tf.summary.image('predictions', model.prediction[0, :16], max_outputs=16),
@@ -372,11 +372,15 @@ class Learner:
         self.model.saver.restore(self.sess, self.ckpt_folder + 'model.ckpt')
         print("Model restored.")
 
-    def predict(self, inputs, pred_batching_shape):
+    def predict(self, inputs, pred_batching_shape, flood_filling=False, labels=None):
         # Make sure that the inputs are 5-dimensional, in the form [batch_size, z_dim, y_dim, x_dim, n_chan]
 
         assert (len(inputs.shape) == 5)
         assert (len(pred_batching_shape) == 3)
 
-        return self.model.predict(self.sess, inputs, pred_batching_shape, mirror_inputs=False)
+        if flood_filling:
+            return self.model.predict(self.sess, inputs, pred_batching_shape, mirror_inputs=False, flood_filling=True, labels=labels)
+        else:
+            return self.model.predict(self.sess, inputs, pred_batching_shape, mirror_inputs=False, flood_filling=False)
+
 

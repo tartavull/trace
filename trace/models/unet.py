@@ -167,7 +167,7 @@ class UNet(Model):
     def __init__(self, architecture, is_training=False):
         super(UNet, self).__init__(architecture)
         prev_layer = self.image
-        prev_n_feature_maps = 4
+        prev_n_feature_maps = 2
 
         skip_connections = []
         
@@ -200,11 +200,70 @@ class UNet(Model):
         self.saver = tf.train.Saver()
 
 
-    def predict(self, session, inputs, pred_batch_shape, mirror_inputs=True):
+    def predict(self, session, inputs, pred_batch_shape, mirror_inputs=True, flood_filling=False, labels=None):
         if mirror_inputs:
             inputs = mirror_aross_borders_3d(inputs, self.fov, self.z_fov)
 
-        return self.__predict_with_evaluation(session, inputs, None, pred_batch_shape, mirror_inputs)
+        if flood_filling:
+            return self.__predict_ff_with_evaluation(session, inputs, None, pred_batch_shape, mirror_inputs, labels=labels)
+        else:
+            return self.__predict_with_evaluation(session, inputs, None, pred_batch_shape, mirror_inputs)
+
+
+    def __predict_ff_with_evaluation(self, session, inputs, metrics, pred_tile_shape, mirror_inputs=True, labels=None):
+        # Extract the tile sizes from the argument
+        z_out_patch, y_out_patch, x_out_patch = pred_tile_shape[0], pred_tile_shape[1], pred_tile_shape[2]
+        z_in_patch = z_out_patch + self.z_fov - 1
+        y_in_patch = y_out_patch + self.fov - 1
+        x_in_patch = x_out_patch + self.fov - 1
+
+        # Extract the overall input size.
+        z_inp_size, y_inp_size, x_inp_size = inputs.shape[1], inputs.shape[2], inputs.shape[3]
+        z_outp_size = z_inp_size - self.z_fov + 1
+        y_outp_size = y_inp_size - self.fov + 1
+        x_outp_size  = x_inp_size - self.fov + 1
+
+        # Create accumulator for output.
+        combined_pred = np.zeros((inputs.shape[0],
+                                  z_outp_size, y_outp_size, x_outp_size, 1))
+
+        for stack, _ in enumerate(inputs):
+            for z in range(0, z_inp_size - z_out_patch + 1, z_out_patch):
+                print('z: ' + str(z) + '/' + str(z_inp_size))
+                for y in range(0, y_inp_size - y_out_patch + 1, y_out_patch):
+                    print('y: ' + str(y) + '/' + str(y_inp_size))
+                    for x in range(0, x_inp_size - x_out_patch + 1, x_out_patch):
+                        label_region = labels[stack:stack + 1,
+                                              z:z + z_in_patch,
+                                              y:y + y_in_patch,
+                                              x:x + x_in_patch,
+                                              :]
+                        target_segment = label_region[0, z_in_patch // 2, y_in_patch // 2, x_in_patch // 2, 0]
+                        if target_segment == 0:
+                            target_segment = np.max(label_region[0, z_in_patch // 2 - 1:z_in_patch // 2 + 1, y_in_patch // 2 - 5:y_in_patch // 2 + 5, x_in_patch // 2 - 5:x_in_patch // 2 + 5])
+                        targets = (label_region == target_segment).astype(np.float32)
+                        target_mask = np.zeros((1, z_in_patch, y_in_patch, x_in_patch, 1))
+                        target_mask[:, :z_in_patch // 2] = 0.5
+                        target_mask[:, z_in_patch // 2:z_in_patch // 2 + 1] = targets[:, z_in_patch // 2:z_in_patch // 2 + 1]
+                        target_mask[:, z_in_patch // 2 + 1:] = 0.5
+                        target_mask *= 255.0
+                        input_img = np.concatenate([inputs[stack:stack + 1, 
+                                                           z:z + z_in_patch, 
+                                                           y:y + y_in_patch,
+                                                           x:x + x_in_patch,
+                                                           :], 
+                                                    target_mask], 
+                                                    axis=4)
+                        pred = session.run(self.prediction,
+                                           feed_dict={
+                                               self.example: input_img,
+                                           })
+
+                        combined_pred[stack, 
+                                      z:z + z_out_patch,
+                                      y:y + y_out_patch,
+                                      x:x + x_out_patch, :] += pred[0]
+        return combined_pred
 
 
     def __predict_with_evaluation(self, session, inputs, metrics, pred_tile_shape, mirror_inputs=True):
