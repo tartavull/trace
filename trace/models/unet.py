@@ -200,13 +200,17 @@ class UNet(Model):
         # Create accumulator for overlaps.
         overlaps = np.zeros((inputs.shape[0], z_outp_size, y_outp_size, x_outp_size, 3))
 
+        dirac = np.zeros((z_out_patch, y_out_patch, x_out_patch, 3))
+        dirac[z_out_patch // 2, y_out_patch // 2, x_out_patch // 2, 1] = 1
+        gaussian_kernel=gaussian_filter(dirac, (z_out_patch // 6, y_out_patch // 6, x_out_patch // 6, 100))
+        
         for stack, _ in enumerate(inputs):
             # Iterate through the overlapping tiles.
-            for z in range(0, z_inp_size - z_in_patch + 1, z_out_patch - 2) + [z_inp_size - z_in_patch]:
+            for z in range(0, z_inp_size - z_in_patch + 1, z_out_patch - 5) + [z_inp_size - z_in_patch]:
                 print('z: ' + str(z) + '/' + str(z_inp_size))
-                for y in range(0, y_inp_size - y_in_patch + 1, y_out_patch - 10) + [y_inp_size - y_in_patch]:
+                for y in range(0, y_inp_size - y_in_patch + 1, y_out_patch - 50) + [y_inp_size - y_in_patch]:
                     print('y: ' + str(y) + '/' + str(y_inp_size))
-                    for x in range(0, x_inp_size - x_in_patch + 1, x_out_patch - 10) + [x_inp_size - x_in_patch]:
+                    for x in range(0, x_inp_size - x_in_patch + 1, x_out_patch - 50) + [x_inp_size - x_in_patch]:
                         pred= session.run(self.prediction,
                                            feed_dict={
                                                self.example: inputs[stack:stack + 1, 
@@ -230,12 +234,12 @@ class UNet(Model):
                         combined_pred[stack, 
                                       z:z + z_out_patch,
                                       y:y + y_out_patch,
-                                      x:x + x_out_patch, :] += pred[0]
+                                      x:x + x_out_patch, :] += pred[0] * gaussian_kernel
                         overlaps[stack,
                                  z:z + z_out_patch,
                                  y:y + y_out_patch,
                                  x:x + x_out_patch, 
-                                 :] += np.ones((z_out_patch, y_out_patch, x_out_patch, 3))
+                                 :] += gaussian_kernel
 
             # Normalize the combined prediction by the number of times each
             # voxel was computed in the overlapping computation.

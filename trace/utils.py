@@ -100,7 +100,8 @@ def write_predictions(low=0.9, hi=0.9995):
     
 def run_watershed_on_affinities_and_store(affinities, run_name, relabel2d=False, low=0.9, hi=0.9999995):
     tmp_aff_file = 'cremi/a/results/unet_3d_4layers/run-' + run_name + '/test-pred-affinities.h5'
-    label_file = 'tmp-validation-labels.h5'
+#    label_file = 'cremi/a/results/unet_3d_4layers/run-' + run_name + '/test-predictions.h5'
+    label_file = 'tmp-validation-labels-new-gaussian.h5'
     final_aff_file = 'final-affinities2.h5'
     final_seg_file = 'validation-final.h5'
 
