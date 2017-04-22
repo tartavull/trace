@@ -193,7 +193,7 @@ def __maybe_split_cremi(folder, train_fraction):
         cremival.create_border_mask(input_data=o_labels, target=o_bounded_labels, max_dist=2, background_label=0)
 
         o_bounded_masks = np.zeros(o_labels.shape, dtype=np.int32)
-        cremival.create_border_mask(input_data=o_labels, target=o_bounded_masks, max_dist=8, background_label=0)
+        cremival.create_border_mask(input_data=o_labels, target=o_bounded_masks, max_dist=14, background_label=0)
         
         o_bounded_clefts = np.zeros(o_clefts.shape, dtype=np.int32)
         cremival.create_border_mask(input_data=o_clefts, target=o_bounded_clefts, max_dist=4, background_label=0)
