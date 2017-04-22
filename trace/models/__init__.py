@@ -5,6 +5,7 @@ MODEL_DICT = {
     'conv': ConvNet,
     'unet': UNet,
     'res_vnet': ResVNet,
+    'runet': RecurrentUNet,
 }
 
 PARAMS_DICT = {
