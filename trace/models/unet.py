@@ -187,9 +187,11 @@ class UNet(Model):
                     prev_layer, prev_n_feature_maps = layer.connect(prev_layer, prev_n_feature_maps, dilation_rate=1, is_training=False, skip_connect=skip_connect)
                 else:
                     last_layer = layer.connect(prev_layer, prev_n_feature_maps, dilation_rate=1, is_training=False, skip_connect=skip_connections[0])
-                    if self.task == 'multi':
-                        last_layer_boundary = layer.connect(prev_layer, prev_n_feature_maps, dilation_rate=1, is_training=False, skip_connect=skip_connections[0], multi=True)
-
+                    second_to_last = prev_layer
+        
+        if self.task == 'multi':
+            with tf.variable_scope('layer' + str(self.architecture.layers + 1)):
+                last_layer_boundary = layer.connect(second_to_last, prev_n_feature_maps, dilation_rate=1, is_training=False, skip_connect=skip_connections[0], multi=True)
         # Predictions
         self.prediction = tf.nn.sigmoid(last_layer)
         self.binary_prediction = tf.round(self.prediction)
