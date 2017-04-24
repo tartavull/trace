@@ -372,16 +372,17 @@ class EMDatasetSampler(object):
 
                 return tf.map_fn(lambda img: randomly_apply_op(img, apply_random_blur_to_slice, prob=5), stack)
 
-            blurred_inputs = tf.map_fn(lambda stack: apply_random_blur_to_stack(stack),
-                                       deformed_inputs)
+            # blurred_inputs = tf.map_fn(lambda stack: apply_random_blur_to_stack(stack),
+            #                            deformed_inputs)
 
             # Mess with the levels
             # leveled_image = tf.image.random_brightness(deformed_image, max_delta=0.15)
             # leveled_image = tf.image.random_contrast(leveled_image, lower=0.5, upper=1.5)
-            leveled_inputs = blurred_inputs
+            # leveled_inputs = blurred_inputs
 
             deformed_inputs = samples[:, :, :, :, :1]
             deformed_labels = samples[:, :, :, :, 1:2]
+            
             if dataset.task == down.MULTI:
                 deformed_labels_boundary = samples[:, :, :, :, 2:3]
                 deformed_labels_boundary = affinitize(deformed_labels_boundary)
