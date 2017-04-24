@@ -190,7 +190,7 @@ class UNet(Model):
                     second_to_last = prev_layer
         
         if self.task == 'multi':
-            with tf.variable_scope('layer' + str(self.architecture.layers + 1)):
+            with tf.variable_scope('layer' + str(num_layers + 1)):
                 last_layer_boundary = layer.connect(second_to_last, prev_n_feature_maps, dilation_rate=1, is_training=False, skip_connect=skip_connections[0], multi=True)
         # Predictions
         self.prediction = tf.nn.sigmoid(last_layer)
