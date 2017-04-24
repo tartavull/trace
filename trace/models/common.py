@@ -439,6 +439,8 @@ class Model(object):
         self.global_step = tf.Variable(0, name='global_step', trainable=False)
         self.apply_mask = apply_mask
         self.num_output_channels = 1
+        self.task = task
+
         if self.architecture.output_mode == AFFINITIES_3D:
             self.num_output_channels = 3
 
