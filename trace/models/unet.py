@@ -199,10 +199,17 @@ class UNet(Model):
         # Loss
         self.cross_entropy = tf.nn.sigmoid_cross_entropy_with_logits(logits=last_layer,
                                                                     labels=self.target)
-        self.pixel_error = tf.cast(tf.abs(self.binary_prediction - self.target), tf.float32)
+        self.pixel_error = tf.reduce_mean(tf.cast(tf.abs(self.binary_prediction - self.target), tf.float32))
 
         if apply_mask:
             self.cross_entropy = tf.multiply(self.cross_entropy, self.mask)
+
+        self.cross_entropy = tf.reduce_mean(self.cross_entropy)
+
+        # Revised for multi-task learning
+        self.cross_entropy_total = self.cross_entropy
+        self.pixel_error_total = self.pixel_error
+
         if self.task == 'multi':
             self.prediction_boundary = tf.nn.sigmoid(last_layer_boundary)
             self.binary_prediction_boundary = tf.round(self.prediction_boundary)
@@ -211,15 +218,12 @@ class UNet(Model):
                                                                                 labels=self.target_boundary)
             self.pixel_error_boundary = tf.cast(tf.abs(self.binary_prediction_boundary - self.target_boundary), tf.float32)
 
+            self.cross_entropy_boundary = tf.reduce_mean(self.cross_entropy_boundary)
+            self.pixel_error_boundary = tf.reduce_mean(self.pixel_error_boundary)
+
             # Update error to have the weighted sum of both
             self.cross_entropy_total = self.cross_entropy + self.cross_entropy_boundary * 0.5
-            self.pixel_error_total = self.pixel_error + self.pixel_error_boundary * 0.5
-        else: 
-            self.cross_entropy_total = self.cross_entropy
-            self.pixel_error_total = self.pixel_error
-
-        self.cross_entropy_total = tf.reduce_mean(self.cross_entropy_total)
-        self.pixel_error_total = tf.reduce_mean(self.cross_entropy_total)
+            self.pixel_error_total = self.pixel_error + self.pixel_error_boundary * 0.5            
 
         self.saver = tf.train.Saver()
 
