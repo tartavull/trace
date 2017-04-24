@@ -205,7 +205,7 @@ class UNet(Model):
             self.prediction_boundary = tf.nn.sigmoid(last_layer_boundary)
             self.binary_prediction_boundary = tf.round(self.prediction_boundary)
 
-            self.cross_entropy_boundary = tf.nn.sigmoid_cross_entropy_with_logits(logits=last_layer_boundary
+            self.cross_entropy_boundary = tf.nn.sigmoid_cross_entropy_with_logits(logits=last_layer_boundary,
                                                                                 labels=self.target_boundary)
             self.pixel_error_boundary = tf.cast(tf.abs(self.binary_prediction_boundary - self.target_boundary), tf.float32)
 
