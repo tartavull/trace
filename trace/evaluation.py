@@ -99,8 +99,6 @@ def __prepare_probabilistic_segmentation_for_rand(thresh, images):
 
 def __rand_error_boundaries(true_labels, pred_labels):
     # Make sure in the shape [n_images, im_dim_1, im_dim_2]
-    print(true_labels.shape)
-    print(pred_labels.shape)
     assert (len(true_labels.shape) == 3)
     assert (len(pred_labels.shape) == 3)
 
@@ -110,7 +108,7 @@ def __rand_error_boundaries(true_labels, pred_labels):
     # Get the rand scores for each threshold
     scores = dict()
 
-    for thresh in np.arange(0, 1, 0.1):
+    for thresh in np.arange(0, 1, 0.25):
         # print('Calculating at thresh %0.1f' % thresh)
         pred_seg = __prepare_probabilistic_segmentation_for_rand(thresh, pred_labels)
 

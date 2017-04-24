@@ -336,7 +336,7 @@ class Learner:
 
         # Iterate through the dataset
         print("Start")
-        begin_step = sess.run(model.global_step)
+        begin_step = sess.run(model.global_step) + 1
         for step in range(begin_step, training_params.n_iter):
             if coord.should_stop():
                 break
