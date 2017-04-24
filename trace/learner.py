@@ -48,10 +48,20 @@ class Hook(object):
 class LossHook(Hook):
     def __init__(self, frequency, model):
         self.frequency = frequency
-        self.training_summaries = tf.summary.merge([
-            tf.summary.scalar('cross_entropy', model.cross_entropy),
-            tf.summary.scalar('pixel_error', model.pixel_error),
-        ])
+        if model.task == 'multi':
+            self.training_summaries = tf.summary.merge([
+                tf.summary.scalar('cross_entropy_cleft', model.cross_entropy),
+                tf.summary.scalar('pixel_error_cleft', model.pixel_error),
+                tf.summary.scalar('cross_entropy_boundary', model.cross_entropy_boundary),
+                tf.summary.scalar('pixel_error_boundary', model.pixel_error_boundary),
+                tf.summary.scalar('cross_entropy_total', model.cross_entropy_total),
+                tf.summary.scalar('pixel_error_total', model.pixel_error_total),
+            ])
+        else:
+            self.training_summaries = tf.summary.merge([
+                tf.summary.scalar('cross_entropy', model.cross_entropy_total),
+                tf.summary.scalar('pixel_error', model.pixel_error_total),
+            ])
 
     def eval(self, step, model, session, summary_writer):
         if step % self.frequency == 0:
@@ -175,20 +185,41 @@ class ImageVisualizationHook(Hook):
                                                         :]),
             if model.apply_mask:
                 mask_summary = tf.summary.image('image_mask', model.mask[0, :3, :, : , :])
-                self.training_summaries = tf.summary.merge([
-                tf.summary.image('input_image', model.raw_image[0, model.z_fov // 2:(model.z_fov // 2) + 3]),
-                output_patch_summary,
-                mask_summary,
-                tf.summary.image('output_target', model.target[0, :3, :, :, :]),
-                tf.summary.image('predictions', model.prediction[0, :3, :, :, :]),
-            ])
+                if model.task == 'multi':
+                    self.training_summaries = tf.summary.merge([
+                        tf.summary.image('input_image', model.raw_image[0, model.z_fov // 2:(model.z_fov // 2) + 3]),
+                        output_patch_summary,
+                        mask_summary,
+                        tf.summary.image('output_target_cleft', model.target[0, :3, :, :, :]),
+                        tf.summary.image('output_target_boundary', model.target_boundary[0, :3, :, :, :]),
+                        tf.summary.image('predictions_cleft', model.prediction[0, :3, :, :, :]),
+                        tf.summary.image('predictions_boundary', model.prediction_boundary[0, :3, :, :, :]),
+                    ])
+                else:
+                    self.training_summaries = tf.summary.merge([
+                        tf.summary.image('input_image', model.raw_image[0, model.z_fov // 2:(model.z_fov // 2) + 3]),
+                        output_patch_summary,
+                        mask_summary,
+                        tf.summary.image('output_target', model.target[0, :3, :, :, :]),
+                        tf.summary.image('predictions', model.prediction[0, :3, :, :, :]),
+                    ])
             else:
-                self.training_summaries = tf.summary.merge([
-                    tf.summary.image('input_image', model.raw_image[0, model.z_fov // 2:(model.z_fov // 2) + 3]),
-                    output_patch_summary,
-                    tf.summary.image('output_target', model.target[0, :3, :, :, :]),
-                    tf.summary.image('predictions', model.prediction[0, :3, :, :, :]),
-                ])
+                if model.task == 'multi':
+                    self.training_summaries = tf.summary.merge([
+                        tf.summary.image('input_image', model.raw_image[0, model.z_fov // 2:(model.z_fov // 2) + 3]),
+                        output_patch_summary,
+                        tf.summary.image('output_target_cleft', model.target[0, :3, :, :, :]),
+                        tf.summary.image('output_target_boundary', model.target_boundary[0, :3, :, :, :]),
+                        tf.summary.image('predictions_cleft', model.prediction[0, :3, :, :, :]),
+                        tf.summary.image('predictions_boundary', model.prediction_boundary[0, :3, :, :, :]),
+                    ])
+                else:
+                    self.training_summaries = tf.summary.merge([
+                        tf.summary.image('input_image', model.raw_image[0, model.z_fov // 2:(model.z_fov // 2) + 3]),
+                        output_patch_summary,
+                        tf.summary.image('output_target', model.target[0, :3, :, :, :]),
+                        tf.summary.image('predictions', model.prediction[0, :3, :, :, :]),
+                    ])
 
     def eval(self, step, model, session, summary_writer):
         if step % self.frequency == 0:
@@ -310,7 +341,7 @@ class Learner:
         qr = tf.train.QueueRunner(model.queue, [enqueue_op] * 4)
 
         # Define an optimizer
-        optimize_step = training_params.optimizer(training_params.learning_rate).minimize(model.cross_entropy, global_step=model.global_step)
+        optimize_step = training_params.optimizer(training_params.learning_rate).minimize(model.cross_entropy_total, global_step=model.global_step)
 
         sess.run(tf.global_variables_initializer())
         if continue_training:

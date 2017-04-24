@@ -212,11 +212,14 @@ class UNet(Model):
             self.pixel_error_boundary = tf.cast(tf.abs(self.binary_prediction_boundary - self.target_boundary), tf.float32)
 
             # Update error to have the weighted sum of both
-            self.cross_entropy += self.cross_entropy_boundary * 0.5
-            self.pixel_error += self.pixel_error_boundary * 0.5
+            self.cross_entropy_total = self.cross_entropy + self.cross_entropy_boundary * 0.5
+            self.pixel_error_total = self.pixel_error + self.pixel_error_boundary * 0.5
+        else: 
+            self.cross_entropy_total = self.cross_entropy
+            self.pixel_error_total = self.pixel_error
 
-        self.cross_entropy = tf.reduce_mean(self.cross_entropy)
-        self.pixel_error = tf.reduce_mean(self.pixel_error)
+        self.cross_entropy_total = tf.reduce_mean(self.cross_entropy_total)
+        self.pixel_error_total = tf.reduce_mean(self.cross_entropy_total)
 
         self.saver = tf.train.Saver()
 
