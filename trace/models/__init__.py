@@ -22,3 +22,5 @@ PARAMS_DICT = {
     'unet_3d_4layers': UNET_3D_4LAYERS,
     'unet_3d_basic': UNET_3D_BASIC
 }
+
+TASK_NAMES = ['boundary', 'cleft', 'multi']

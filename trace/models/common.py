@@ -205,7 +205,7 @@ class UNet3DLayer(Layer):
         super(UNet3DLayer, self).__init__(*args, **kwargs)
 
     def connect(self, prev_layer, prev_n_feature_maps, dilation_rate, is_training, z_dilation_rate=1,
-                skip_connect=None):
+                skip_connect=None, multi=False):
         weights = []
         biases = []
         convs = []
@@ -290,9 +290,12 @@ class UNet3DLayer(Layer):
             return up_conv, out_n_feature_maps
         else:
             # Map to boundaries 
+            n_out = 1
+            if multi:
+                n_out = 3
             w_o = get_weight_variable('w_o',
-                                      [self.z_filter_size, self.filter_size, self.filter_size, self.n_feature_maps, 1])
-            b_o = get_bias_variable('b_o', [1])
+                                      [self.z_filter_size, self.filter_size, self.filter_size, self.n_feature_maps, n_out])
+            b_o = get_bias_variable('b_o', [n_out])
             out_node = same_conv3d(final_node, w_o) + b_o
             return out_node
 
@@ -427,7 +430,7 @@ class Architecture(object):
 
 
 class Model(object):
-    def __init__(self, architecture, apply_mask=False):
+    def __init__(self, architecture, task='cleft', apply_mask=False):
         # Save the architecture
         self.architecture = architecture
         self.model_name = self.architecture.model_name
@@ -438,6 +441,7 @@ class Model(object):
         self.num_output_channels = 1
         if self.architecture.output_mode == AFFINITIES_3D:
             self.num_output_channels = 3
+
         # Create an input queue
         with tf.device('/cpu:0'):
             self.queue = tf.FIFOQueue(50, tf.float32)
@@ -456,8 +460,12 @@ class Model(object):
 
         # Crop the labels to the appropriate field of view
         if self.fov == 1 and self.z_fov == 1:
+            mask_index = self.num_output_channels + 1
+            if task == 'multi':
+                self.target_boundary = self.example[:, :, :, :, self.num_output_channels + 1: self.num_output_channels + 4]
+                mask_index = self.num_output_channels + 4
             if apply_mask:
-                self.mask = self.example[:, :, :, :, (self.num_output_channels + 1):]
+                self.mask = self.example[:, :, :, :, mask_index:]
             self.target = self.example[:, :, :, :, 1:(self.num_output_channels + 1)]
         else:
             if apply_mask:

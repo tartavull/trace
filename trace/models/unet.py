@@ -187,6 +187,8 @@ class UNet(Model):
                     prev_layer, prev_n_feature_maps = layer.connect(prev_layer, prev_n_feature_maps, dilation_rate=1, is_training=False, skip_connect=skip_connect)
                 else:
                     last_layer = layer.connect(prev_layer, prev_n_feature_maps, dilation_rate=1, is_training=False, skip_connect=skip_connections[0])
+                    if self.task == 'multi':
+                        last_layer_boundary = layer.connect(prev_layer, prev_n_feature_maps, dilation_rate=1, is_training=False, skip_connect=skip_connections[0], multi=True)
 
         # Predictions
         self.prediction = tf.nn.sigmoid(last_layer)
@@ -195,10 +197,24 @@ class UNet(Model):
         # Loss
         self.cross_entropy = tf.nn.sigmoid_cross_entropy_with_logits(logits=last_layer,
                                                                     labels=self.target)
+        self.pixel_error = tf.cast(tf.abs(self.binary_prediction - self.target), tf.float32)
+
         if apply_mask:
             self.cross_entropy = tf.multiply(self.cross_entropy, self.mask)
+        if self.task == 'multi':
+            self.prediction_boundary = tf.nn.sigmoid(last_layer_boundary)
+            self.binary_prediction_boundary = tf.round(self.prediction_boundary)
+
+            self.cross_entropy_boundary = tf.nn.sigmoid_cross_entropy_with_logits(logits=last_layer_boundary
+                                                                                labels=self.target_boundary)
+            self.pixel_error_boundary = tf.cast(tf.abs(self.binary_prediction_boundary - self.target_boundary), tf.float32)
+
+            # Update error to have the weighted sum of both
+            self.cross_entropy += self.cross_entropy_boundary * 0.5
+            self.pixel_error += self.pixel_error_boundary * 0.5
+
         self.cross_entropy = tf.reduce_mean(self.cross_entropy)
-        self.pixel_error = tf.reduce_mean(tf.cast(tf.abs(self.binary_prediction - self.target), tf.float32))
+        self.pixel_error = tf.reduce_mean(self.pixel_error)
 
         self.saver = tf.train.Saver()
 

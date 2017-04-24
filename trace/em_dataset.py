@@ -148,7 +148,7 @@ class SNEMI3DDataset(Dataset):
 class CREMIDataset(Dataset):
     label_type = SEGMENTATION_3D
 
-    def __init__(self, data_folder):
+    def __init__(self, data_folder, task):
         """Wrapper for the CREMI dataset. The CREMI dataset as downloaded (via download_data.py) is as follows:
         train.hdf: Training data for a stack of EM images from fly. Can be used to derive the inputs,
         in the shape [num_images, x_size, y_size] where each value is found on the interval [0, 255] representing
@@ -160,22 +160,36 @@ class CREMIDataset(Dataset):
         """
         self.data_folder = data_folder
         self.name = down.CREMI
+        self.task = task
 
         train_file = cremiio.CremiFile(data_folder + 'train.hdf', 'r')
         self.train_inputs = train_file.read_raw().data.value
-        if down.CLEFTS in self.data_folder:
-            self.train_masks = train_file.read_neuron_ids().data.value
+
+        # Read label based on task [cleft, boundary, multi]
+        if task == down.BOUNDARY:
+            self.train_labels = train_file.read_neuron_ids().data.value
+        elif task == down.CLEFT:
+            mask_file = cremiio.CremiFile(data_folder + 'train_masks.hdf', 'r')
+            self.train_masks = mask_file.read_neuron_ids().data.value
             self.train_labels = train_file.read_clefts().data.value
         else:
-            self.train_labels = train_file.read_neuron_ids().data.value
+            mask_file = cremiio.CremiFile(data_folder + 'train_masks.hdf', 'r')
+            self.train_masks = mask_file.read_neuron_ids().data.value
+            self.train_labels = train_file.read_clefts().data.value
+            self.train_labels_boundary = train_file.read_neuron_ids().data.value
+
         train_file.close()
 
         validation_file = cremiio.CremiFile(data_folder + 'validation.hdf', 'r')
         self.validation_inputs = validation_file.read_raw().data.value
-        if down.CLEFTS in self.data_folder:
+        if task == down.BOUNDARY:
+            self.validation_labels = validation_file.read_neuron_ids().data.value
+        elif task = down.CLEFT:
             self.validation_labels = validation_file.read_clefts().data.value
         else:
-            self.validation_labels = validation_file.read_neuron_ids().data.value
+            self.validation_labels = validation_file.read_clefts().data.value
+            self.validation_labels_boundary = validation_file.read_neuron_ids().data.value
+
         validation_file.close()
 
         # TODO(beisner): Decide if we need to load the test file every time (probably don't)
@@ -222,14 +236,26 @@ class EMDatasetSampler(object):
         """
         # All inputs and labels come in with the shape: [n_images, x_dim, y_dim]
         # In order to generalize we, expand into 5 dimensions: [batch_size, z_dim, x_dim, y_dim, n_channels]
-   
+        if dataset.task == down.MULTI:
+            self.__train_labels_boundary = expand_3d_to_5d(dataset.train_labels_boundary)
+            self.__train_labels_boundary = self.__train_labels_boundary[:, 1:, 1:, 1:, :]
+            self.__train_targets_boundary = convert_between_label_types(dataset.name, dataset.label_type, AFFINITIES_3D, 
+                expand_3d_to_5d(dataset.train_labels_boundary))
+
+            self.__validation_labels_boundary = expand_3d_to_5d(dataset.validation_labels_boundary)
+            self.__validation_targets_boundary = convert_between_label_types(dataset.name, dataset.label_type, AFFINITIES_3D,
+                expand_3d_to_5d(dataset.validation_labels_boundary))
+            
+            self.__validation_labels_boundary = self.__validation_labels_boundary[:, 1:, 1:, 1:, :]
+            self.__validation_targets_boundary  = self.__validation_targets_boundary[:, 1:, 1:, 1:, :]
+
         # Extract the inputs and labels from the dataset
         '''TODO: MAKE SURE TO CHANGE IT SUCH THAT BOUNDARY CONVERSION IS HANDLED MORE NEATLY'''
         self.__train_inputs = expand_3d_to_5d(dataset.train_inputs)
-        self.__train_labels = convert_between_label_types(dataset.name, dataset.label_type, label_output_type,
-            dataset.train_labels)
+        if label_output_type == BOUNDARIES:
+            self.__train_labels = convert_between_label_types(dataset.name, dataset.label_type, label_output_type,
+                dataset.train_labels)
         self.__train_labels = expand_3d_to_5d(self.__train_labels)
-
         self.__train_targets = convert_between_label_types(dataset.name, dataset.label_type, label_output_type,
             dataset.train_labels)
         self.__train_targets = expand_3d_to_5d(self.__train_targets)
@@ -241,8 +267,9 @@ class EMDatasetSampler(object):
 
         self.__validation_inputs = expand_3d_to_5d(dataset.validation_inputs)
 
-        self.__validation_labels = convert_between_label_types(dataset.name, dataset.label_type, label_output_type,
-            dataset.validation_labels)
+        if label_output_type == BOUNDARIES:
+            self.__validation_labels = convert_between_label_types(dataset.name, dataset.label_type, label_output_type,
+                dataset.validation_labels)
         self.__validation_labels = expand_3d_to_5d(self.__validation_labels)
 
         self.__validation_targets = convert_between_label_types(dataset.name, dataset.label_type, label_output_type,
@@ -259,10 +286,13 @@ class EMDatasetSampler(object):
         # Stack the inputs and labels, so when we sample we sample corresponding labels and inputs
 
         # If computing for clefts, include ops for masks as well
-        if dataset.train_masks.any():
-            print(np.sum(dataset.train_masks))
+        if dataset.task == down.MULTI:
             self.__train_masks = create_binary_mask(dataset.train_masks)
-            print(np.sum(self.__train_masks))
+            self.__train_masks = expand_3d_to_5d(self.__train_masks)
+            self.__train_masks = self.__train_masks[:, 1:, 1:, 1:, :]
+            train_stacked = np.concatenate((self.__train_inputs, self.__train_labels, self.__train_labels_boundary, self.__train_masks), axis=CHANNEL_AXIS)
+        elif dataset.task == down.CLEFT:
+            self.__train_masks = create_binary_mask(dataset.train_masks)
             self.__train_masks = expand_3d_to_5d(self.__train_masks)
             self.__train_masks = self.__train_masks[:, 1:, 1:, 1:, :]
             train_stacked = np.concatenate((self.__train_inputs, self.__train_labels, self.__train_masks), axis=CHANNEL_AXIS)
@@ -290,6 +320,7 @@ class EMDatasetSampler(object):
                 samples.append(tf.random_crop(self.__dataset_constant, size=crop_size))
 
             samples = tf.squeeze(samples, axis=1)
+            mask_index = 2
 
             # Flip a coin, and apply an op to sample (sample can be 5d or 4d)
             # Prob is the denominator of the probability (1 in prob chance)
@@ -332,8 +363,6 @@ class EMDatasetSampler(object):
             # Separate the image from the labels
             #deformed_inputs = elastically_deformed_sample[:, :, :, :, :1]
             #deformed_labels = elastically_deformed_sample[:, :, :, :, 1:]
-            deformed_inputs = samples[:, :, :, :, :1]
-            deformed_labels = samples[:, :, :, :, 1:2]
 
             # Apply random gaussian blurring to the image
             def apply_random_blur_to_stack(stack):
@@ -351,6 +380,14 @@ class EMDatasetSampler(object):
             # leveled_image = tf.image.random_contrast(leveled_image, lower=0.5, upper=1.5)
             leveled_inputs = blurred_inputs
 
+            deformed_inputs = samples[:, :, :, :, :1]
+            deformed_labels = samples[:, :, :, :, 1:2]
+            if dataset.task == down.MULTI:
+                deformed_labels_boundary = samples[:. :, :, :, 2:3]
+                deformed_labels_boundary = affinitize(deformed_labels_boundary)
+                cropped_labels_boundary = deformed_labels_boundary[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
+                mask_index = 3
+
             # Affinitize the labels if applicable
             # TODO (ffjiang): Do the if applicable part
             if label_output_type == AFFINITIES_3D:
@@ -360,17 +397,16 @@ class EMDatasetSampler(object):
             cropped_inputs = leveled_inputs[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
             cropped_labels = deformed_labels[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
             
-
-
             # Re-stack the image and labels
-            if dataset.train_masks.any():
+            if dataset.task == down.CLEFT:
                 # Include masks if they exist
-                deformed_masks = samples[:, :, :, :, 2:]
-                if label_output_type == AFFINITIES_3D:
-                    deformed_masks = affinitize(deformed_masks)
+                deformed_masks = samples[:, :, :, :, mask_index:]
                 cropped_masks = deformed_masks[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
-                self.training_example_op = tf.concat([tf.concat([cropped_inputs, cropped_labels, cropped_masks], axis=CHANNEL_AXIS)] * batch_size, axis=BATCH_AXIS)
-                                                    
+                self.training_example_op = tf.concat([tf.concat([cropped_inputs, cropped_labels, cropped_masks], axis=CHANNEL_AXIS)] * batch_size, axis=BATCH_AXIS)                     
+            elif dataset.task == down.MULTI:
+                deformed_masks = samples[:, :, :, :, mask_index:]
+                cropped_masks = deformed_masks[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
+                self.training_example_op = tf.concat([tf.concat([cropped_inputs, cropped_labels, cropped_labels_boundary, cropped_masks], axis=CHANNEL_AXIS)] * batch_size, axis=BATCH_AXIS)                     
             else:
                 self.training_example_op = tf.concat([tf.concat([cropped_inputs, cropped_labels], axis=CHANNEL_AXIS)] * batch_size, axis=BATCH_AXIS)
 
@@ -397,3 +433,5 @@ DATASET_DICT = {
     down.ISBI: ISBIDataset,
     down.SNEMI3D: SNEMI3DDataset,
 }
+
+TASK_NAMES = [down.BOUNDARY, down.CLEFT, down.MULTI]

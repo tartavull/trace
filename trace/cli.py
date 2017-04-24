@@ -16,7 +16,7 @@ from utils import *
 import viewer_utils as vu
 
 from em_dataset import DATASET_DICT
-from models import MODEL_DICT, PARAMS_DICT
+from models import MODEL_DICT, PARAMS_DICT, TASK_NAMES
 from ensemble import ENSEMBLE_METHOD_DICT, ENSEMBLE_PARAMS_DICT
 
 
@@ -90,11 +90,12 @@ def watershed(dataset_name, split, high, low, dust):
 @click.argument('model_type', type=click.Choice(MODEL_DICT.keys()))
 @click.argument('params_type', type=click.Choice(PARAMS_DICT.keys()))
 @click.argument('dataset_name', type=click.Choice(DATASET_DICT.keys()))
+@click.argument('task', type=click.Choice(TASK_NAMES))
 @click.argument('n_iter', type=int, default=10000)
 @click.argument('run_name', type=str, default='1')
 @click.option('--cont/--no-cont', default=False, help="Continue training using a saved model.")
 @click.option('--mask/--no-mask', default=False, help="Apply boundary mask for cleft detection.")
-def train(model_type, params_type, dataset_name, n_iter, run_name, cont, mask):
+def train(model_type, params_type, dataset_name, task, n_iter, run_name, cont, mask):
     """
     Train an N4 models to predict affinities
     """
@@ -102,7 +103,7 @@ def train(model_type, params_type, dataset_name, n_iter, run_name, cont, mask):
 
     model_constructor = MODEL_DICT[model_type]
     params = PARAMS_DICT[params_type]
-    model = model_constructor(params, apply_mask=mask, is_training=True)
+    model = model_constructor(params, task=task, apply_mask=mask, is_training=True)
     batch_size = 1
 
     training_params = learner.TrainingParams(
@@ -120,7 +121,7 @@ def train(model_type, params_type, dataset_name, n_iter, run_name, cont, mask):
 
     # Construct the dataset sampler
     dset_constructor = DATASET_DICT[dataset_name]
-    dataset = dset_constructor(data_folder)
+    dataset = dset_constructor(data_folder, task)
     dset_sampler = em.EMDatasetSampler(dataset, input_size, z_input_size, batch_size=batch_size, label_output_type=params.output_mode)
 
     ckpt_folder = data_folder + 'results/' + model.model_name + '/run-' + run_name + '/'
