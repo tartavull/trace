@@ -184,7 +184,7 @@ class CREMIDataset(Dataset):
         self.validation_inputs = validation_file.read_raw().data.value
         if task == down.BOUNDARY:
             self.validation_labels = validation_file.read_neuron_ids().data.value
-        elif task = down.CLEFT:
+        elif task == down.CLEFT:
             self.validation_labels = validation_file.read_clefts().data.value
         else:
             self.validation_labels = validation_file.read_clefts().data.value
