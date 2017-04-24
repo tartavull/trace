@@ -383,7 +383,7 @@ class EMDatasetSampler(object):
             deformed_inputs = samples[:, :, :, :, :1]
             deformed_labels = samples[:, :, :, :, 1:2]
             if dataset.task == down.MULTI:
-                deformed_labels_boundary = samples[:. :, :, :, 2:3]
+                deformed_labels_boundary = samples[:, :, :, :, 2:3]
                 deformed_labels_boundary = affinitize(deformed_labels_boundary)
                 cropped_labels_boundary = deformed_labels_boundary[:, z_crop_pad // 2:-(z_crop_pad // 2), crop_pad // 2:-(crop_pad // 2), crop_pad // 2:-(crop_pad // 2), :]
                 mask_index = 3
