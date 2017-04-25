@@ -150,7 +150,7 @@ def train(model_type, params_type, dataset_name, task, n_iter, run_name, cont, m
 @click.argument('split', type=click.Choice(SPLIT))
 @click.argument('task', type=click.Choice(TASK_NAMES))
 @click.argument('run_name', type=str, default='1')
-def predict(model_type, params_type, dataset_name, split, run_name):
+def predict(model_type, params_type, dataset_name, split, task, run_name):
     """
     Realods a model previously trained
     """
