@@ -4,6 +4,7 @@ import h5py
 def add_file(folder, filename, viewer):
     try:
         with h5py.File(folder+filename+'.h5', 'r') as f:
+            print(folder+filename+'.h5')
             arr = f['main'][:]
             viewer.add(arr, name=filename)
     except IOError:
