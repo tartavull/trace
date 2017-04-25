@@ -3,7 +3,7 @@ import h5py
 
 def add_file(folder, filename, viewer):
     try:
-        with h5py.File(folder+filename+'.hdf', 'r') as f:
+        with h5py.File(folder+filename+'.h5', 'r') as f:
             arr = f['main'][:]
             viewer.add(arr, name=filename)
     except IOError:
@@ -12,7 +12,7 @@ def add_file(folder, filename, viewer):
 
 def add_labels(folder, filename, viewer):
     try:
-        with h5py.File(folder+filename+'.hdf', 'r') as f:
+        with h5py.File(folder+filename+'.h5', 'r') as f:
             if "clefts" in folder:
               arr = f['volumes']['labels']['clefts'][:]
             else:
