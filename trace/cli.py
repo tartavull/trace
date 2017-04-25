@@ -57,7 +57,7 @@ def visualize(dataset_name, split, params_type, run_name, aff, ip, port, remote)
     # vu.add_file(data_folder, split, viewer)
     # if aff:
         # vu.add_affinities(data_folder + 'results/' + params.model_name + '/' + 'run-' + run_name + '/', split+'-pred-affinities', viewer)
-    # vu.add_labels(data_folder + 'results/' + params.model_name + '/' +  'run-' + run_name + '/', split+'-predictions', viewer)
+    vu.add_labels(data_folder + 'results/' + params.model_name + '/' +  'run-' + run_name + '/', split+'-predictions', viewer)
     if split != 'test':
         vu.add_labels(data_folder, split, viewer)
 
@@ -148,6 +148,7 @@ def train(model_type, params_type, dataset_name, task, n_iter, run_name, cont, m
 @click.argument('params_type', type=click.Choice(PARAMS_DICT.keys()))
 @click.argument('dataset_name', type=click.Choice(DATASET_DICT.keys()))
 @click.argument('split', type=click.Choice(SPLIT))
+@click.argument('task', type=click.Choice(TASK_NAMES))
 @click.argument('run_name', type=str, default='1')
 def predict(model_type, params_type, dataset_name, split, run_name):
     """
@@ -158,10 +159,10 @@ def predict(model_type, params_type, dataset_name, split, run_name):
     # Create the model
     model_constructor = MODEL_DICT[model_type]
     params = PARAMS_DICT[params_type]
-    model = model_constructor(params, is_training=False)
+    model = model_constructor(params, task=task, is_training=False)
 
     dset_constructor = DATASET_DICT[dataset_name]
-    dataset = dset_constructor(data_folder)
+    dataset = dset_constructor(data_folder, task)
 
     # Input size doesn't matter for us; neither does batch size
     dset_sampler = em.EMDatasetSampler(dataset, input_size=model.fov + 1, z_input_size=model.z_fov + 1, label_output_type=params.output_mode)
@@ -183,10 +184,12 @@ def predict(model_type, params_type, dataset_name, split, run_name):
     # Predict on the classifier
     predictions = classifier.predict(inputs, [16, 160, 160])
 
+    '''TODO: go from boundaries to seg3d somehow'''
     # Save the predicted affinities for viewing in neuroglancer.
-    dataset.prepare_predictions_for_neuroglancer()
-    dataset.prepare_predictions_for_neuroglancer_affinities(ckpt_folder, split, predictions, params.output_mode)
+    dataset.prepare_predictions_for_neuroglancer(ckpt_folder, split, predictions, params.output_mode)
+    # dataset.prepare_predictions_for_neuroglancer_affinities(ckpt_folder, split, predictions, params.output_mode)
 
+    '''TODO: use the above method to write the cremi file and submit'''
     # Prepare the predictions for submission for this particular dataset
     # Only send in the first dimension of predictions, because theoretically predict can predict on many stacks
     dataset.prepare_predictions_for_submission(ckpt_folder, split, predictions[0], params.output_mode)

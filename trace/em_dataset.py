@@ -222,7 +222,10 @@ class CREMIDataset(Dataset):
 
         pred_file = cremiio.CremiFile(results_folder + split + '-predictions.hdf', 'w')
         pred_file.write_raw(cremiio.Volume(inputs, resolution=resolution))
-        pred_file.write_neuron_ids(cremiio.Volume(trans_predictions, resolution=resolution))
+        if self.task == 'cleft' or self.task == 'multi':
+            pred_file.write_clefts(cremiio.Volume(trans_predictions, resolution=resolution))
+        else:
+            pred_file.write_neuron_ids(cremiio.Volume(trans_predictions, resolution=resolution))
         pred_file.close()
 
 

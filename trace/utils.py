@@ -14,6 +14,8 @@ import os
 
 import dataprovider.transform as trans
 import cremi.evaluation as cremival
+from skimage.filters import threshold_otsu
+from skimage.measure import label
 
 try:
     from thirdparty.segascorus import io_utils
@@ -109,7 +111,10 @@ def convert_between_label_types(dset_name, input_type, output_type, original_lab
         elif output_type == SEGMENTATION_2D:
             raise NotImplementedError('Boundaries->Seg2d not implemented')
         elif output_type == SEGMENTATION_3D:
-            raise NotImplementedError('Boundaries->Seg3d not implemented')
+            # Use otsu thresholding to threshold values
+            thresh = threshold_otsu(original_labels)
+            segmented_image = label(thresh, background=0)
+            return segmented_image
         else:
             raise Exception('Invalid output_type')
     elif input_type == AFFINITIES_2D:
