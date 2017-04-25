@@ -15,8 +15,8 @@ import learner
 from utils import *
 import viewer_utils as vu
 
-from em_dataset import DATASET_DICT
-from models import MODEL_DICT, PARAMS_DICT, TASK_NAMES
+from em_dataset import DATASET_DICT, TASK_NAMES
+from models import MODEL_DICT, PARAMS_DICT
 from ensemble import ENSEMBLE_METHOD_DICT, ENSEMBLE_PARAMS_DICT
 
 
