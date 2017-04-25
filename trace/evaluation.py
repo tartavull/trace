@@ -108,7 +108,7 @@ def __rand_error_boundaries(true_labels, pred_labels):
     # Get the rand scores for each threshold
     scores = dict()
 
-    for thresh in np.arange(0, 1, 0.25):
+    for thresh in np.arange(0, 1, 0.1):
         # print('Calculating at thresh %0.1f' % thresh)
         pred_seg = __prepare_probabilistic_segmentation_for_rand(thresh, pred_labels)
 

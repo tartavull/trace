@@ -222,8 +222,8 @@ class UNet(Model):
             self.pixel_error_boundary = tf.reduce_mean(self.pixel_error_boundary)
 
             # Update error to have the weighted sum of both
-            self.cross_entropy_total = self.cross_entropy + self.cross_entropy_boundary * 0.5
-            self.pixel_error_total = self.pixel_error + self.pixel_error_boundary * 0.5            
+            self.cross_entropy_total = self.cross_entropy + self.cross_entropy_boundary * 0.25
+            self.pixel_error_total = self.pixel_error + self.pixel_error_boundary * 0.25            
 
         self.saver = tf.train.Saver()
 
