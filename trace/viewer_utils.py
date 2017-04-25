@@ -3,7 +3,7 @@ import h5py
 
 def add_file(folder, filename, viewer):
     try:
-        with h5py.File(folder+filename+'.h5', 'r') as f:
+        with h5py.File(folder+filename+'.hdf', 'r') as f:
             arr = f['main'][:]
             viewer.add(arr, name=filename)
     except IOError:
@@ -29,7 +29,7 @@ def add_affinities(folder, filename, viewer):
     reading from disk directly.
     """
     try:
-        with h5py.File(folder+filename+'.h5', 'r') as f:
+        with h5py.File(folder+filename+'.hdf', 'r') as f:
             x_aff = f['main'][0, :, :, :]
             viewer.add(x_aff, name=filename+'-x', shader="""
             void main() {
