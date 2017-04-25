@@ -54,7 +54,7 @@ def visualize(dataset_name, split, params_type, run_name, aff, ip, port, remote)
     viewer = neuroglancer.Viewer(voxel_size=[6, 6, 30])
 
     # vu.add_file(data_folder, split + '-input', viewer)
-    vu.add_file(data_folder, split, viewer)
+    # vu.add_file(data_folder, split, viewer)
     # if aff:
         # vu.add_affinities(data_folder + 'results/' + params.model_name + '/' + 'run-' + run_name + '/', split+'-pred-affinities', viewer)
     # vu.add_labels(data_folder + 'results/' + params.model_name + '/' +  'run-' + run_name + '/', split+'-predictions', viewer)
