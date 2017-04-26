@@ -184,6 +184,7 @@ def predict(model_type, params_type, dataset_name, split, task, run_name):
     # Predict on the classifier
     predictions = classifier.predict(inputs, [16, 160, 160])
 
+    print predictions.shape
     '''TODO: go from boundaries to seg3d somehow'''
     # Save the predicted affinities for viewing in neuroglancer.
     dataset.prepare_predictions_for_neuroglancer(ckpt_folder, split, predictions, params.output_mode)
@@ -192,7 +193,7 @@ def predict(model_type, params_type, dataset_name, split, task, run_name):
     '''TODO: use the above method to write the cremi file and submit'''
     # Prepare the predictions for submission for this particular dataset
     # Only send in the first dimension of predictions, because theoretically predict can predict on many stacks
-    dataset.prepare_predictions_for_submission(ckpt_folder, split, predictions[0], params.output_mode)
+    dataset.prepare_predictions_for_submission(ckpt_folder, split, predictions, params.output_mode)
 
 
 @cli.command()
