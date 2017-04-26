@@ -14,7 +14,7 @@ def add_raw(folder, filename, viewer):
     try:
         with h5py.File(folder+filename+'.h5', 'r') as f:
             arr = f['volumes']['raw'][:]
-            viewer.add(arr, name=filename)
+            viewer.add(arr, name=filename + '_raw')
     except IOError:
         print(filename+' not found')
 
