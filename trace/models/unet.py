@@ -260,7 +260,7 @@ class UNet(Model):
         overlaps = np.zeros((inputs.shape[0], z_outp_size, y_outp_size, x_outp_size, n_output_channels))
 
         dirac = np.zeros((z_out_patch, y_out_patch, x_out_patch, n_output_channels))
-        dirac[z_out_patch // 2, y_out_patch // 2, x_out_patch // 2, 1] = 1
+        dirac[z_out_patch // 2, y_out_patch // 2, x_out_patch // 2, 0] = 1
         gaussian_kernel=gaussian_filter(dirac, (z_out_patch // 6, y_out_patch // 6, x_out_patch // 6, 100))
         
         for stack, _ in enumerate(inputs):
