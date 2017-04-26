@@ -2,7 +2,6 @@ import h5py
 
 
 def add_file(folder, filename, viewer):
-    print(folder + filename + '.h5')
     try:
         with h5py.File(folder+filename+'.h5', 'r') as f:
             arr = f['main'][:]

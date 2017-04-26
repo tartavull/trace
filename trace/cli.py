@@ -59,7 +59,7 @@ def visualize(dataset_name, split, params_type, run_name, aff, ip, port, remote)
     vu.add_raw(data_folder, split, viewer)
     # if aff:
         # vu.add_affinities(data_folder + 'results/' + params.model_name + '/' + 'run-' + run_name + '/', split+'-pred-affinities', viewer)
-    vu.add_labels(data_folder + 'results/' + params.model_name + '/' +  'run-' + run_name + '/', split+'-predictions', viewer)
+    vu.add_file(data_folder + 'results/' + params.model_name + '/' +  'run-' + run_name + '/', split+'-predictions', viewer)
     if split != 'test':
         vu.add_labels(data_folder, split, viewer)
 
