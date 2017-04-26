@@ -4,7 +4,7 @@ import h5py
 def add_file(folder, filename, viewer):
     try:
         with h5py.File(folder+filename+'.h5', 'r') as f:
-            arr = f['main'][:]
+            arr = f['volumes']['raw'][:]
             viewer.add(arr, name=filename)
     except IOError:
         print(filename+' not found')
@@ -19,7 +19,7 @@ def add_labels(folder, filename, viewer):
               arr = f['volumes']['labels']['clefts'][:]
             else:
               arr = f['volumes']['labels']['neuron_ids'][:]
-            viewer.add(arr, name=filename)
+            viewer.add(arr, name=filename + '_labels')
     except IOError:
         print(filename+' not found')
 
