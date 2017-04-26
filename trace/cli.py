@@ -202,9 +202,9 @@ def predict(model_type, params_type, dataset_name, split, task, run_name):
 def test_func(dataset_name):
     data_folder = os.path.dirname(os.path.abspath(__file__)) + '/' + dataset_name + '/'
 
-    train_file = cremiio.CremiFile(data_folder + 'results/' + 'unet_3d' + '/' +  'run-1_no_mask' + '/' + 'train-predictions.h5', 'r')
-    train_labels = train_file.read_clefts().data.value
-    print(np.max(train_labels))
+    with h5py.File(data_folder + 'results/' + 'unet_3d' + '/' +  'run-1_no_mask' + '/' + 'train-predictions.h5', 'r') as f:
+        arr=f['main'][:]
+        print np.max(arr)
     # binary_output = convert_between_label_types(SEGMENTATION_3D, BOUNDARIES,
     #                 train_labels)
     # print(np.max(binary_output))
