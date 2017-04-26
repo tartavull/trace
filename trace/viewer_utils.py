@@ -8,6 +8,7 @@ def add_file(folder, filename, viewer):
             arr = f['main'][:]
             viewer.add(arr, name=filename)
     except IOError:
+        print(folder + filename + '.h5')
         print(filename+' not found')
 
 def add_raw(folder, filename, viewer):
