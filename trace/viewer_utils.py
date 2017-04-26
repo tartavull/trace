@@ -16,6 +16,7 @@ def add_raw(folder, filename, viewer):
             arr = f['volumes']['raw'][:]
             viewer.add(arr, name=filename)
     except IOError:
+        print(filename+' not found')
 
 def add_labels(folder, filename, viewer):
     try:
