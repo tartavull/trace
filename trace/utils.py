@@ -114,8 +114,8 @@ def convert_between_label_types(input_type, output_type, original_labels):
         elif output_type == SEGMENTATION_3D:
             # Use otsu thresholding to threshold values
             original_labels = np.squeeze(original_labels)
-            threshold = threshold_otsu(original_labels)
-            thresholded_image = closing(original_labels > threshold, square(3))
+            # threshold = threshold_otsu(original_labels)
+            thresholded_image = closing(original_labels > .7, square(3))
             segmented_image = label(thresholded_image, background=0)
             return segmented_image
         else:
