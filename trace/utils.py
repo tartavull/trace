@@ -93,7 +93,7 @@ def create_binary_mask(original_mask):
     boundary_map = -(np.where(original_mask == 0., original_mask, 1) - 1)
     return boundary_map
 
-def convert_between_label_types(dset_name, input_type, output_type, original_labels):
+def convert_between_label_types(input_type, output_type, original_labels):
     # No augmentation needed, as we're basically doing e2e learning
     if input_type == output_type:
         return original_labels

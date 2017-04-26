@@ -246,11 +246,11 @@ class EMDatasetSampler(object):
         if dataset.task == down.MULTI:
             self.__train_labels_boundary = expand_3d_to_5d(dataset.train_labels_boundary)
             self.__train_labels_boundary = self.__train_labels_boundary[:, 1:, 1:, 1:, :]
-            self.__train_targets_boundary = convert_between_label_types(dataset.name, dataset.label_type, AFFINITIES_3D, 
+            self.__train_targets_boundary = convert_between_label_types(dataset.label_type, AFFINITIES_3D, 
                 expand_3d_to_5d(dataset.train_labels_boundary))
 
             self.__validation_labels_boundary = expand_3d_to_5d(dataset.validation_labels_boundary)
-            self.__validation_targets_boundary = convert_between_label_types(dataset.name, dataset.label_type, AFFINITIES_3D,
+            self.__validation_targets_boundary = convert_between_label_types(dataset.label_type, AFFINITIES_3D,
                 expand_3d_to_5d(dataset.validation_labels_boundary))
             
             self.__validation_labels_boundary = self.__validation_labels_boundary[:, 1:, 1:, 1:, :]
@@ -260,10 +260,10 @@ class EMDatasetSampler(object):
         '''TODO: MAKE SURE TO CHANGE IT SUCH THAT BOUNDARY CONVERSION IS HANDLED MORE NEATLY'''
         self.__train_inputs = expand_3d_to_5d(dataset.train_inputs)
         if label_output_type == BOUNDARIES:
-            self.__train_labels = convert_between_label_types(dataset.name, dataset.label_type, label_output_type,
+            self.__train_labels = convert_between_label_types(dataset.label_type, label_output_type,
                 dataset.train_labels)
         self.__train_labels = expand_3d_to_5d(self.__train_labels)
-        self.__train_targets = convert_between_label_types(dataset.name, dataset.label_type, label_output_type,
+        self.__train_targets = convert_between_label_types(dataset.label_type, label_output_type,
             dataset.train_labels)
         self.__train_targets = expand_3d_to_5d(self.__train_targets)
 
@@ -275,11 +275,11 @@ class EMDatasetSampler(object):
         self.__validation_inputs = expand_3d_to_5d(dataset.validation_inputs)
 
         if label_output_type == BOUNDARIES:
-            self.__validation_labels = convert_between_label_types(dataset.name, dataset.label_type, label_output_type,
+            self.__validation_labels = convert_between_label_types(dataset.label_type, label_output_type,
                 dataset.validation_labels)
         self.__validation_labels = expand_3d_to_5d(self.__validation_labels)
 
-        self.__validation_targets = convert_between_label_types(dataset.name, dataset.label_type, label_output_type,
+        self.__validation_targets = convert_between_label_types(dataset.label_type, label_output_type,
             dataset.validation_labels)
         self.__validation_targets = expand_3d_to_5d(self.__validation_targets)
 
