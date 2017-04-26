@@ -207,6 +207,7 @@ def test_func(dataset_name):
     print(np.max(train_labels))
     binary_output = convert_between_label_types(SEGMENTATION_3D, BOUNDARIES,
                     train_labels)
+    print(np.max(binary_output))
     segmentation = convert_between_label_types(BOUNDARIES, SEGMENTATION_3D, binary_output)
     print(np.max(segmentation))
 
