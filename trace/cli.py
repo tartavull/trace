@@ -184,7 +184,7 @@ def predict(model_type, params_type, dataset_name, split, task, run_name):
     # Predict on the classifier
     predictions = classifier.predict(inputs, [16, 160, 160])
 
-    print predictions.shape
+    print(predictions.shape)
     '''TODO: go from boundaries to seg3d somehow'''
     # Save the predicted affinities for viewing in neuroglancer.
     dataset.prepare_predictions_for_neuroglancer(ckpt_folder, split, predictions, params.output_mode)
