@@ -15,6 +15,8 @@ import learner
 from utils import *
 import viewer_utils as vu
 
+import cremi.io as cremiio
+
 from em_dataset import DATASET_DICT, TASK_NAMES
 from models import MODEL_DICT, PARAMS_DICT
 from ensemble import ENSEMBLE_METHOD_DICT, ENSEMBLE_PARAMS_DICT
@@ -194,6 +196,18 @@ def predict(model_type, params_type, dataset_name, split, task, run_name):
     # Prepare the predictions for submission for this particular dataset
     # Only send in the first dimension of predictions, because theoretically predict can predict on many stacks
     dataset.prepare_predictions_for_submission(ckpt_folder, split, predictions, params.output_mode)
+
+@cli.command()
+def test_func():
+    train_file = cremiio.CremiFile(data_folder + 'train.hdf', 'r')
+    train_labels = train_file.read_clefts().data.value
+    print(np.max(train_labels))
+    binary_output = convert_between_label_types(SEGMENTATION_3D, BOUNDARIES,
+                    train_labels)
+    segmentation = convert_between_label_types(BOUNDARIES, SEGMENTATION_3D, binary_output)
+    print(np.max(segmentation))
+
+
 
 
 @cli.command()
