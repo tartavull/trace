@@ -198,7 +198,10 @@ def predict(model_type, params_type, dataset_name, split, task, run_name):
     dataset.prepare_predictions_for_submission(ckpt_folder, split, predictions, params.output_mode)
 
 @cli.command()
-def test_func():
+@click.argument('dataset_name', type=click.Choice(DATASET_DICT.keys()))
+def test_func(dataset_name):
+    data_folder = os.path.dirname(os.path.abspath(__file__)) + '/' + dataset_name + '/'
+
     train_file = cremiio.CremiFile(data_folder + 'train.hdf', 'r')
     train_labels = train_file.read_clefts().data.value
     print(np.max(train_labels))
