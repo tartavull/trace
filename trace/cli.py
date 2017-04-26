@@ -255,7 +255,7 @@ def ens_predict(ensemble_method, ensemble_params, dataset_name, split, run_name)
 
     # Prepare the predictions for submission for this particular dataset
     # Only take the first of the predictions
-    dataset.prepare_predictions_for_submission(classifier.ensembler_folder, split, predictions,
+    dataset.prepare_predictions_for_submission(classifier.ensembler_folder, split, predictions[0],
                                                ensemble_params[0].output_mode)
 
 if __name__ == '__main__':
