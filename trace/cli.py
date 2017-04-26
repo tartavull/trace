@@ -204,7 +204,7 @@ def test_func(dataset_name):
 
     with h5py.File(data_folder + 'results/' + 'unet_3d' + '/' +  'run-1_no_mask' + '/' + 'train-predictions.h5', 'r') as f:
         arr=f['main'][:]
-        print np.max(arr)
+        print(np.max(arr))
     # binary_output = convert_between_label_types(SEGMENTATION_3D, BOUNDARIES,
     #                 train_labels)
     # print(np.max(binary_output))
