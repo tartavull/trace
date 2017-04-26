@@ -21,9 +21,7 @@ def add_raw(folder, filename, viewer):
 def add_labels(folder, filename, viewer):
     try:
         with h5py.File(folder+filename+'.h5', 'r') as f:
-            print(folder)
             if "clefts" in folder:
-              print('yes')
               arr = f['volumes']['labels']['clefts'][:]
             else:
               arr = f['volumes']['labels']['neuron_ids'][:]
