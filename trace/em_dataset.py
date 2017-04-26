@@ -27,7 +27,7 @@ class Dataset(object):
         :param split: The name of partition of the dataset we are predicting on ['train', 'validation', 'split']
         :param predictions: Predictions for labels in some format, dictated by label_type
         """
-        predictions = convert_between_label_types(label_type, SEGMENTATION_3D, predictions[0])
+        predictions = convert_between_label_types(label_type, SEGMENTATION_3D, predictions)
         # Create an affinities file
         with h5py.File(results_folder + split + '-predictions.h5', 'w') as output_file:
             output_file.create_dataset('main', shape=predictions.shape)
