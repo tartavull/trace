@@ -115,8 +115,8 @@ def convert_between_label_types(input_type, output_type, original_labels):
             # Use otsu thresholding to threshold values
             original_labels = np.squeeze(original_labels)
             # threshold = threshold_otsu(original_labels)
-            thresholded_image = original_labels > .7
-            segmented_image = label(thresholded_image, background=0)
+            thresholded_image = original_labels > .6
+            segmented_image = label(thresholded_image, background=0xffffffffffffffff)
             return segmented_image
         else:
             raise Exception('Invalid output_type')
