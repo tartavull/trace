@@ -135,38 +135,31 @@ def __rand_error_affinities(pred_affinities, true_seg, aff_type=AFFINITIES_3D):
     return __rand_error(true_seg, pred_segmentation, calc_variation_information=False, calc_variation_score=False, relabel2d=relabel2d)
 
 
-def num_false_positives(pred, truth):
+def cleft_stats(pred, truth):
     pred_file = CremiFile(pred, 'r')
     truth_file = CremiFile(truth, 'r')
 
-    clefts_eval = Clefts(pred_file.read_clefts(), truth_file.read_clefts())
+    pred_vol = pred_file.read_raw()
+    pred_raw = pred_vol.data.value 
+    pred_res = pred_vol.resolution
 
-    return clefts_eval.count_false_positives()
+    pred_cleft_vol = pred_file.read_clefts()
+    pred_cleft = pred_cleft_vol.data.value
+    pred_cleft_res = pred_cleft_vol.resolution
 
-def num_false_negatives(pred, truth):
-    pred_file = CremiFile(pred, 'r')
-    truth_file = CremiFile(truth, 'r')
-    print(pred_file.read_clefts().data.shape)
-    print(truth_file.read_clefts().data.shape)
-    clefts_eval = Clefts(pred_file.read_clefts(), truth_file.read_clefts())
+    pred_cleft[0].append(0)
+    pred_cleft[0][0].append(0)
+    pred_cleft[0][0][0].append(0)
 
-    return clefts_eval.count_false_negatives()
+    print pred_cleft.shape
 
-def acc_false_negatives(pred, truth):
-    pred_file = CremiFile(pred, 'r')
-    truth_file = CremiFile(truth, 'r')
+    # clefts_eval = Clefts(pred_file.read_clefts(), truth_file.read_clefts())
 
-    clefts_eval = Clefts(pred_file.read_clefts(), truth_file.read_clefts())
+    # num_false_pos = clefts_eval.count_false_positives()
+    # num_false_neg = clefts_eval.count_false_negatives()
+    # acc_false_neg = clefts_eval.acc_false_negatives()
+    # acc_false_pos = clefts_eval.acc_false_positives()
 
-    return clefts_eval.acc_false_negatives()
-
-def acc_false_positives(pred, truth):
-    pred_file = CremiFile(pred, 'r')
-    truth_file = CremiFile(truth, 'r')
-
-    clefts_eval = Clefts(pred_file.read_clefts(), truth_file.read_clefts())
-
-    return clefts_eval.acc_false_positives()
 
 def rand_error_from_prediction(true_labels, pred_values, pred_type=BOUNDARIES):
     """ Predict the rand error and variation of information from a given prediction. Based on the prediction type, we
