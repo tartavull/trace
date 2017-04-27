@@ -151,7 +151,7 @@ def cleft_stats(pred, truth):
     temp_file.write_clefts(cremiio.Volume(truth_cleft, resolution=truth_cleft_res))
     temp_file.close()
 
-    print(temp_file.read_clefts())
+    print(temp_file.read_clefts().data.value)
 
     clefts_eval = Clefts(pred_file.read_clefts(), temp_file.read_clefts())
 
