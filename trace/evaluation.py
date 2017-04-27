@@ -13,7 +13,7 @@ import cv2
 from utils import *
 
 from cremi.evaluation import Clefts, NeuronIds
-from cremi.io import cremiio
+import cremi.io as cremiio
 
 try:
     from thirdparty.segascorus import io_utils
