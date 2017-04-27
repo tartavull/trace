@@ -187,13 +187,10 @@ def predict(model_type, params_type, dataset_name, split, task, run_name):
     # Predict on the classifier
     predictions = classifier.predict(inputs, [16, 160, 160])
 
-    print(predictions.shape)
-    '''TODO: go from boundaries to seg3d somehow'''
     # Save the predicted affinities for viewing in neuroglancer.
     dataset.prepare_predictions_for_neuroglancer(ckpt_folder, split, predictions, params.output_mode)
     # dataset.prepare_predictions_for_neuroglancer_affinities(ckpt_folder, split, predictions, params.output_mode)
 
-    '''TODO: use the above method to write the cremi file and submit'''
     # Prepare the predictions for submission for this particular dataset
     # Only send in the first dimension of predictions, because theoretically predict can predict on many stacks
     dataset.prepare_predictions_for_submission(ckpt_folder, split, predictions, params.output_mode)
@@ -209,7 +206,7 @@ def cleft_inference(model_type, params_type, dataset_name, split, run_name):
     pred_file = data_folder + 'results/' + params_type + '/run-' + run_name + '/' + split +'-predictions.hdf'
     label_file = data_folder + split + '.hdf'
 
-    evaluation.cleft_stats(pred_file, label_file)
+    print(evaluation.cleft_stats(pred_file, label_file))
 
 @cli.command()
 @click.argument('ensemble_method', type=click.Choice(ENSEMBLE_METHOD_DICT.keys()))
