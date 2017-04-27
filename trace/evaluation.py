@@ -139,6 +139,8 @@ def cleft_stats(pred, truth):
     pred_file = cremiio.CremiFile(pred, 'r')
     truth_file = cremiio.CremiFile(truth, 'r')
 
+    print(np.sum(pred_file.read_clefts().data.value))
+
     truth_cleft_vol = truth_file.read_clefts()
     truth_cleft = truth_cleft_vol.data.value
     truth_cleft_res = truth_cleft_vol.resolution
