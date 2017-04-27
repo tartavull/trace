@@ -209,7 +209,7 @@ def cleft_inference(model_type, params_type, dataset_name, split, run_name):
     pred_file = data_folder + 'results/' + params_type + '/run-' + run_name + '/' + split +'-predictions.hdf'
     label_file = data_folder + split + '.hdf'
 
-    cleft_stats(pred_file, label_file)
+    evaluation.cleft_stats(pred_file, label_file)
 
 @cli.command()
 @click.argument('ensemble_method', type=click.Choice(ENSEMBLE_METHOD_DICT.keys()))
