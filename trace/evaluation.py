@@ -135,7 +135,7 @@ def __rand_error_affinities(pred_affinities, true_seg, aff_type=AFFINITIES_3D):
     return __rand_error(true_seg, pred_segmentation, calc_variation_information=False, calc_variation_score=False, relabel2d=relabel2d)
 
 
-def num_false_postitives(pred, truth):
+def num_false_positives(pred, truth):
     pred_file = CremiFile(pred)
     truth_file = CremiFile(truth)
 
@@ -143,7 +143,7 @@ def num_false_postitives(pred, truth):
 
     return clefts_eval.count_false_positives()
 
-def num_false_negatives(folder, pred, truth):
+def num_false_negatives(pred, truth):
     pred_file = CremiFile(pred)
     truth_file = CremiFile(truth)
 
@@ -151,7 +151,7 @@ def num_false_negatives(folder, pred, truth):
 
     return clefts_eval.count_false_negatives()
 
-def acc_false_negatives(folder, pred, truth):
+def acc_false_negatives(pred, truth):
     pred_file = CremiFile(pred)
     truth_file = CremiFile(truth)
 
@@ -159,7 +159,7 @@ def acc_false_negatives(folder, pred, truth):
 
     return clefts_eval.acc_false_negatives()
 
-def acc_false_positives(folder, pred, truth):
+def acc_false_positives(pred, truth):
     pred_file = CremiFile(pred)
     truth_file = CremiFile(truth)
 
