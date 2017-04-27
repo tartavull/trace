@@ -151,7 +151,7 @@ def cleft_stats(pred, truth):
     pred_cleft[0][0].append(0)
     pred_cleft[0][0][0].append(0)
 
-    print pred_cleft.shape
+    print(pred_cleft.shape)
 
     # clefts_eval = Clefts(pred_file.read_clefts(), truth_file.read_clefts())
 
