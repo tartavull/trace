@@ -208,9 +208,9 @@ def cleft_inference(model_type, params_type, dataset_name, split, run_name):
     data_folder = os.path.dirname(os.path.abspath(__file__)) + '/' + dataset_name + '/'
     pred_file = data_folder + 'results/' + params_type + '/run-' + run_name + '/' + split +'-predictions.hdf'
     label_file = data_folder + split + '.hdf'
-
-    num_false_pos = evaluation.num_false_positives(pred_file, label_file)
+    
     num_false_neg = evaluation.num_false_negatives(pred_file, label_file)
+    num_false_pos = evaluation.num_false_positives(pred_file, label_file)
     acc_false_neg = evaluation.acc_false_negatives(pred_file, label_file)
     acc_false_pos = evaluation.acc_false_positives(pred_file, label_file)
 
