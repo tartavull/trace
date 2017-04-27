@@ -147,7 +147,7 @@ def cleft_stats(pred, truth):
     truth_cleft = truth_cleft_vol.data.value
     truth_cleft_res = truth_cleft_vol.resolution
 
-    truth_cleft = truth_cleft[1:][1:][1:]
+    truth_cleft = truth_cleft[1:][1:]
 
     print(truth_cleft.shape)
 
