@@ -6,6 +6,7 @@ import subprocess
 import click
 import tensorflow as tf
 import h5py
+import evaluation 
 
 import em_dataset as em
 import download_data
@@ -198,18 +199,25 @@ def predict(model_type, params_type, dataset_name, split, task, run_name):
     dataset.prepare_predictions_for_submission(ckpt_folder, split, predictions, params.output_mode)
 
 @cli.command()
+@click.argument('model_type', type=click.Choice(MODEL_DICT.keys()))
+@click.argument('params_type', type=click.Choice(PARAMS_DICT.keys()))
 @click.argument('dataset_name', type=click.Choice(DATASET_DICT.keys()))
-def test_func(dataset_name):
+@click.argument('split', type=click.Choice(SPLIT))
+@click.argument('run_name', type=str, default='1')
+def cleft_inference(model_type, params_type, dataset_name, split, run_name):
     data_folder = os.path.dirname(os.path.abspath(__file__)) + '/' + dataset_name + '/'
+    pred_file = data_folder + 'results/' + params_type + '/run-' + 'run_name/' + split +'-predictions'
+    label_file = data_folder + split + '.hdf'
 
-    with h5py.File(data_folder + 'results/' + 'unet_3d' + '/' +  'run-1_no_mask' + '/' + 'train-predictions.h5', 'r') as f:
-        arr=f['main'][:]
-        print(np.max(arr))
-    # binary_output = convert_between_label_types(SEGMENTATION_3D, BOUNDARIES,
-    #                 train_labels)
-    # print(np.max(binary_output))
-    # segmentation = convert_between_label_types(BOUNDARIES, SEGMENTATION_3D, binary_output)
-    # print(np.max(segmentation))
+    num_false_pos = evaluation.num_false_positives(pred_file, label_file)
+    num_false_neg = evaluation.num_false_negatives(pred_file, label_file)
+    acc_false_neg = evaluation.acc_false_negatives(pred_file, label_file)
+    acc_false_pos = evaluation.acc_false_positives(pred_file, label_file)
+
+    print("False Positives: " + num_false_pos)
+    print("False Negatives: " + num_false_neg)
+    print("False Positive Acc: " + acc_false_pos)
+    print("False Negative Acc: " + acc_false_neg)
 
 
 
