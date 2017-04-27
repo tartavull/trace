@@ -146,7 +146,8 @@ def num_false_positives(pred, truth):
 def num_false_negatives(pred, truth):
     pred_file = CremiFile(pred, 'r')
     truth_file = CremiFile(truth, 'r')
-
+    print(pred_file.read_clefts().data.shape)
+    print(truth_file.read_clefts().data.shape)
     clefts_eval = Clefts(pred_file.read_clefts(), truth_file.read_clefts())
 
     return clefts_eval.count_false_negatives()
