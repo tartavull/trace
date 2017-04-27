@@ -139,19 +139,17 @@ def cleft_stats(pred, truth):
     pred_file = CremiFile(pred, 'r')
     truth_file = CremiFile(truth, 'r')
 
-    pred_vol = pred_file.read_raw()
-    pred_raw = pred_vol.data.value 
-    pred_res = pred_vol.resolution
+    truth_vol = truth_file.read_raw()
+    truth_raw = truth_vol.data.value 
+    truth_res = truth_vol.resolution
 
-    pred_cleft_vol = pred_file.read_clefts()
-    pred_cleft = pred_cleft_vol.data.value
-    pred_cleft_res = pred_cleft_vol.resolution
+    truth_cleft_vol = truth_file.read_clefts()
+    truth_cleft = truth_cleft_vol.data.value
+    truth_cleft_res = truth_cleft_vol.resolution
 
-    pred_cleft[100][:][:] = 0
-    pred_cleft[:][1250][:] = 0
-    pred_cleft[:][:][1250] = 0
+    truth_cleft = truth_cleft[1:][1:][1:]
 
-    print(pred_cleft.shape)
+    print(truth_cleft.shape)
 
     # clefts_eval = Clefts(pred_file.read_clefts(), truth_file.read_clefts())
 
