@@ -13,7 +13,7 @@ import cv2
 from utils import *
 
 from cremi.evaluation import Clefts, NeuronIds
-from cremi.io import CremiFile
+from cremi.io import cremiio
 
 try:
     from thirdparty.segascorus import io_utils
@@ -136,12 +136,8 @@ def __rand_error_affinities(pred_affinities, true_seg, aff_type=AFFINITIES_3D):
 
 
 def cleft_stats(pred, truth):
-    pred_file = CremiFile(pred, 'r')
-    truth_file = CremiFile(truth, 'r')
-
-    truth_vol = truth_file.read_raw()
-    truth_raw = truth_vol.data.value 
-    truth_res = truth_vol.resolution
+    pred_file = cremiio.CremiFile(pred, 'r')
+    truth_file = cremiio.CremiFile(truth, 'r')
 
     truth_cleft_vol = truth_file.read_clefts()
     truth_cleft = truth_cleft_vol.data.value
@@ -149,14 +145,19 @@ def cleft_stats(pred, truth):
 
     truth_cleft = truth_cleft[1:, 1:, 1:]
 
-    print(truth_cleft.shape)
+    temp_file = cremiio.CremiFile('temp_file.hdf', 'w')
+    temp_file.write_clefts(cremiio.Volume(truth_cleft, resolution=truth_cleft_res))
+    temp_file.close()
 
-    # clefts_eval = Clefts(pred_file.read_clefts(), truth_file.read_clefts())
+    clefts_eval = Clefts(pred_file.read_clefts(), temp_file.read_clefts())
 
-    # num_false_pos = clefts_eval.count_false_positives()
-    # num_false_neg = clefts_eval.count_false_negatives()
-    # acc_false_neg = clefts_eval.acc_false_negatives()
-    # acc_false_pos = clefts_eval.acc_false_positives()
+    pred_file.close()
+    truth_file.close()
+
+    num_false_pos = clefts_eval.count_false_positives()
+    num_false_neg = clefts_eval.count_false_negatives()
+    acc_false_neg = clefts_eval.acc_false_negatives()
+    acc_false_pos = clefts_eval.acc_false_positives()
 
 
 def rand_error_from_prediction(true_labels, pred_values, pred_type=BOUNDARIES):
