@@ -139,7 +139,7 @@ def cleft_stats(pred, truth):
     pred_file = cremiio.CremiFile(pred, 'r')
     truth_file = cremiio.CremiFile(truth, 'r')
 
-    print(np.sum(pred_file.read_clefts().data.value))
+    print(np.max(pred_file.read_clefts().data.value))
 
     truth_vol = truth_file.read_raw()
     truth_input = truth_vol.data.value
