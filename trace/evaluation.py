@@ -147,9 +147,9 @@ def cleft_stats(pred, truth):
     pred_cleft = pred_cleft_vol.data.value
     pred_cleft_res = pred_cleft_vol.resolution
 
-    pred_cleft[0].append(0)
-    pred_cleft[0][0].append(0)
-    pred_cleft[0][0][0].append(0)
+    pred_cleft[125][:][:] = 0
+    pred_cleft[:][1250][:] = 0
+    pred_cleft[:][:][1250] = 0
 
     print(pred_cleft.shape)
 
