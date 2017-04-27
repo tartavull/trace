@@ -136,32 +136,32 @@ def __rand_error_affinities(pred_affinities, true_seg, aff_type=AFFINITIES_3D):
 
 
 def num_false_positives(pred, truth):
-    pred_file = CremiFile(pred)
-    truth_file = CremiFile(truth)
+    pred_file = CremiFile(pred, 'r')
+    truth_file = CremiFile(truth, 'r')
 
     clefts_eval = Clefts(pred_file.read_clefts(), truth_file.read_clefts())
 
     return clefts_eval.count_false_positives()
 
 def num_false_negatives(pred, truth):
-    pred_file = CremiFile(pred)
-    truth_file = CremiFile(truth)
+    pred_file = CremiFile(pred, 'r')
+    truth_file = CremiFile(truth, 'r')
 
     clefts_eval = Clefts(pred_file.read_clefts(), truth_file.read_clefts())
 
     return clefts_eval.count_false_negatives()
 
 def acc_false_negatives(pred, truth):
-    pred_file = CremiFile(pred)
-    truth_file = CremiFile(truth)
+    pred_file = CremiFile(pred, 'r')
+    truth_file = CremiFile(truth, 'r')
 
     clefts_eval = Clefts(pred_file.read_clefts(), truth_file.read_clefts())
 
     return clefts_eval.acc_false_negatives()
 
 def acc_false_positives(pred, truth):
-    pred_file = CremiFile(pred)
-    truth_file = CremiFile(truth)
+    pred_file = CremiFile(pred, 'r')
+    truth_file = CremiFile(truth, 'r')
 
     clefts_eval = Clefts(pred_file.read_clefts(), truth_file.read_clefts())
 
