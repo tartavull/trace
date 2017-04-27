@@ -268,9 +268,9 @@ class EMDatasetSampler(object):
         self.__train_targets = expand_3d_to_5d(self.__train_targets)
 
         # Crop to get rid of edge affinities
-        self.__train_inputs = self.__train_inputs[:, 1:, 1:, 1:, :]
-        self.__train_labels = self.__train_labels[:, 1:, 1:, 1:, :]
-        self.__train_targets = self.__train_targets[:, 1:, 1:, 1:, :]
+        # self.__train_inputs = self.__train_inputs[:, 1:, 1:, 1:, :]
+        # self.__train_labels = self.__train_labels[:, 1:, 1:, 1:, :]
+        # self.__train_targets = self.__train_targets[:, 1:, 1:, 1:, :]
 
         self.__validation_inputs = expand_3d_to_5d(dataset.validation_inputs)
 
@@ -284,9 +284,9 @@ class EMDatasetSampler(object):
         self.__validation_targets = expand_3d_to_5d(self.__validation_targets)
 
         # Crop to get rid of edge affinities
-        self.__validation_inputs = self.__validation_inputs[:, 1:, 1:, 1:, :]
-        self.__validation_labels = self.__validation_labels[:, 1:, 1:, 1:, :]
-        self.__validation_targets = self.__validation_targets[:, 1:, 1:, 1:, :]
+        # self.__validation_inputs = self.__validation_inputs[:, 1:, 1:, 1:, :]
+        # self.__validation_labels = self.__validation_labels[:, 1:, 1:, 1:, :]
+        # self.__validation_targets = self.__validation_targets[:, 1:, 1:, 1:, :]
 
         self.__test_inputs = expand_3d_to_5d(dataset.test_inputs)
 
@@ -296,12 +296,12 @@ class EMDatasetSampler(object):
         if dataset.task == down.MULTI:
             self.__train_masks = create_binary_mask(dataset.train_masks)
             self.__train_masks = expand_3d_to_5d(self.__train_masks)
-            self.__train_masks = self.__train_masks[:, 1:, 1:, 1:, :]
+            # self.__train_masks = self.__train_masks[:, 1:, 1:, 1:, :]
             train_stacked = np.concatenate((self.__train_inputs, self.__train_labels, self.__train_labels_boundary, self.__train_masks), axis=CHANNEL_AXIS)
         elif dataset.task == down.CLEFT:
             self.__train_masks = create_binary_mask(dataset.train_masks)
             self.__train_masks = expand_3d_to_5d(self.__train_masks)
-            self.__train_masks = self.__train_masks[:, 1:, 1:, 1:, :]
+            # self.__train_masks = self.__train_masks[:, 1:, 1:, 1:, :]
             train_stacked = np.concatenate((self.__train_inputs, self.__train_labels, self.__train_masks), axis=CHANNEL_AXIS)
         else:
             train_stacked = np.concatenate((self.__train_inputs, self.__train_labels), axis=CHANNEL_AXIS)
