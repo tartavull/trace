@@ -206,7 +206,7 @@ def predict(model_type, params_type, dataset_name, split, task, run_name):
 @click.argument('run_name', type=str, default='1')
 def cleft_inference(model_type, params_type, dataset_name, split, run_name):
     data_folder = os.path.dirname(os.path.abspath(__file__)) + '/' + dataset_name + '/'
-    pred_file = data_folder + 'results/' + params_type + '/run-' + 'run_name/' + split +'-predictions'
+    pred_file = data_folder + 'results/' + params_type + '/run-' + 'run_name/' + split +'-predictions.hdf'
     label_file = data_folder + split + '.hdf'
 
     num_false_pos = evaluation.num_false_positives(pred_file, label_file)
