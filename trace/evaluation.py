@@ -139,9 +139,9 @@ def cleft_stats(pred, truth, threshold):
     pred_file = cremiio.CremiFile(pred, 'r')
     truth_file = cremiio.CremiFile(truth, 'r')
 
-    temp_file = cremiio.CremiFile('temp.hdf', 'w')
+    # temp_file = cremiio.CremiFile('temp.hdf', 'w')
     truth_cleft = truth_file.read_clefts()
-    truth_cleft_data = truth_cleft.dataset
+    truth_cleft_data = truth_cleft.data.value
     truth_cleft_res = truth_cleft.resolution
     truth_cleft_data = np.where(truth_cleft_data == 0., truth_cleft_data, 1)
     truth_cleft_data = np.where(truth_cleft_data == 1., truth_cleft_data, 0xffffffffffffffff)
