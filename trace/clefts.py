@@ -10,7 +10,7 @@ class Clefts:
 
         self.test_clefts_mask = np.equal(test_clefts.data, 0xffffffffffffffff)
         self.truth_clefts_mask = np.equal(truth_clefts.data, 0xffffffffffffffff)
-	
+    
         self.test_clefts_edt = ndimage.distance_transform_edt(self.test_clefts_mask, sampling=test_clefts.resolution)
         self.truth_clefts_edt = ndimage.distance_transform_edt(self.truth_clefts_mask, sampling=truth_clefts.resolution)
 
@@ -18,13 +18,13 @@ class Clefts:
         mask1 = np.invert(self.test_clefts_mask)
         mask2 = self.truth_clefts_edt > threshold
         false_positives = self.truth_clefts_edt[np.logical_and(mask1, mask2)]
-	    return false_positives.size
+        return false_positives.size
 
     def count_false_negatives(self, threshold = 200):
         mask1 = np.invert(self.truth_clefts_mask)
         mask2 = self.test_clefts_edt > threshold
         false_negatives = self.test_clefts_edt[np.logical_and(mask1, mask2)]
-	    return false_negatives.size
+        return false_negatives.size
 
     def count_true_positives(self, threshold = 200):
         mask1 = np.invert(self.truth_cleft_mask)
