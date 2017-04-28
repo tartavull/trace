@@ -203,12 +203,13 @@ def predict(model_type, params_type, dataset_name, split, task, run_name, thresh
 @click.argument('split', type=click.Choice(SPLIT))
 @click.argument('run_name', type=str, default='1')
 @click.argument('threshold_pos', type=float, default=200.0)
+@click.argument('threshold_neg', type=float, default=200.0)
 def cleft_inference(model_type, params_type, dataset_name, split, run_name, threshold_pos):
     data_folder = os.path.dirname(os.path.abspath(__file__)) + '/' + dataset_name + '/'
     pred_file = data_folder + 'results/' + params_type + '/run-' + run_name + '/' + split +'-predictions.hdf'
     label_file = data_folder + split + '.hdf'
 
-    print(evaluation.cleft_stats(pred_file, label_file, threshold_pos))
+    print(evaluation.cleft_stats(pred_file, label_file, threshold_pos, threshold_neg))
 
 @cli.command()
 @click.argument('ensemble_method', type=click.Choice(ENSEMBLE_METHOD_DICT.keys()))
