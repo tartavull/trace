@@ -94,12 +94,17 @@ def create_binary_mask(original_mask):
     boundary_map = -(np.where(original_mask == 0., original_mask, 1) - 1)
     return boundary_map
 
-def convert_label_for_cremi_cleft(original_labels):
+def convert_label_for_cremi_cleft(original_labels, threshold):
     original_labels = np.squeeze(original_labels)
-    thresholded_image = original_labels > .7
+    thresholded_image = original_labels > threshold
     thresholded_image = np.where(thresholded_image == 1., thresholded_image, 0xffffffffffffffff)
     return thresholded_image
-
+def convert_label_for_cremi_cleft_neuro(original_labels, threshold):
+    original_labels = np.squeeze(original_labels)
+    print(np.sum(original_labels))
+    thresholded_image = original_labels > threshold
+    print(np.sum(thresholded_image))
+    return thresholded_image
 def convert_between_label_types(input_type, output_type, original_labels):
     # No augmentation needed, as we're basically doing e2e learning
     if input_type == output_type:

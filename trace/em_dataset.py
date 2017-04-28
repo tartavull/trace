@@ -20,14 +20,15 @@ class Dataset(object):
         raise NotImplementedError
 
     @staticmethod
-    def prepare_predictions_for_neuroglancer(results_folder, split, predictions, label_type):
+    def prepare_predictions_for_neuroglancer(results_folder, split, predictions, label_type, threshold):
         """Prepare the provided labels to be visualized using Neuroglancer.
         :param label_type: The format of the predictions passed in
         :param results_folder: The location where we should save the h5 file
         :param split: The name of partition of the dataset we are predicting on ['train', 'validation', 'split']
         :param predictions: Predictions for labels in some format, dictated by label_type
         """
-        predictions = convert_between_label_types(label_type, SEGMENTATION_3D, predictions)
+        # predictions = convert_between_label_types(label_type, SEGMENTATION_3D, predictions, threshold)
+        predictions = convert_between_label_types_cremi_neuro(predictions, threshold)
         # Create an affinities file
         with h5py.File(results_folder + split + '-predictions.h5', 'w') as output_file:
             output_file.create_dataset('main', shape=predictions.shape)
@@ -203,7 +204,7 @@ class CREMIDataset(Dataset):
         test_file.close()
 
 
-    def prepare_predictions_for_submission(self, results_folder, split, predictions, label_type):
+    def prepare_predictions_for_submission(self, results_folder, split, predictions, label_type, threshold):
         """Prepare a given segmentation prediction for submission to the CREMI competiton
         :param label_type: The type of label given in predictions (i.e. affinities-2d, boundaries, etc)
         :param results_folder: The location where we should save the dataset.
@@ -211,7 +212,7 @@ class CREMIDataset(Dataset):
         :param predictions: Predictions for labels in some format, dictated by label_type
         """
         if self.task =='cleft':
-            trans_predictions = convert_label_for_cremi_cleft(predictions)
+            trans_predictions = convert_label_for_cremi_cleft(predictions, threshold)
         else:
             trans_predictions = convert_between_label_types(label_type, self.label_type, predictions)
 

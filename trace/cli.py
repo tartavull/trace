@@ -153,7 +153,8 @@ def train(model_type, params_type, dataset_name, task, n_iter, run_name, cont, m
 @click.argument('split', type=click.Choice(SPLIT))
 @click.argument('task', type=click.Choice(TASK_NAMES))
 @click.argument('run_name', type=str, default='1')
-def predict(model_type, params_type, dataset_name, split, task, run_name):
+@click.argument('threshold', type=float, default=0.001)
+def predict(model_type, params_type, dataset_name, split, task, run_name, threshold):
     """
     Realods a model previously trained
     """
@@ -188,12 +189,12 @@ def predict(model_type, params_type, dataset_name, split, task, run_name):
     predictions = classifier.predict(inputs, [16, 160, 160])
 
     # Save the predicted affinities for viewing in neuroglancer.
-    dataset.prepare_predictions_for_neuroglancer(ckpt_folder, split, predictions, params.output_mode)
+    dataset.prepare_predictions_for_neuroglancer(ckpt_folder, split, predictions, params.output_mode, threshold)
     # dataset.prepare_predictions_for_neuroglancer_affinities(ckpt_folder, split, predictions, params.output_mode)
 
     # Prepare the predictions for submission for this particular dataset
     # Only send in the first dimension of predictions, because theoretically predict can predict on many stacks
-    dataset.prepare_predictions_for_submission(ckpt_folder, split, predictions, params.output_mode)
+    dataset.prepare_predictions_for_submission(ckpt_folder, split, predictions, params.output_mode, threshold)
 
 @cli.command()
 @click.argument('model_type', type=click.Choice(MODEL_DICT.keys()))
