@@ -212,6 +212,7 @@ class CREMIDataset(Dataset):
         :param predictions: Predictions for labels in some format, dictated by label_type
         """
         if self.task =='cleft':
+            print('fuckthis')
             trans_predictions = convert_label_for_cremi_cleft(predictions, threshold)
         else:
             trans_predictions = convert_between_label_types(label_type, self.label_type, predictions)
