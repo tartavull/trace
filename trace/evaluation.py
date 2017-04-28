@@ -139,17 +139,26 @@ def cleft_stats(pred, truth, threshold):
     pred_file = cremiio.CremiFile(pred, 'r')
     truth_file = cremiio.CremiFile(truth, 'r')
 
-    clefts_eval = Clefts(pred_file.read_clefts(), truth_file.read_clefts())
+    temp_file = cremiio.CremiFile('temp.hdf', 'w')
+    truth_cleft = truth_file.read_clefts()
+    truth_cleft_data = truth_cleft.dataset
+    truth_cleft_res = truth_cleft.resolution
+    truth_cleft_data = np.where(truth_cleft_data == 0., truth_cleft_data, 1)
+    truth_cleft_data = np.where(truth_cleft_data == 1., truth_cleft_data, 0xffffffffffffffff)
 
-    pred_file.close()
-    truth_file.close()
+    print(np.min(truth_cleft_data))
+    print(np.max(truth_cleft_data))
+    # clefts_eval = Clefts(pred_file.read_clefts(), truth_file.read_clefts())
 
-    num_false_pos = clefts_eval.count_false_positives(threshold=threshold)
-    num_false_neg = clefts_eval.count_false_negatives()
-    acc_false_neg = clefts_eval.acc_false_negatives()
-    acc_false_pos = clefts_eval.acc_false_positives()
+    # pred_file.close()
+    # truth_file.close()
 
-    return num_false_pos, num_false_neg, acc_false_pos, acc_false_neg
+    # num_false_pos = clefts_eval.count_false_positives(threshold=threshold)
+    # num_false_neg = clefts_eval.count_false_negatives()
+    # acc_false_neg = clefts_eval.acc_false_negatives()
+    # acc_false_pos = clefts_eval.acc_false_positives()
+
+    # return num_false_pos, num_false_neg, acc_false_pos, acc_false_neg
 
 def rand_error_from_prediction(true_labels, pred_values, pred_type=BOUNDARIES):
     """ Predict the rand error and variation of information from a given prediction. Based on the prediction type, we
