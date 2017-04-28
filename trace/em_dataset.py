@@ -210,7 +210,10 @@ class CREMIDataset(Dataset):
         :param split: The name of partition of the dataset we are predicting on ['train', 'validation', 'test']
         :param predictions: Predictions for labels in some format, dictated by label_type
         """
-        trans_predictions = convert_between_label_types(label_type, self.label_type, predictions)
+        if self.task =='cleft':
+            trans_predictions = convert_label_for_cremi_cleft(predictions)
+        else:
+            trans_predictions = convert_between_label_types(label_type, self.label_type, predictions)
 
         # Get the input we used
         input_file = cremiio.CremiFile(self.data_folder + split + '.hdf', 'r')

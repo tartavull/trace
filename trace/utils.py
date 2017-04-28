@@ -94,6 +94,12 @@ def create_binary_mask(original_mask):
     boundary_map = -(np.where(original_mask == 0., original_mask, 1) - 1)
     return boundary_map
 
+def convert_label_for_cremi_cleft(original_labels):
+    original_labels = np.squeeze(original_labels)
+    thresholded_image = original_labels > .7
+    thresholded_image = np.where(thresholded_image == 1., thresholded_image, 0xffffffffffffffff)
+    return thresholded_image
+
 def convert_between_label_types(input_type, output_type, original_labels):
     # No augmentation needed, as we're basically doing e2e learning
     if input_type == output_type:
@@ -112,14 +118,8 @@ def convert_between_label_types(input_type, output_type, original_labels):
         elif output_type == SEGMENTATION_2D:
             raise NotImplementedError('Boundaries->Seg2d not implemented')
         elif output_type == SEGMENTATION_3D:
-            # Use otsu thresholding to threshold values
             original_labels = np.squeeze(original_labels)
-            # threshold = threshold_otsu(original_labels)
             thresholded_image = original_labels > .7
-            thresholded_image = np.where(thresholded_image == 1., thresholded_image, 0xffffffffffffffff)
-            print(np.min(thresholded_image))
-            print(np.max(thresholded_image))
-            # segmented_image = label(thresholded_image, background=0)
             return thresholded_image
         else:
             raise Exception('Invalid output_type')
