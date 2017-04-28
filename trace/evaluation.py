@@ -13,8 +13,7 @@ import cv2
 from utils import *
 
 import cremi.io as cremiio
-import clefts as Clefts
-
+import clefts
 try:
     from thirdparty.segascorus import io_utils
     from thirdparty.segascorus import utils
@@ -150,7 +149,7 @@ def cleft_stats(pred, truth, thresh_pos, thresh_neg, thresh_true):
     truth_cleft_data = np.where(truth_cleft_data == 1., truth_cleft_data, 0xffffffffffffffff)
 
     temp_file.write_clefts(cremiio.Volume(truth_cleft_data, resolution=truth_cleft_res))
-    clefts_eval = Clefts(pred_file.read_clefts(), temp_file.read_clefts())
+    clefts_eval = clefts.Clefts(pred_file.read_clefts(), temp_file.read_clefts())
 
     pred_file.close()
     truth_file.close()
