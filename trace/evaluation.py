@@ -139,8 +139,6 @@ def cleft_stats(pred, truth):
     pred_file = cremiio.CremiFile(pred, 'r')
     truth_file = cremiio.CremiFile(truth, 'r')
 
-    print(np.max(pred_file.read_clefts().data.value))
-
     clefts_eval = Clefts(pred_file.read_clefts(), truth_file.read_clefts())
 
     pred_file.close()
@@ -151,7 +149,7 @@ def cleft_stats(pred, truth):
     acc_false_neg = clefts_eval.acc_false_negatives()
     acc_false_pos = clefts_eval.acc_false_positives()
 
-    return num_false_pos, num_false_neg, acc_false_neg, acc_false_pos
+    return num_false_pos, num_false_neg, acc_false_pos, acc_false_neg
 
 def rand_error_from_prediction(true_labels, pred_values, pred_type=BOUNDARIES):
     """ Predict the rand error and variation of information from a given prediction. Based on the prediction type, we
