@@ -27,7 +27,7 @@ class Clefts:
         return false_negatives.size
 
     def count_true_positives(self, threshold = 200):
-        mask1 = np.invert(self.truth_cleft_mask)
+        mask1 = np.invert(self.truth_clefts_mask)
         mask2 = self.test_clefts_edt < threshold
         true_positives = self.test_clefts_edt[np.logical_and(mask1, mask2)]
         return true_positives.size
