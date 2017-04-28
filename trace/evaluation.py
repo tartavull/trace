@@ -146,8 +146,8 @@ def cleft_stats(pred, truth):
     pred_file.close()
     truth_file.close()
 
-    num_false_pos = clefts_eval.count_false_positives(threshold=0.5)
-    num_false_neg = clefts_eval.count_false_negatives(threshold=0.5)
+    num_false_pos = clefts_eval.count_false_positives()
+    num_false_neg = clefts_eval.count_false_negatives()
     acc_false_neg = clefts_eval.acc_false_negatives()
     acc_false_pos = clefts_eval.acc_false_positives()
 
