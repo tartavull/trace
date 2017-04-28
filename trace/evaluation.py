@@ -141,24 +141,8 @@ def cleft_stats(pred, truth):
 
     print(np.max(pred_file.read_clefts().data.value))
 
-    # truth_vol = truth_file.read_raw()
-    # truth_input = truth_vol.data.value
-    # truth_res = truth_vol.resolution
-
-    # truth_cleft_vol = truth_file.read_clefts()
-    # truth_cleft = truth_cleft_vol.data.value
-    # truth_cleft_res = truth_cleft_vol.resolution
-
-    # temp_file = cremiio.CremiFile('temp_file.hdf', 'w')
-    # temp_file.write_raw(cremiio.Volume(truth_input, resolution=truth_res))
-    # temp_file.write_clefts(cremiio.Volume(truth_cleft, resolution=truth_cleft_res))
-    # temp_file.close()
-
-    # temp_file = cremiio.CremiFile('temp_file.hdf', 'r')
-
     clefts_eval = Clefts(pred_file.read_clefts(), truth_file.read_clefts())
 
-    # temp_file.close()
     pred_file.close()
     truth_file.close()
 

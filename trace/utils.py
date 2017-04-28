@@ -116,7 +116,9 @@ def convert_between_label_types(input_type, output_type, original_labels):
             original_labels = np.squeeze(original_labels)
             # threshold = threshold_otsu(original_labels)
             thresholded_image = original_labels > .7
-            print(np.sum(thresholded_image))
+            thresholded_image = np.where(thresholded_image == 1., thresholded_image, 0xffffffffffffffff)
+            print(np.min(thresholded_image))
+            print(np.max(thresholded_image))
             # segmented_image = label(thresholded_image, background=0)
             return thresholded_image
         else:
