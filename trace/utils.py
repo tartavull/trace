@@ -106,6 +106,7 @@ def convert_label_for_cremi_cleft_neuro(original_labels, threshold):
     thresholded_image = original_labels > threshold
     print(np.sum(thresholded_image))
     return thresholded_image
+    
 def convert_between_label_types(input_type, output_type, original_labels):
     # No augmentation needed, as we're basically doing e2e learning
     if input_type == output_type:

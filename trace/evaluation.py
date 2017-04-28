@@ -12,8 +12,8 @@ import tifffile as tiff
 import cv2
 from utils import *
 
-from cremi.evaluation import Clefts, NeuronIds
 import cremi.io as cremiio
+import clefts as Clefts
 
 try:
     from thirdparty.segascorus import io_utils
@@ -135,13 +135,13 @@ def __rand_error_affinities(pred_affinities, true_seg, aff_type=AFFINITIES_3D):
     return __rand_error(true_seg, pred_segmentation, calc_variation_information=False, calc_variation_score=False, relabel2d=relabel2d)
 
 
-def cleft_stats(pred, truth, thresh_pos, thresh_neg):
+def cleft_stats(pred, truth, thresh_pos, thresh_neg, thresh_true):
     pred_file = cremiio.CremiFile(pred, 'r')
     truth_file = cremiio.CremiFile(truth, 'r')
 
     pred_data = pred_file.read_clefts().data
     print(np.min(pred_data))
-    
+
     temp_file = cremiio.CremiFile('temp.hdf', 'w')
     truth_cleft = truth_file.read_clefts()
     truth_cleft_data = truth_cleft.data.value
@@ -158,10 +158,11 @@ def cleft_stats(pred, truth, thresh_pos, thresh_neg):
 
     num_false_pos = clefts_eval.count_false_positives(threshold=thresh_pos)
     num_false_neg = clefts_eval.count_false_negatives(threshold=thresh_neg)
+    num_true_pos = clefts_eval.count_true_positives(threshold=thresh_true)
     acc_false_neg = clefts_eval.acc_false_negatives()
     acc_false_pos = clefts_eval.acc_false_positives()
 
-    return num_false_pos, num_false_neg, acc_false_pos, acc_false_neg
+    return num_true_pos, num_false_pos, num_false_neg, acc_false_pos, acc_false_neg
 
 def rand_error_from_prediction(true_labels, pred_values, pred_type=BOUNDARIES):
     """ Predict the rand error and variation of information from a given prediction. Based on the prediction type, we
