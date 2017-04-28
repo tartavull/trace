@@ -250,7 +250,7 @@ class EMDatasetSampler(object):
         # In order to generalize we, expand into 5 dimensions: [batch_size, z_dim, x_dim, y_dim, n_channels]
         if dataset.task == down.MULTI:
             self.__train_labels_boundary = expand_3d_to_5d(dataset.train_labels_boundary)
-            self.__train_labels_boundary = self.__train_labels_boundary[:, 1:, 1:, 1:, :]
+            # self.__train_labels_boundary = self.__train_labels_boundary[:, 1:, 1:, 1:, :]
             self.__train_targets_boundary = convert_between_label_types(dataset.label_type, AFFINITIES_3D, 
                 expand_3d_to_5d(dataset.train_labels_boundary))
 
@@ -258,8 +258,8 @@ class EMDatasetSampler(object):
             self.__validation_targets_boundary = convert_between_label_types(dataset.label_type, AFFINITIES_3D,
                 expand_3d_to_5d(dataset.validation_labels_boundary))
             
-            self.__validation_labels_boundary = self.__validation_labels_boundary[:, 1:, 1:, 1:, :]
-            self.__validation_targets_boundary  = self.__validation_targets_boundary[:, 1:, 1:, 1:, :]
+            # self.__validation_labels_boundary = self.__validation_labels_boundary[:, 1:, 1:, 1:, :]
+            # self.__validation_targets_boundary  = self.__validation_targets_boundary[:, 1:, 1:, 1:, :]
 
         # Extract the inputs and labels from the dataset
         '''TODO: MAKE SURE TO CHANGE IT SUCH THAT BOUNDARY CONVERSION IS HANDLED MORE NEATLY'''
