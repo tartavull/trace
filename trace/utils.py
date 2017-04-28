@@ -120,7 +120,7 @@ def convert_between_label_types(input_type, output_type, original_labels):
         elif output_type == SEGMENTATION_3D:
             original_labels = np.squeeze(original_labels)
             print(np.sum(original_labels))
-            thresholded_image = original_labels > .01
+            thresholded_image = original_labels > .001
             print(np.sum(thresholded_image))
             return thresholded_image
         else:
