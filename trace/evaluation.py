@@ -139,6 +139,9 @@ def cleft_stats(pred, truth, thresh_pos, thresh_neg):
     pred_file = cremiio.CremiFile(pred, 'r')
     truth_file = cremiio.CremiFile(truth, 'r')
 
+    pred_data = pred_file.read_clefts().data
+    print(np.min(pred_data))
+    
     temp_file = cremiio.CremiFile('temp.hdf', 'w')
     truth_cleft = truth_file.read_clefts()
     truth_cleft_data = truth_cleft.data.value
