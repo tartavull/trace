@@ -28,7 +28,7 @@ class Dataset(object):
         :param predictions: Predictions for labels in some format, dictated by label_type
         """
         # predictions = convert_between_label_types(label_type, SEGMENTATION_3D, predictions, threshold)
-        predictions = convert_between_label_types_cremi_neuro(predictions, threshold)
+        predictions = convert_label_for_cremi_cleft_neuro(predictions, threshold)
         # Create an affinities file
         with h5py.File(results_folder + split + '-predictions.h5', 'w') as output_file:
             output_file.create_dataset('main', shape=predictions.shape)
