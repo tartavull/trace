@@ -137,7 +137,7 @@ def __rand_error_affinities(pred_affinities, true_seg, aff_type=AFFINITIES_3D):
 
 def cleft_stats(pred, truth, threshold):
     pred_file = cremiio.CremiFile(pred, 'r')
-    truth_file = cremiio.CremiFile(truth, 'rw')
+    truth_file = cremiio.CremiFile(truth, 'r')
 
     temp_file = cremiio.CremiFile('temp.hdf', 'w')
     truth_cleft = truth_file.read_clefts()
