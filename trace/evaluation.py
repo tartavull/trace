@@ -135,7 +135,7 @@ def __rand_error_affinities(pred_affinities, true_seg, aff_type=AFFINITIES_3D):
     return __rand_error(true_seg, pred_segmentation, calc_variation_information=False, calc_variation_score=False, relabel2d=relabel2d)
 
 
-def cleft_stats(pred, truth):
+def cleft_stats(pred, truth, threshold):
     pred_file = cremiio.CremiFile(pred, 'r')
     truth_file = cremiio.CremiFile(truth, 'r')
 
@@ -144,7 +144,7 @@ def cleft_stats(pred, truth):
     pred_file.close()
     truth_file.close()
 
-    num_false_pos = clefts_eval.count_false_positives()
+    num_false_pos = clefts_eval.count_false_positives(threshold=threshold)
     num_false_neg = clefts_eval.count_false_negatives()
     acc_false_neg = clefts_eval.acc_false_negatives()
     acc_false_pos = clefts_eval.acc_false_positives()
