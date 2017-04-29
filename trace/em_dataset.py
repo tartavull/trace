@@ -220,9 +220,9 @@ class CREMIDataset(Dataset):
         input_file.close()
 
         scores = {}
-        min_thresh = 0.01
+        min_thresh = 0.05
         if self.task =='cleft':
-            for threshold in np.arange(0.01, .6, 0.01):
+            for threshold in np.arange(0, .6, 0.05):
                 trans_predictions = convert_label_for_cremi_cleft(predictions, threshold)
                 
                 # write temp file for prediction

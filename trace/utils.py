@@ -102,8 +102,8 @@ def convert_label_for_cremi_cleft(original_labels, threshold):
     
 def convert_label_for_cremi_cleft_neuro(original_labels, threshold):
     original_labels = np.squeeze(original_labels)
-    thresholded_image = original_labels > threshold
-    return thresholded_image
+    # thresholded_image = original_labels > threshold
+    return original_labels
 
 def convert_between_label_types(input_type, output_type, original_labels):
     # No augmentation needed, as we're basically doing e2e learning
