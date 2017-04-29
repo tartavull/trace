@@ -8,8 +8,8 @@ class Clefts:
         test_clefts = test
         truth_clefts = truth
 
-        self.test_clefts_mask = np.equal(test_clefts, 0xffffffffffffffff)
-        self.truth_clefts_mask = np.equal(truth_clefts, 0xffffffffffffffff)
+        self.test_clefts_mask = np.equal(test_clefts.data, 0xffffffffffffffff)
+        self.truth_clefts_mask = np.equal(truth_clefts.data, 0xffffffffffffffff)
     
         self.test_clefts_edt = ndimage.distance_transform_edt(self.test_clefts_mask, sampling=test_clefts.resolution)
         self.truth_clefts_edt = ndimage.distance_transform_edt(self.truth_clefts_mask, sampling=truth_clefts.resolution)

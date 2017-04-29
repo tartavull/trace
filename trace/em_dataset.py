@@ -211,33 +211,40 @@ class CREMIDataset(Dataset):
         :param split: The name of partition of the dataset we are predicting on ['train', 'validation', 'test']
         :param predictions: Predictions for labels in some format, dictated by label_type
         """
-        scores = {}
-        min_thresh = 0.05
-        if self.task =='cleft':
-            for threshold in np.arange(0, 1, 0.05):
-                trans_predictions = convert_label_for_cremi_cleft(predictions, threshold)
-                stats = cleft_stats_optimize(trans_predictions, self.data_folder + split + '.hdf')
-
-                print('F-Score: %f, TP: %f, FP: %f, FN: %f' % (stats[0], stats[1], stats[2], stats[3]))
-
-                scores[threshold] = stats[0]
-            min_thresh = min(scores, key=scores.get)
-            trans_predictions = convert_label_for_cremi_cleft(predictions, min_thresh)
-        else:
-            trans_predictions = convert_between_label_types(label_type, self.label_type, predictions)
-
         # Get the input we used
         input_file = cremiio.CremiFile(self.data_folder + split + '.hdf', 'r')
         raw = input_file.read_raw()
         inputs = raw.data.value
         resolution = raw.resolution
-
+        cleft_res = input_file.read_clefts().resolution
         input_file.close()
+
+        scores = {}
+        min_thresh = 0.05
+        if self.task =='cleft':
+            for threshold in np.arange(0, 1, 0.05):
+                trans_predictions = convert_label_for_cremi_cleft(predictions, threshold)
+                
+                # write temp file for prediction
+                temp_file = cremiio.CremiFile('temp_pred.hdf', 'w')
+                temp_file.write_clefts(cremiio.Volume(trans_predictions, resolution=cleft_res))
+                temp_file.close()
+
+                stats = cleft_stats_optimize(temp_file, self.data_folder + split + '.hdf')
+
+                print('F-Score: %f, TP: %f, FP: %f, FN: %f' % (stats[0], stats[1], stats[2], stats[3]))
+
+                scores[threshold] = stats[0]
+                os.remove('temp_pred.hdf')
+            min_thresh = min(scores, key=scores.get)
+            trans_predictions = convert_label_for_cremi_cleft(predictions, min_thresh)
+        else:
+            trans_predictions = convert_between_label_types(label_type, self.label_type, predictions)
 
         pred_file = cremiio.CremiFile(results_folder + split + '-predictions.hdf', 'w')
         pred_file.write_raw(cremiio.Volume(inputs, resolution=resolution))
         if self.task == 'cleft' or self.task == 'multi':
-            pred_file.write_clefts(cremiio.Volume(trans_predictions, resolution=resolution))
+            pred_file.write_clefts(cremiio.Volume(trans_predictions, resolution=cleft_res))
         else:
             pred_file.write_neuron_ids(cremiio.Volume(trans_predictions, resolution=resolution))
         pred_file.close()

@@ -133,8 +133,9 @@ def __rand_error_affinities(pred_affinities, true_seg, aff_type=AFFINITIES_3D):
 
     return __rand_error(true_seg, pred_segmentation, calc_variation_information=False, calc_variation_score=False, relabel2d=relabel2d)
 
-def cleft_stats_optimize(pred_data, truth_fn, thresh_pos=200, thresh_neg=200, thresh_true=200):
-    truth_file = cremiio.CremiFile(truth_fn, 'r')
+def cleft_stats_optimize(pred, truth, thresh_pos=200, thresh_neg=200, thresh_true=200):
+    pred_file = cremiio.CremiFile(pred, 'r')
+    truth_file = cremiio.CremiFile(truth, 'r')
 
     temp_file = cremiio.CremiFile('temp.hdf', 'w')
     truth_cleft = truth_file.read_clefts()
@@ -144,10 +145,11 @@ def cleft_stats_optimize(pred_data, truth_fn, thresh_pos=200, thresh_neg=200, th
     truth_cleft_data = np.where(truth_cleft_data == 1., truth_cleft_data, 0xffffffffffffffff)
 
     temp_file.write_clefts(cremiio.Volume(truth_cleft_data, resolution=truth_cleft_res))
-    clefts_eval = clefts.Clefts(pred_data, temp_file.read_clefts().data)
+    clefts_eval = clefts.Clefts(pred_file.read_clefts(), temp_file.read_clefts().data)
 
     truth_file.close()
     temp_file.close()
+    pred_file.close()
     os.remove('temp.hdf')
 
     num_false_pos = clefts_eval.count_false_positives(threshold=thresh_pos)
@@ -170,7 +172,7 @@ def cleft_stats(pred, truth, thresh_pos, thresh_neg, thresh_true):
     truth_cleft_data = np.where(truth_cleft_data == 1., truth_cleft_data, 0xffffffffffffffff)
 
     temp_file.write_clefts(cremiio.Volume(truth_cleft_data, resolution=truth_cleft_res))
-    clefts_eval = clefts.Clefts(pred_file.read_clefts().data, temp_file.read_clefts().data)
+    clefts_eval = clefts.Clefts(pred_file.read_clefts(), temp_file.read_clefts())
 
     pred_file.close()
     truth_file.close()
