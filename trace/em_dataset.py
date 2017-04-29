@@ -216,7 +216,7 @@ class CREMIDataset(Dataset):
         if self.task =='cleft':
             for threshold in np.arange(0, 1, 0.05):
                 trans_predictions = convert_label_for_cremi_cleft(predictions, threshold)
-                stats = evaluation.cleft_stats_optimize(trans_predictions, data_folder + split + '.hdf')
+                stats = cleft_stats_optimize(trans_predictions, data_folder + split + '.hdf')
 
                 print('F-Score: %f, TP: %f, FP: %f, FN: %f' % (stats[0], stats[1], stats[2], stats[3]))
 
