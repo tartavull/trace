@@ -145,7 +145,7 @@ def cleft_stats_optimize(pred, truth, thresh_pos=200, thresh_neg=200, thresh_tru
     truth_cleft_data = np.where(truth_cleft_data == 1., truth_cleft_data, 0xffffffffffffffff)
 
     temp_file.write_clefts(cremiio.Volume(truth_cleft_data, resolution=truth_cleft_res))
-    clefts_eval = clefts.Clefts(pred_file.read_clefts(), temp_file.read_clefts().data)
+    clefts_eval = clefts.Clefts(pred_file.read_clefts(), temp_file.read_clefts())
 
     truth_file.close()
     temp_file.close()
