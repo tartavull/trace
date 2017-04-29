@@ -236,8 +236,8 @@ class CREMIDataset(Dataset):
 
                 scores[threshold] = stats[0]
                 os.remove('temp_pred.hdf')
-            min_thresh = min(scores, key=scores.get)
-            trans_predictions = convert_label_for_cremi_cleft(predictions, min_thresh)
+            opt_thresh = max(scores, key=scores.get)
+            trans_predictions = convert_label_for_cremi_cleft(predictions, opt_thresh)
         else:
             trans_predictions = convert_between_label_types(label_type, self.label_type, predictions)
 
@@ -249,7 +249,7 @@ class CREMIDataset(Dataset):
             pred_file.write_neuron_ids(cremiio.Volume(trans_predictions, resolution=resolution))
         pred_file.close()
 
-        return min_thresh
+        return opt_thresh
 
 
 class EMDatasetSampler(object):
