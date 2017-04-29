@@ -243,9 +243,6 @@ class UNet(Model):
 
         # Extract the tile sizes from the argument
         z_out_patch, y_out_patch, x_out_patch = pred_tile_shape[0], pred_tile_shape[1], pred_tile_shape[2]
-        print(z_out_patch)
-        print(y_out_patch)
-        print(x_out_patch)
         z_in_patch = z_out_patch + self.z_fov - 1
         y_in_patch = y_out_patch + self.fov - 1
         x_in_patch = x_out_patch + self.fov - 1

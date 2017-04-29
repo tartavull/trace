@@ -88,20 +88,20 @@ class ValidationHook(Hook):
         # Set up placeholders for other metrics
         self.validation_cross_entropy = tf.placeholder(tf.float32)
         self.validation_pixel_error = tf.placeholder(tf.float32)
-        self.rand_f_score = tf.placeholder(tf.float32)
-        self.rand_f_score_merge = tf.placeholder(tf.float32)
-        self.rand_f_score_split = tf.placeholder(tf.float32)
-        self.vi_f_score = tf.placeholder(tf.float32)
-        self.vi_f_score_merge = tf.placeholder(tf.float32)
-        self.vi_f_score_split = tf.placeholder(tf.float32)
+        # self.rand_f_score = tf.placeholder(tf.float32)
+        # self.rand_f_score_merge = tf.placeholder(tf.float32)
+        # self.rand_f_score_split = tf.placeholder(tf.float32)
+        # self.vi_f_score = tf.placeholder(tf.float32)
+        # self.vi_f_score_merge = tf.placeholder(tf.float32)
+        # self.vi_f_score_split = tf.placeholder(tf.float32)
 
         # Create validation summaries
         self.validation_summaries = tf.summary.merge([
             tf.summary.scalar('validation_cross_entropy', self.validation_cross_entropy),
             tf.summary.scalar('validation_pixel_error', self.validation_pixel_error),
-            tf.summary.scalar('rand_score', self.rand_f_score),
-            tf.summary.scalar('rand_merge_score', self.rand_f_score_merge),
-            tf.summary.scalar('rand_split_score', self.rand_f_score_split),
+            # tf.summary.scalar('rand_score', self.rand_f_score),
+            # tf.summary.scalar('rand_merge_score', self.rand_f_score_merge),
+            # tf.summary.scalar('rand_split_score', self.rand_f_score_split),
             #tf.summary.scalar('vi_score', self.vi_f_score),
             #tf.summary.scalar('vi_merge_score', self.vi_f_score_merge),
             #tf.summary.scalar('vi_split_score', self.vi_f_score_split),
@@ -142,16 +142,16 @@ class ValidationHook(Hook):
             summary_writer.add_summary(validation_image_summary, step)
 
             # Calculate rand and VI scores
-            scores = evaluation.rand_error_from_prediction(self.val_labels[0],
-                                                           validation_prediction[0],
-                                                           pred_type=model.architecture.output_mode)
+            # scores = evaluation.rand_error_from_prediction(self.val_labels[0],
+                                                           # validation_prediction[0],
+                                                           # pred_type=model.architecture.output_mode)
 
             score_summary = session.run(self.validation_summaries,
                                         feed_dict={self.validation_cross_entropy: validation_cross_entropy,
                                                    self.validation_pixel_error: validation_pixel_error,
-                                                   self.rand_f_score: scores['Rand F-Score Full'],
-                                                   self.rand_f_score_merge: scores['Rand F-Score Merge'],
-                                                   self.rand_f_score_split: scores['Rand F-Score Split'],
+                                                   # self.rand_f_score: scores['Rand F-Score Full'],
+                                                   # self.rand_f_score_merge: scores['Rand F-Score Merge'],
+                                                   # self.rand_f_score_split: scores['Rand F-Score Split'],
                                                    #self.vi_f_score: scores['VI F-Score Full'],
                                                    #self.vi_f_score_merge: scores['VI F-Score Merge'],
                                                    #self.vi_f_score_split: scores['VI F-Score Split'],
