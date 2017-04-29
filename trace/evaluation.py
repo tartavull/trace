@@ -182,10 +182,11 @@ def cleft_stats(pred, truth, thresh_pos, thresh_neg, thresh_true):
     num_false_pos = clefts_eval.count_false_positives(threshold=thresh_pos)
     num_false_neg = clefts_eval.count_false_negatives(threshold=thresh_neg)
     num_true_pos = clefts_eval.count_true_positives(threshold=thresh_true)
+    f_score = clefts_eval.f_score(num_true_pos, num_false_neg, num_false_pos)
     acc_false_neg = clefts_eval.acc_false_negatives()
     acc_false_pos = clefts_eval.acc_false_positives()
 
-    return num_true_pos, num_false_pos, num_false_neg, acc_false_pos, acc_false_neg
+    return f_score, num_true_pos, num_false_pos, num_false_neg, acc_false_pos, acc_false_neg
 
 def rand_error_from_prediction(true_labels, pred_values, pred_type=BOUNDARIES):
     """ Predict the rand error and variation of information from a given prediction. Based on the prediction type, we
