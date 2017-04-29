@@ -174,6 +174,7 @@ class CREMIDataset(Dataset):
             self.train_masks = mask_file.read_neuron_ids().data.value
             self.train_labels = train_file.read_clefts().data.value
             second_smallest = np.partition(self.train_labels, 1, axis=None)[1]
+            print(second_smallest)
             print("Num Train Synapses: " + str(np.max(self.train_labels) - second_smallest))
         else:
             mask_file = cremiio.CremiFile(data_folder + 'train_masks.hdf', 'r')
