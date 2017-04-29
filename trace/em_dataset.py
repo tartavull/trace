@@ -173,14 +173,14 @@ class CREMIDataset(Dataset):
             mask_file = cremiio.CremiFile(data_folder + 'train_masks.hdf', 'r')
             self.train_masks = mask_file.read_neuron_ids().data.value
             self.train_labels = train_file.read_clefts().data.value
-            second_smallest = np.partition(self.train_labels, 1)[1]
+            second_smallest = np.partition(self.train_labels, 1, axis=None)[1]
             print("Num Train Synapses: " + str(np.max(self.train_labels) - second_smallest))
         else:
             mask_file = cremiio.CremiFile(data_folder + 'train_masks.hdf', 'r')
             self.train_masks = mask_file.read_neuron_ids().data.value
             self.train_labels = train_file.read_clefts().data.value
             self.train_labels_boundary = train_file.read_neuron_ids().data.value
-            second_smallest = np.partition(self.train_labels, 1)[1]
+            second_smallest = np.partition(self.train_labels, 1, axis=None)[1]
             print("Num Train Synapses: " + str(np.max(self.train_labels) - second_smallest))
 
         train_file.close()
@@ -191,12 +191,12 @@ class CREMIDataset(Dataset):
             self.validation_labels = validation_file.read_neuron_ids().data.value
         elif task == down.CLEFT:
             self.validation_labels = validation_file.read_clefts().data.value
-            second_smallest = np.partition(self.validation_labels, 1)[1]
+            second_smallest = np.partition(self.validation_labels, 1, axis=None)[1]
             print("Num Validation Synapses: " + str(np.max(self.validation_labels) -  second_smallest))
         else:
             self.validation_labels = validation_file.read_clefts().data.value
             self.validation_labels_boundary = validation_file.read_neuron_ids().data.value
-            second_smallest = np.partition(self.validation_labels, 1)[1]
+            second_smallest = np.partition(self.validation_labels, 1, axis=None)[1]
             print("Num Validation Synapses: " + str(np.max(self.validation_labels) - second_smallest))
 
         validation_file.close()
