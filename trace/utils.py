@@ -102,7 +102,7 @@ def convert_label_for_cremi_cleft(original_labels, threshold):
     
 def convert_label_for_cremi_cleft_neuro(original_labels, threshold):
     original_labels = np.squeeze(original_labels)
-    thresholded_image = original_labels > 0.0001
+    thresholded_image = original_labels > 0.01
     print(np.sum(thresholded_image))
     return thresholded_image
 
