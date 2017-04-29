@@ -230,7 +230,7 @@ class CREMIDataset(Dataset):
                 temp_file.write_clefts(cremiio.Volume(trans_predictions, resolution=cleft_res))
                 temp_file.close()
 
-                stats = cleft_stats_optimize(temp_file, self.data_folder + split + '.hdf')
+                stats = cleft_stats_optimize('temp_pred.hdf', self.data_folder + split + '.hdf')
 
                 print('F-Score: %f, TP: %f, FP: %f, FN: %f' % (stats[0], stats[1], stats[2], stats[3]))
 
