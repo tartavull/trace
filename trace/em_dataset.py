@@ -3,17 +3,17 @@ from __future__ import print_function
 import tensorflow as tf
 import numpy as np
 import math
+import os
 
 # I/O
 import tifffile as tiff
 import cremi.io as cremiio
 import h5py
-
 import download_data as down
 
 from augmentation import *
 from utils import *
-
+from evaluation import *
 
 class Dataset(object):
     def prepare_predictions_for_submission(self, results_folder, split, predictions, label_type):
@@ -173,13 +173,15 @@ class CREMIDataset(Dataset):
             mask_file = cremiio.CremiFile(data_folder + 'train_masks.hdf', 'r')
             self.train_masks = mask_file.read_neuron_ids().data.value
             self.train_labels = train_file.read_clefts().data.value
-            print("Num Train Synapses: " + str(np.max(self.train_labels)))
+            second_smallest = np.partition(self.train_labels, 1)[1]
+            print("Num Train Synapses: " + str(np.max(self.train_labels) - second_smallest))
         else:
             mask_file = cremiio.CremiFile(data_folder + 'train_masks.hdf', 'r')
             self.train_masks = mask_file.read_neuron_ids().data.value
             self.train_labels = train_file.read_clefts().data.value
             self.train_labels_boundary = train_file.read_neuron_ids().data.value
-            print("Num Train Synapses: " + str(np.max(self.train_labels)))
+            second_smallest = np.partition(self.train_labels, 1)[1]
+            print("Num Train Synapses: " + str(np.max(self.train_labels) - second_smallest))
 
         train_file.close()
 
@@ -189,11 +191,13 @@ class CREMIDataset(Dataset):
             self.validation_labels = validation_file.read_neuron_ids().data.value
         elif task == down.CLEFT:
             self.validation_labels = validation_file.read_clefts().data.value
-            print("Num Validation Synapses: " + str(np.max(self.validation_labels)))
+            second_smallest = np.partition(self.validation_labels, 1)[1]
+            print("Num Validation Synapses: " + str(np.max(self.validation_labels) -  second_smallest))
         else:
             self.validation_labels = validation_file.read_clefts().data.value
             self.validation_labels_boundary = validation_file.read_neuron_ids().data.value
-            print("Num Validation Synapses: " + str(np.max(self.validation_labels)))
+            second_smallest = np.partition(self.validation_labels, 1)[1]
+            print("Num Validation Synapses: " + str(np.max(self.validation_labels) - second_smallest))
 
         validation_file.close()
 
@@ -204,16 +208,25 @@ class CREMIDataset(Dataset):
         test_file.close()
 
 
-    def prepare_predictions_for_submission(self, results_folder, split, predictions, label_type, threshold):
+    def prepare_predictions_for_submission(self, results_folder, split, predictions, label_type):
         """Prepare a given segmentation prediction for submission to the CREMI competiton
         :param label_type: The type of label given in predictions (i.e. affinities-2d, boundaries, etc)
         :param results_folder: The location where we should save the dataset.
         :param split: The name of partition of the dataset we are predicting on ['train', 'validation', 'test']
         :param predictions: Predictions for labels in some format, dictated by label_type
         """
+        scores = {}
+        min_thresh = 0.05
         if self.task =='cleft':
-            print('fuckthis')
-            trans_predictions = convert_label_for_cremi_cleft(predictions, threshold)
+            for threshold in np.arange(0, 1, 0.05):
+                trans_predictions = convert_label_for_cremi_cleft(predictions, threshold)
+                stats = evaluation.cleft_stats_optimize(trans_predictions, data_folder + split + '.hdf')
+
+                print('TP: %f, FP: %f, FN: %f' % (stats[1], stats[2], stats[3]))
+
+                scores[threshold] = stats[0]
+            min_thresh = min(scores, key=scores.get)
+            trans_predictions = convert_label_for_cremi_cleft(predictions, min_thresh)
         else:
             trans_predictions = convert_between_label_types(label_type, self.label_type, predictions)
 
@@ -232,6 +245,8 @@ class CREMIDataset(Dataset):
         else:
             pred_file.write_neuron_ids(cremiio.Volume(trans_predictions, resolution=resolution))
         pred_file.close()
+
+        return min_thresh
 
 
 class EMDatasetSampler(object):
