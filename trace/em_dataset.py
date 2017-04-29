@@ -222,7 +222,7 @@ class CREMIDataset(Dataset):
                 trans_predictions = convert_label_for_cremi_cleft(predictions, threshold)
                 stats = evaluation.cleft_stats_optimize(trans_predictions, data_folder + split + '.hdf')
 
-                print('TP: %f, FP: %f, FN: %f' % (stats[1], stats[2], stats[3]))
+                print('F-Score: %f, TP: %f, FP: %f, FN: %f' % (stats[0], stats[1], stats[2], stats[3]))
 
                 scores[threshold] = stats[0]
             min_thresh = min(scores, key=scores.get)

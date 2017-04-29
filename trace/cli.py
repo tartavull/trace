@@ -193,6 +193,7 @@ def predict(model_type, params_type, dataset_name, split, task, run_name):
     # Prepare the predictions for submission for this particular dataset
     # Only send in the first dimension of predictions, because theoretically predict can predict on many stacks
     optimal_thresh = dataset.prepare_predictions_for_submission(ckpt_folder, split, predictions, params.output_mode)
+    print(optimal_thresh)
     dataset.prepare_predictions_for_neuroglancer(ckpt_folder, split, predictions, params.output_mode, optimal_thresh)
 
 @cli.command()
