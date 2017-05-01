@@ -136,31 +136,31 @@ def generate_UNET_3D_4LAYERS():
         layers=[
             UNet3DLayer(layer_name='layer_d1', is_valid=False, is_z_valid=False, is_residual=True, 
                         uses_max_pool=True, filter_size=3, z_filter_size=3,
-                        n_feature_maps=64, num_convs=3, is_contracting=True, 
+                        n_feature_maps=32, num_convs=3, is_contracting=True, 
                         is_expanding=False, is_training=False),
             UNet3DLayer(layer_name='layer_d2', is_valid=False, is_z_valid=False, is_residual=True, 
                         uses_max_pool=True, filter_size=3, z_filter_size=3,
-                        n_feature_maps=128, num_convs=3, is_contracting=True, 
+                        n_feature_maps=64, num_convs=3, is_contracting=True, 
                         is_expanding=False, is_training=False),
             UNet3DLayer(layer_name='layer_d3', is_valid=False, is_z_valid=False, is_residual=True, 
                         uses_max_pool=True, filter_size=3, z_filter_size=3,
-                        n_feature_maps=256, num_convs=3, is_contracting=True, 
+                        n_feature_maps=128, num_convs=3, is_contracting=True, 
                         is_expanding=False, is_training=False),
             UNet3DLayer(layer_name='layer_4', is_valid=False, is_z_valid=False, is_residual=True, 
                         uses_max_pool=True, filter_size=3, z_filter_size=3,
-                        n_feature_maps=512, num_convs=3, is_contracting=False, 
+                        n_feature_maps=256, num_convs=3, is_contracting=False, 
                         is_expanding=True, is_training=False),
             UNet3DLayer(layer_name='layer_u3', is_valid=False, is_z_valid=False, is_residual=True, 
                         uses_max_pool=True, filter_size=3, z_filter_size=3,
-                        n_feature_maps=256, num_convs=3, is_contracting=False, 
+                        n_feature_maps=128, num_convs=3, is_contracting=False, 
                         is_expanding=True, is_training=False),
             UNet3DLayer(layer_name='layer_u2', is_valid=False, is_z_valid=False, is_residual=True, 
                         uses_max_pool=True, filter_size=3, z_filter_size=3,
-                        n_feature_maps=128, num_convs=3, is_contracting=False, 
+                        n_feature_maps=64, num_convs=3, is_contracting=False, 
                         is_expanding=True, is_training=False),
             UNet3DLayer(layer_name='layer_u1', is_valid=False, is_z_valid=False, is_residual=True, 
                         uses_max_pool=True, filter_size=3, z_filter_size=3,
-                        n_feature_maps=64, num_convs=3, is_contracting=False, 
+                        n_feature_maps=32, num_convs=3, is_contracting=False, 
                         is_expanding=False, is_training=False),
         ]
     )
@@ -168,41 +168,64 @@ def generate_UNET_3D_4LAYERS():
 UNET_3D_4LAYERS = generate_UNET_3D_4LAYERS()
 
 class RecurrentUNet(Model):
-    def __init__(self, architecture, is_training=False, patch_size=120, z_patch_size=16):
+    def __init__(self, architecture, is_training=False, patch_size=80, z_patch_size=8):
         super(RecurrentUNet, self).__init__(architecture)
 
-        inputShape = tf.shape(self.image[0])
-        zInputSize = inputShape[0]
-        yInputSize = inputShape[1]
-        xInputSize = inputShape[2]
+        # Need to initialize variables as they cannot be initialized in while
+        # loop.
+        UNet(generate_UNET_3D_4LAYERS())
 
-        self.pointsToVisit = tf.get_variable('pointsToVisit', trainable=False, validate_shape=False, collections=None)
-        assignInitialPoint = tf.assign(self.pointsToVisit, [(1, (zInputSize, yInputSize, xInputSize))], validate_shape=False)
+        inputShape = tf.shape(self.image)
+        zInputSize = inputShape[1]
+        yInputSize = inputShape[2]
+        xInputSize = inputShape[3]
+
+        # Remember to clear between steps
+        with tf.variable_scope('points2visit'):
+            self.pointsToVisit = tf.get_variable('pointsToVisit', shape=[50, 4], dtype=tf.int32, trainable=False, collections=None)
+        assignInitialPoint = self.pointsToVisit[0].assign(tf.stack([zInputSize // 2, yInputSize // 2, xInputSize // 2, 1]))
+        assignInitialPoint = tf.Print(assignInitialPoint, [self.pointsToVisit], message='initial point assigned')
          
 
         objectMask = tf.zeros(shape=inputShape, dtype=tf.float32)
+        visitedPoints = tf.zeros(shape=inputShape, dtype=tf.int32)
         # Assign single positive pixel to center of object mask
         indices = tf.stack([[0, zInputSize // 2, yInputSize // 2, xInputSize // 2, 0]])
         updates = tf.constant([1.0])
         shape = tf.shape(objectMask)
         objectMask = tf.scatter_nd(indices, updates, shape)
-        
+        cross_entropy = 0.0 
 
-        def cond(pointsToVisit):
-            return tf.greater(tf.shape(numPointsToVisit)[0], 0)
+        def cond(objectMask, visitedPoints, cross_entropy):
+            with tf.variable_scope('points2visit', reuse=True):
+                pointsToVisit = tf.get_variable('pointsToVisit', dtype=tf.int32, trainable=False, collections=None)
+            pointsToVisit = tf.Print(pointsToVisit, [pointsToVisit, tf.reduce_sum(pointsToVisit[:, 3])], summarize=20, message='cond pointsToVisit')
+            return tf.greater(tf.reduce_sum(pointsToVisit[:, 3]), 0)
 
-        def body(pointsToVisit):
-            statingPoint = pointsToVisit[0, 1]
 
-            # (The control dependency just makes sure that the starting point
-            # is removed from the pointsToVisit list)
-            with tf.control_dependencies([tf.assign(pointsToVisit, pointsToVisit[1:], validate_shape=False)]):
-                # Determine current patch.
-                patch = self.image[0, startingPoint[0] - (z_patch_size // 2): startingPoint[0] + (z_patch_size // 2),
-                                      startingPoint[1] - (patch_size // 2): startingPoint[1] + (patch_size // 2),
-                                      startingPoint[2] - (patch_size // 2): startingPoint[2] + (patch_size // 2)]
+        def body(objectMask, visitedPoints, cross_entropy):
+            # Have to grab variable again because a tensor is passed as the
+            # argument, rather than the actual variable.
+            with tf.variable_scope('points2visit', reuse=True):
+                pointsToVisit = tf.get_variable('pointsToVisit', dtype=tf.int32, trainable=False, collections=None)
+            reordered = tf.gather(pointsToVisit, tf.nn.top_k(pointsToVisit[:, 3], k=tf.shape(pointsToVisit)[0]).indices)
+            reorder = tf.assign(self.pointsToVisit, reordered)
+            with tf.control_dependencies([reorder]):
+                startingPoint = pointsToVisit[0, :3]
 
-                objectMaskPatch = objectMask[0, startingPoint[0] - (z_patch_size // 2): startingPoint[0] + (z_patch_size // 2),
+            startingPoint = tf.Print(startingPoint, [startingPoint, inputShape, pointsToVisit], summarize=10, message='starting point, input shape and points to visit')
+            newVisitedPoints = visitedPoints
+
+            # Determine current patch.
+            patch = self.image[:, startingPoint[0] - (z_patch_size // 2): startingPoint[0] + (z_patch_size // 2),
+                                  startingPoint[1] - (patch_size // 2): startingPoint[1] + (patch_size // 2),
+                                  startingPoint[2] - (patch_size // 2): startingPoint[2] + (patch_size // 2)]
+
+            objectMaskPatch = objectMask[:, startingPoint[0] - (z_patch_size // 2): startingPoint[0] + (z_patch_size // 2),
+                                            startingPoint[1] - (patch_size // 2): startingPoint[1] + (patch_size // 2),
+                                            startingPoint[2] - (patch_size // 2): startingPoint[2] + (patch_size // 2)]
+
+            targetPatch = self.target[:, startingPoint[0] - (z_patch_size // 2): startingPoint[0] + (z_patch_size // 2),
                                             startingPoint[1] - (patch_size // 2): startingPoint[1] + (patch_size // 2),
                                             startingPoint[2] - (patch_size // 2): startingPoint[2] + (patch_size // 2)]
 
@@ -210,14 +233,15 @@ class RecurrentUNet(Model):
             # Do computation using UNet for this time step.
             unetArchitecture = generate_UNET_3D_4LAYERS()
 
-            prev_layer = tf.concat([patch, objectMaskPatch], axis=4)
+            prev_layer = tf.concat([patch, tf.nn.sigmoid(objectMaskPatch)], axis=4)
+            prev_layer = tf.Print(prev_layer, [tf.shape(patch), tf.shape(objectMaskPatch)], summarize=10, message='patch and object mask')
             prev_n_feature_maps = 2
 
             skip_connections = []
             
             num_layers = len(unetArchitecture.layers)
             for layer_num, layer in enumerate(unetArchitecture.layers):
-                with tf.variable_scope('layer' + str(layer_num)):
+                with tf.variable_scope('layer' + str(layer_num), reuse=True):
                     layer.depth = layer_num
                     
                     if layer.is_contracting:
@@ -232,8 +256,6 @@ class RecurrentUNet(Model):
                     else:
                         last_layer = layer.connect(prev_layer, prev_n_feature_maps, dilation_rate=1, is_training=False, skip_connect=skip_connections[0])
 
-            # Predictions
-            prediction = tf.nn.sigmoid(last_layer)
             
             # Update object mask
             # Need to concatenate the outside shell of a cube because tensorflow
@@ -244,7 +266,7 @@ class RecurrentUNet(Model):
             x_after = objectMask[:, startingPoint[0] - (z_patch_size // 2): startingPoint[0] + (z_patch_size // 2),
                                      startingPoint[1] - (patch_size // 2): startingPoint[1] + (patch_size // 2),
                                      startingPoint[2] + (patch_size // 2):]
-            x_slice = tf.concat([x_before, prediction, x_after], axis=3) 
+            x_slice = tf.concat([x_before, last_layer, x_after], axis=3) 
 
             y_before = objectMask[:, startingPoint[0] - (z_patch_size // 2): startingPoint[0] + (z_patch_size // 2),
                                      :startingPoint[1] - (patch_size // 2)]
@@ -256,17 +278,77 @@ class RecurrentUNet(Model):
             z_after = objectMask[:, startingPoint[0] + (z_patch_size // 2):]
             z_slice = tf.concat([z_before, y_slice, z_after], axis=1)
 
+            # Make sure this is actually changing the global objectMask
             objectMask = z_slice
             
+            with tf.control_dependencies([startingPoint]):
+                popOp = pointsToVisit[0].assign(tf.zeros((4), dtype=tf.int32))
+                popOp = tf.Print(popOp, [startingPoint], message='popOp - startingPoint')
+            
             # Add new points to pointsToVisit
+            threshold = 2.2 # Corresponds to prediction value of 0.9 after sigmoid
+            moveDelta = tf.constant([4, 32, 32])
+            directions = tf.constant([[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]])
+            def addPoint1():
+                newPoint = startingPoint + tf.multiply(moveDelta, directions[0])
+                newZ = startingPoint[0] + moveDelta[0]
+                newY = startingPoint[1]
+                newX = startingPoint[2]
+                if newVisitedPoints[0, newZ, newY, newX, 0] == 1:
+                    return (pointsToVisit[tf.shape(pointsToVisit)[0] - 1].assign(tf.zeros((4), dtype=tf.int32)), newVisitedPoints)
+                else:
+                    indices = tf.stack([[0, newZ, newY, newX, 0]])
+                    updates = tf.constant([1])
+                    shape = tf.shape(newVisitedPoints)
+                    updateMask = tf.scatter_nd(indices, updates, shape)
+                    newerVisitedPoints = newVisitedPoints + updateMask
+                    return (pointsToVisit[tf.shape(pointsToVisit)[0] - 1].assign(tf.concat([newPoint, (1,)], axis=0)), newerVisitedPoints)
+
+            addNewPoint1, newVisitedPoints = tf.cond(startingPoint[0] + moveDelta[0] * directions[0, 0] < zInputSize, lambda: tf.cond(objectMask[0, startingPoint[0] + moveDelta[0] * directions[0, 0], startingPoint[1] + moveDelta[1] * directions[0, 1], startingPoint[2] + moveDelta[2] * directions[0, 2], 0] > threshold,
+                    addPoint1,
+                    lambda: (pointsToVisit[tf.shape(pointsToVisit)[0] - 1].assign(tf.zeros((4), dtype=tf.int32)), newVisitedPoints)),
+                lambda: (pointsToVisit[tf.shape(pointsToVisit)[0] - 1].assign(tf.zeros((4), dtype=tf.int32)), newVisitedPoints))
+            addNewPoint2 = tf.cond(startingPoint[0] + moveDelta[0] * directions[1, 0] >= 0, lambda: tf.cond(objectMask[0, startingPoint[0] + moveDelta[0] * directions[1, 0], startingPoint[1] + moveDelta[1] * directions[1, 1], startingPoint[2] + moveDelta[2] * directions[1, 2], 0] > threshold,
+                    lambda: pointsToVisit[tf.shape(pointsToVisit)[0] - 2].assign(tf.concat([startingPoint + tf.multiply(moveDelta, directions[1]), (1,)], axis=0)), 
+                    lambda: pointsToVisit[tf.shape(pointsToVisit)[0] - 2].assign(tf.zeros((4), dtype=tf.int32))),
+                lambda: pointsToVisit[tf.shape(pointsToVisit)[0] - 2].assign(tf.zeros((4), dtype=tf.int32)))
+            addNewPoint3 = tf.cond(startingPoint[1] + moveDelta[1] * directions[2, 1] < yInputSize, lambda: tf.cond(objectMask[0, startingPoint[0] + moveDelta[0] * directions[2, 0], startingPoint[1] + moveDelta[1] * directions[2, 1], startingPoint[2] + moveDelta[2] * directions[2, 2], 0] > threshold,
+                    lambda: pointsToVisit[tf.shape(pointsToVisit)[0] - 3].assign(tf.concat([startingPoint + tf.multiply(moveDelta, directions[2]), (1,)], axis=0)),
+                    lambda: pointsToVisit[tf.shape(pointsToVisit)[0] - 3].assign(tf.zeros((4), dtype=tf.int32))),
+                lambda: pointsToVisit[tf.shape(pointsToVisit)[0] - 3].assign(tf.zeros((4), dtype=tf.int32)))
+            addNewPoint4 = tf.cond(startingPoint[1] + moveDelta[1] * directions[3, 1] >= 0, lambda: tf.cond(objectMask[0, startingPoint[0] + moveDelta[0] * directions[3, 0], startingPoint[1] + moveDelta[1] * directions[3, 1], startingPoint[2] + moveDelta[2] * directions[3, 2], 0] > threshold,
+                    lambda: pointsToVisit[tf.shape(pointsToVisit)[0] - 4].assign(tf.concat([startingPoint + tf.multiply(moveDelta, directions[3]), (1,)], axis=0)),
+                    lambda: pointsToVisit[tf.shape(pointsToVisit)[0] - 4].assign(tf.zeros((4), dtype=tf.int32))),
+                lambda: pointsToVisit[tf.shape(pointsToVisit)[0] - 4].assign(tf.zeros((4), dtype=tf.int32)))
+            addNewPoint5 = tf.cond(startingPoint[2] + moveDelta[2] * directions[4, 2] < xInputSize, lambda: tf.cond(objectMask[0, startingPoint[0] + moveDelta[0] * directions[4, 0], startingPoint[1] + moveDelta[1] * directions[4, 1], startingPoint[2] + moveDelta[2] * directions[4, 2], 0] > threshold,
+                    lambda: pointsToVisit[tf.shape(pointsToVisit)[0] - 5].assign(tf.concat([startingPoint + tf.multiply(moveDelta, directions[4]), (1,)], axis=0)),
+                    lambda: pointsToVisit[tf.shape(pointsToVisit)[0] - 5].assign(tf.zeros((4), dtype=tf.int32))),
+                lambda: pointsToVisit[tf.shape(pointsToVisit)[0] - 5].assign(tf.zeros((4), dtype=tf.int32)))
+            addNewPoint6 = tf.cond(startingPoint[2] + moveDelta[2] * directions[5, 2] >= 0, lambda: tf.cond(objectMask[0, startingPoint[0] + moveDelta[0] * directions[5, 0], startingPoint[1] + moveDelta[1] * directions[5, 1], startingPoint[2] + moveDelta[2] * directions[5, 2], 0] > threshold,
+                    lambda: pointsToVisit[tf.shape(pointsToVisit)[0] - 6].assign(tf.concat([startingPoint + tf.multiply(moveDelta, directions[5]), (1,)], axis=0)),
+                    lambda: pointsToVisit[tf.shape(pointsToVisit)[0] - 6].assign(tf.zeros((4), dtype=tf.int32))),
+                lambda: pointsToVisit[tf.shape(pointsToVisit)[0] - 6].assign(tf.zeros((4), dtype=tf.int32)))
+            
+            
+            return tf.tuple([objectMask, newVisitedPoints, cross_entropy + tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=last_layer,
+                                                        labels=targetPatch))], control_inputs=[popOp, addNewPoint1, addNewPoint2, addNewPoint3, addNewPoint4, addNewPoint5, addNewPoint6])
 
         with tf.control_dependencies([assignInitialPoint]):
-            tf.while_loop(tf.shape(self.pointsToVisit))
+            objectMask, _, cross_entropy = tf.while_loop(cond, body, [objectMask, visitedPoints, cross_entropy], swap_memory=True)
 
+        # Predictions
+        objectMask = tf.Print(objectMask, [tf.reduce_max(objectMask), objectMask], summarize=50, message='object mask')
+        self.prediction = tf.nn.sigmoid(objectMask)
+        self.prediction = tf.Print(self.prediction, [tf.reduce_max(self.prediction), self.prediction], summarize=50, message='predictions')
+        self.binary_prediction = tf.round(self.prediction)
 
+        # Loss
+        self.cross_entropy = cross_entropy + tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=objectMask,
+                                                                                                    labels=self.target))
+        self.pixel_error = tf.reduce_mean(tf.cast(tf.abs(self.binary_prediction - self.target), tf.float32))
 
+        self.saver = tf.train.Saver()
 
-    def __call__(self, inputs, state, scope=None):
 
 class UNet(Model):
     def __init__(self, architecture, is_training=False):

@@ -108,10 +108,10 @@ def train(model_type, params_type, dataset_name, n_iter, run_name, ff, cont):
 
     training_params = learner.TrainingParams(
         optimizer=tf.train.AdamOptimizer,
-        learning_rate=0.00002,
+        learning_rate=0.0001,
         n_iter=n_iter,
-        output_size=120,
-        z_output_size=16,
+        output_size=240,
+        z_output_size=24,
         batch_size=batch_size
     )
 
@@ -132,7 +132,7 @@ def train(model_type, params_type, dataset_name, n_iter, run_name, ff, cont):
         learner.LossHook(10, model),
         learner.ModelSaverHook(100, ckpt_folder),
         #learner.ValidationHook(500, dset_sampler, model, data_folder, params.output_mode, [training_params.z_output_size, training_params.output_size, training_params.output_size]),
-        learner.ImageVisualizationHook(1000, model),
+        learner.ImageVisualizationHook(100, model),
         # learner.HistogramHook(100, model),
         # learner.LayerVisualizationHook(500, model),
     ]

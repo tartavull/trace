@@ -64,6 +64,7 @@ class LossHook(Hook):
 
             cross_entropy = session.run(self.cross_entropy)
             if cross_entropy > 1:
+                print('bad image')
                 bad_img = session.run(model.raw_image)
                 tifffile.imsave('bad_image', bad_img)
 
@@ -173,19 +174,19 @@ class ImageVisualizationHook(Hook):
         self.frequency = frequency
         with tf.variable_scope('images'):
             if model.fov == 1:
-                output_patch_summary = tf.summary.image('output_patch', model.image[0, :16, :, :, 1:2], max_outputs=16)
+                output_patch_summary = tf.summary.image('output_patch', model.image[0, :48, :, :, :], max_outputs=48)
             else:
                 output_patch_summary = tf.summary.image('output_patch',
-                                                        model.image[0, model.z_fov // 2:(model.z_fov // 2) + 3,
+                                                        model.image[0, model.z_fov // 2:(model.z_fov // 2) + 48,
                                                         model.fov // 2:-(model.fov // 2),
                                                         model.fov // 2:-(model.fov // 2),
-                                                        1:2]),
+                                                        :]),
 
             self.training_summaries = tf.summary.merge([
-                tf.summary.image('input_image', model.image[0, model.z_fov // 2:(model.z_fov // 2) + 16, :, :, :1], max_outputs=16),
+                tf.summary.image('input_image', model.image[0, model.z_fov // 2:(model.z_fov // 2) + 48, :, :, :], max_outputs=1),
                 output_patch_summary,
-                tf.summary.image('output_target', model.target[0, :16], max_outputs=16),
-                tf.summary.image('predictions', model.prediction[0, :16], max_outputs=16),
+                tf.summary.image('output_target', model.target[0, :48], max_outputs=48),
+                tf.summary.image('predictions', model.prediction[0, :48], max_outputs=48),
             ])
 
     def eval(self, step, model, session, summary_writer):

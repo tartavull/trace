@@ -418,7 +418,7 @@ class EMDatasetSampler(object):
 
             # Re-stack the image and targets
             if flood_filling_mode:
-                self.training_example_op = tf.concat([tf.concat([cropped_inputs, cropped_affs, cropped_targets], axis=CHANNEL_AXIS)] * batch_size, axis=BATCH_AXIS)
+                self.training_example_op = tf.concat([tf.concat([cropped_inputs, cropped_targets], axis=CHANNEL_AXIS)] * batch_size, axis=BATCH_AXIS)
             else:
                 self.training_example_op = tf.concat([tf.concat([cropped_inputs, cropped_targets], axis=CHANNEL_AXIS)] * batch_size, axis=BATCH_AXIS)
 

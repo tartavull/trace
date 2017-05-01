@@ -19,7 +19,8 @@ def bias_variable(shape):
 
 
 def get_bias_variable(name, shape):
-    initial = tf.constant(0.0, shape=shape)
+    with tf.variable_scope('wut'):
+        initial = tf.constant(0.0, shape=shape)
     return tf.get_variable(name, initializer=initial)
 
 
@@ -274,7 +275,7 @@ class UNet3DLayer(Layer):
         else:
             # Map back to affinites.
             w_o = get_weight_variable('w_o',
-                                      [self.z_filter_size, self.filter_size, self.filter_size, self.n_feature_maps, 1])
+                                          [self.z_filter_size, self.filter_size, self.filter_size, self.n_feature_maps, 1])
             b_o = get_bias_variable('b_o', [1])
             out_node = same_conv3d(final_node, w_o) + b_o
             return out_node
@@ -427,7 +428,7 @@ class Model(object):
         # Inputs are tensor of shape [batch, z, y, x, n_chan]
         self.example = tf.placeholder_with_default(self.queue.dequeue(), shape=[None, None, None, None, None])
 
-        self.raw_image = self.example[:, :, :, :, :2]
+        self.raw_image = self.example[:, :, :, :, :1]
 
         # Standardize each input image, using map because per_image_standardization takes one image at a time
         self.image = tf.map_fn(lambda stack: tf.map_fn(lambda img: tf.image.per_image_standardization(img), stack), self.raw_image)
@@ -441,7 +442,7 @@ class Model(object):
 
         # Crop the labels to the appropriate field of view
         if self.fov == 1 and self.z_fov == 1:
-            self.target = self.example[:, :, :, :, 2:]
+            self.target = self.example[:, :, :, :, 1:]
         else:
             self.target = self.example[:, self.z_fov // 2:-(self.z_fov // 2), self.fov // 2:-(self.fov // 2),
                           self.fov // 2:-(self.fov // 2), 2:]
