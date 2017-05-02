@@ -22,14 +22,19 @@ except Exception:
     print("Segascorus is not installed. Please install by going to trace/trace/thirdparty/segascorus and run 'make'."
           " If this fails, segascorus is likely not compatible with your computer (i.e. Macs).")
 
-def affinity_error():
+def affinity_error(aff):
     highest_rand = 0
     highest_rand_thres = 0
     highest_vi = 0
     highest_vi_thres = 0
-    for i in range(0,10):
-        file_name = 'mean_affinity_segm%.1f.h5' %(i*0.1)
+    for i in range(0, 9):
+        if aff == 1:
+            file_name = 'mean_affinity_segm%.1f.h5' %(i*0.1)
 #        file_name = 'validation-labels.h5'
+#        file_name = "validation-labels-new-gaussian-new-bounds.h5"
+        else:
+            file_name = 'cremi/a/results/unet_3d_4layers/run-maxpoolz_2d_conv_half0.9995_missing_10k_4_26/validation-predictions.h5'
+#        file_name = 'cremi/a/results/unet_3d_4layers/run-combine_missing_not/validation-predictions.h5'
         with h5py.File(file_name, 'r') as f:
             arr = f['main'][:]
             shape = arr.shape

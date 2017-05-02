@@ -14,6 +14,7 @@ import os
 
 import dataprovider.transform as trans
 
+
 import cremi.io as cremiio
 #import cremi.evaluation as cremival
 from cremi.evaluation import NeuronIds
@@ -40,6 +41,116 @@ CHANNEL_AXIS = 4
 
 SPLIT = ['train', 'validation', 'test', 'aligned']
 
+def check_tensor(data):
+    """Ensure that data is numpy 4D array."""
+    assert isinstance(data, np.ndarray)
+
+    if data.ndim == 2:
+        data = data[np.newaxis,np.newaxis,...]
+    elif data.ndim == 3:
+        data = data[np.newaxis,...]
+    elif data.ndim == 4:
+        pass
+    else:
+        raise RuntimeError('data must be a numpy 4D array')
+
+    assert data.ndim==4
+    return data
+
+def flip(data, rule):
+    """Flip data according to a specified rule.
+Args:
+data: 3D numpy array to be transformed.
+rule: Transform rule, specified as a Boolean array.
+     [z reflection,
+      y reflection,
+      x reflection,
+      xy transpose]
+Returns:
+data: Transformed data.
+"""
+    data = check_tensor(data)
+
+    assert np.size(rule)==4
+
+    # z reflection
+    if rule[0]:
+        data = data[::-1,:,:,:]
+        # y reflection
+    if rule[1]:
+        data = data[:,::-1,:,:]
+    # x reflection
+    if rule[2]:
+        data = data[:,:,::-1,:]
+    # Transpose in xy.
+    if rule[3]:
+        data = data.transpose(0,2,1,3)
+
+    return data
+
+def revert_flip(data, rule, dst=[1,1,1]):
+    """
+TODO(kisuk): Documentation.
+"""
+    data = check_tensor(data)
+    data = np.einsum('zyxd->dzyx', data)
+
+    assert np.size(rule)==4
+
+    # Special treat for affinity.
+    is_affinity = False if dst is None else True
+    if is_affinity:
+        (dz,dy,dx) = dst
+        assert data.shape[-4]==3
+        assert dx and abs(dx) < data.shape[-1]
+        assert dy and abs(dy) < data.shape[-2]
+        assert dz and abs(dz) < data.shape[-3]
+
+        # Transpose in xy.
+    if rule[3]:
+        data = data.transpose(0,1,3,2)
+        # Swap x/y-affinity maps.
+        if is_affinity:
+            data[[0,1],...] = data[[1,0],...]   #fix this!!!
+    # x reflection
+    if rule[2]:
+        data = data[:,:,:,::-1]
+        # Special treatment for x-affinity.
+        if is_affinity:
+            if dx > 0:
+                data[0,:,:,dx:] = data[0,:,:,:-dx]
+                data[0,:,:,:dx].fill(0)
+            else:
+                dx = abs(dx)
+                data[0,:,:,:-dx] = data[0,:,:,dx:]
+                data[0,:,:,-dx:].fill(0)
+    # y reflection
+    if rule[1]:
+        data = data[:,:,::-1,:]
+        # Special treatment for y-affinity.
+        if is_affinity:
+            if dy > 0:
+                data[1,:,dy:,:] = data[1,:,:-dy,:]
+                data[1,:,:dy,:].fill(0)
+            else:
+                dy = abs(dy)
+                data[1,:,:-dy,:] = data[1,:,dy:,:]
+                data[1,:,-dy:,:].fill(0)
+    # z reflection
+    if rule[0]:
+        data = data[:,::-1,:,:]
+        # Special treatment for z-affinity.
+        if is_affinity:
+            if dz > 0:
+                data[2,dz:,:,:] = data[2,:-dz,:,:]
+                data[2,:dz,:,:].fill(0)
+            else:
+                dz = abs(dz)
+                data[2,:-dz,:,:] = data[2,dz:,:,:]
+                data[2,-dz:,:,:].fill(0)
+
+    data = np.einsum('dzyx->zyxd', data)
+    return data
 
 def expand_3d_to_5d(data):
     # Add a batch dimension and a channel dimension
@@ -98,10 +209,11 @@ def write_predictions(low=0.9, hi=0.9995):
         test_file.write_neuron_ids(cremiio.Volume(arr, resolution=o_labels_res))
         test_file.close()
     
-def run_watershed_on_affinities_and_store(affinities, run_name, relabel2d=False, low=0.9, hi=0.9999995):
-    tmp_aff_file = 'cremi/a/results/unet_3d_4layers/run-' + run_name + '/test-pred-affinities.h5'
-#    label_file = 'cremi/a/results/unet_3d_4layers/run-' + run_name + '/test-predictions.h5'
-    label_file = 'validation-labels-new-gaussian-new-bounds.h5'
+def run_watershed_on_affinities_and_store(affinities, run_name, split, relabel2d=False, low=0.9, hi=0.9999995):
+    tmp_aff_file = 'cremi/a/results/unet_3d_4layers/run-' + run_name + '/' + split + '-pred-affinities.h5'
+#    tmp_aff_file ='cremi/a/results/unet_3d_4layers/run-' + run_name + '/combined_map.h5'
+    label_file = 'cremi/a/results/unet_3d_4layers/run-' + run_name + '/' + split + '-predictions.h5'
+#    label_file = 'validation-labels-new-gaussian-new-bounds.h5'
     final_aff_file = 'final-affinities2.h5'
     final_seg_file = 'validation-final.h5'
 
@@ -162,7 +274,7 @@ def run_watershed_on_affinities(affinities, relabel2d=False, low=0.9, hi=0.9995)
     tmp_aff_file = 'tmp-affinities.h5'
     tmp_label_file = 'tmp-labels.h5'
 
-    base = './tmp/' + str(int(round(time.time() * 1000))) + '/'
+    base = './tmp2/' + str(int(round(time.time() * 1000))) + '/'
 
     os.makedirs(base)
 
@@ -193,7 +305,7 @@ def run_watershed_on_affinities(affinities, relabel2d=False, low=0.9, hi=0.9995)
     prep = utils.parse_fns(utils.prep_fns, [relabel2d, False])
     pred_seg, _ = utils.run_preprocessing(pred_seg, pred_seg, prep)
 
-    shutil.rmtree('./tmp/')
+    shutil.rmtree('./tmp2/')
 
     return pred_seg
 
@@ -279,9 +391,12 @@ def convert_between_label_types(input_type, output_type, original_labels):
 
         elif output_type == SEGMENTATION_2D:
             raise NotImplementedError('Seg3d->Seg2d not implemented')
+        elif output_type == SEGMENTATION_3D:
+            return original_labels
         else:
             raise Exception('Invalid output_type')
     else:
+        print(input_type)
         raise Exception('Invalid input_type')
 
 

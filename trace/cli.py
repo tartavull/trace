@@ -34,13 +34,14 @@ def prepare_submission():
     data_folder = os.path.dirname(os.path.abspath(__file__))+'/' + 'cremi/a' + '/'
     dset_constructor = DATASET_DICT['cremi/a']
     dataset = dset_constructor(data_folder)
-    ensembler_folder = os.path.dirname(os.path.abspath(__file__))+'/cremi/a/results/run-' + run_name + '/'
-    with h5py.File(ensembler_folder + 'test-pred-affinities.h5', 'r') as input_file:
-        arr = input_file['main']
-        
-        predictions = np.einsum('dzyx->zyxd', arr)
-    
-        dataset.prepare_predictions_for_submission(ensembler_folder, 'test', predictions, 'AFFINITIES_3D')
+    ensembler_folder = ""
+#    with h5py.File('0.3_0.9995/mean_affinity_segm0.3.h5', 'r') as input_file:
+#        arr = input_file['main']
+    pred_seg = io_utils.import_file('cremi/a/results/unet_3d_4layers/run-maxpoolz_2d_conv_half0.9995_missing_15k_4_24/test-predictions.h5')
+    print(pred_seg.shape)
+    prep = utils.parse_fns(utils.prep_fns, [False, False])
+    pred_seg, _ = utils.run_preprocessing(pred_seg, pred_seg, prep)
+    dataset.prepare_predictions_for_submission(ensembler_folder, 'test', pred_seg, 'segmentation-3d')
     
 @cli.command()
 def cr_write_predictions():
@@ -48,27 +49,55 @@ def cr_write_predictions():
 
 @cli.command()
 def get_low_high():
-    with h5py.File('cremi/a/results/unet_3d_4layers/run-maxpoolz_2d_conv_half_0.9995/old_aff/validation-pred-affinities.h5', 'r') as input_file:
+    with h5py.File('cremi/a/results/unet_3d_4layers/run-maxpoolz_2d_conv_half0.9995_missing_15k_4_24/test-pred-affinities.h5', 'r') as input_file:
         arr = input_file['main']
         a = np.array(arr)
         print("percentiles")
-        print(np.percentile(a, 80))
+        print(np.percentile(a, 65))
+        print(np.percentile(a, 50))
+        print(np.percentile(a, 30))
+        print(np.percentile(a, 20))
+        print(np.percentile(a, 10))
+        print(np.percentile(a, 5))
         print(np.percentile(a, 1))
     
 @cli.command()
 @click.argument('run_name', type=str, default='1')
+@click.argument('split', type=click.Choice(SPLIT))
 @click.argument('low_param', type=float, default='0.9')
 @click.argument('high_param', type=float, default='0.9995')
-def create_segm_mean_aff(run_name, low_param, high_param):
-    with h5py.File('cremi/a/results/unet_3d_4layers/run-' + run_name + '/validation-pred-affinities.h5', 'r') as input_file:
+def create_segm_mean_aff(run_name, split, low_param, high_param):
+    with h5py.File('cremi/a/results/unet_3d_4layers/run-' + run_name + '/' + split + '-pred-affinities.h5', 'r') as input_file:
         arr = input_file['main']
         print(arr.shape)
-        run_watershed_on_affinities_and_store(arr, run_name, low=low_param, hi=high_param)
+        run_watershed_on_affinities_and_store(arr, run_name, split, low=low_param, hi=high_param)
 
 @cli.command()
-def affinity_error():
-    ev.affinity_error()
+@click.option('--mean/--no-mean', default=False, help="Display the affinities as well.")
+def affinity_error(mean):
+    if mean:
+        ev.affinity_error(aff=1)
+    else:
+        ev.affinity_error(aff=0)
 
+@cli.command()
+@click.argument('dir_name', type=str, default='1')
+@click.argument('first_map', type=str, default='1')
+@click.argument('second_map', type=str, default='1')
+def combine_maps(dir_name, first_map, second_map):
+    with h5py.File('cremi/a/results/unet_3d_4layers/' + dir_name + '/' + first_map + '.h5', 'r') as input1:
+        with h5py.File('cremi/a/results/unet_3d_4layers/' + dir_name + '/' + second_map +'.h5', 'r') as input2:
+            arr1 = input1['main']
+            arr2 = input2['main']
+            comb_arr = np.zeros(arr1.shape)
+            for i in range(arr1.shape[0]):
+                for j in range(arr1.shape[1]):
+                    for k in range(arr1.shape[2]):
+                            comb_arr[i,j,k] = np.minimum(arr1[i,j,k], arr2[i,j,k])
+            #comb_arr = np.minimum(arr1, arr2)
+            with h5py.File('cremi/a/results/unet_3d_4layers/' + dir_name + '/' + 'combined_map.h5', 'w') as f:
+                f.create_dataset('main', data=comb_arr)
+    
 @cli.command()
 def check_shape():
     with h5py.File('validation-labels.h5', 'r') as input_file:
@@ -108,14 +137,17 @@ def visualize(dataset_name, split, params_type, run_name, aff, ip, port, remote)
     viewer = neuroglancer.Viewer(voxel_size=[6, 6, 30])
 
     vu.add_file(data_folder, split +'-input', viewer)
+    if split == 'aligned':
+        vu.add_file(data_folder, 'test-input', viewer)
     print(data_folder)
     if aff:
         vu.add_affinities(data_folder + 'results/' + params.model_name + '/' + 'run-' + run_name + '/', split+'-pred-affinities', viewer)
 #    vu.add_labels(data_folder + 'results/' + params.model_name + '/' +  'run-' + run_name + '/', split+'-predictions', viewer)
-    vu.add_file(data_folder + 'results/' + params.model_name + '/' + 'run-' + run_name + '/', split+'-predictions', viewer)
-#    vu.add_file('mean_affinity_segm0.7', '', viewer)
-    if split != 'test':
-        vu.add_labels(data_folder, split, viewer)
+
+xitvu.add_file(data_folder + 'results/' + params.model_name + '/' + 'run-' + run_name + '/', split+'-predictions', viewer)
+#    vu.add_file('mean_affinity_segm0.3', '', viewer)
+#    if split != 'test':
+#        vu.add_labels(data_folder, split, viewer)
 
     print('open your brower at:')
     print(viewer.__str__().replace('172.17.0.2', remote))
@@ -164,7 +196,7 @@ def train(model_type, params_type, dataset_name, n_iter, run_name, cont):
 
     training_params = learner.TrainingParams(
         optimizer=tf.train.AdamOptimizer,
-        learning_rate=0.00005,
+        learning_rate=0.00002,
         n_iter=n_iter,
         output_size=160,
         z_output_size=16,
@@ -188,7 +220,7 @@ def train(model_type, params_type, dataset_name, n_iter, run_name, cont):
         learner.LossHook(100, model),
         learner.ModelSaverHook(1000, ckpt_folder),
         learner.ValidationHook(1000, dset_sampler, model, data_folder, params.output_mode, [training_params.z_output_size, training_params.output_size, training_params.output_size]),
-        learner.ImageVisualizationHook(2000, model),
+#        learner.ImageVisualizationHook(2000, model),
         # learner.HistogramHook(100, model),
         # learner.LayerVisualizationHook(500, model),
     ]
@@ -208,8 +240,9 @@ def predict(model_type, params_type, dataset_name, split, run_name):
     """
     Realods a model previously trained
     """
-    data_folder = os.path.dirname(os.path.abspath(__file__)) + '/' + dataset_name + '/'
-
+    data_folder = os.path.dirname(os.path.abspath(__file__)) + '/' + dataset_name + '/'   #changed this
+    data_folder_learner = os.path.dirname(os.path.abspath(__file__)) + '/' + 'cremi/a' + '/'
+    
     # Create the model
     model_constructor = MODEL_DICT[model_type]
     params = PARAMS_DICT[params_type]
@@ -234,12 +267,14 @@ def predict(model_type, params_type, dataset_name, split, run_name):
     print(inputs.shape[1])
     print(inputs.shape[2])
     print(inputs.shape[3])
+
+    learner_folder = data_folder_learner + 'results/' + model.model_name + '/run-' + run_name + '/'
     
     # Define results folder
     ckpt_folder = data_folder + 'results/' + model.model_name + '/run-' + run_name + '/'
 
     # Create and restore the classifier
-    classifier = learner.Learner(model, ckpt_folder)
+    classifier = learner.Learner(model, learner_folder)
     classifier.restore()
 
     # Predict on the classifier

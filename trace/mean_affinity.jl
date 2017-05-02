@@ -6,9 +6,11 @@ function load_segmentation(fn)
 	 return h5read(fn, "main")
 end
 
-aff = load_segmentation("cremi/a/results/unet_3d_4layers/run-maxpoolz_2d_conv_half_0.9995/prev/validation-pred-affinities.h5")
+#aff = load_segmentation("cremi/a/results/unet_3d_4layers/run-maxpoolz_2d_conv_half_0.9995/prev/validation-pred-affinities.h5")
+aff = load_segmentation("cremi/a/results/unet_3d_4layers/run-maxpoolz_2d_conv_half0.9995_missing_15k_4_26/validation-pred-affinities.h5")
 #segm = load_segmentation("validation-labels.h5")
-segm = load_segmentation("validation-labels-new-gaussian-0.65.h5")
+#segm = load_segmentation("validation-labels-new-gaussian-new-bounds.h5")
+segm = load_segmentation("cremi/a/results/unet_3d_4layers/run-maxpoolz_2d_conv_half0.9995_missing_15k_4_26/validation-predictions.h5")
 
 #aff is a (X,Y,Z,3) array of affinities
 #segm is a (X,Y,Z) array containing a flat segmentation from watershed
@@ -27,7 +29,7 @@ merge_tree = Process.forward2(aff, segm)
 #seg = MergeTrees.flatten(segm, merge_tree, 0.5)
 #h5write("mean_affinity_segm0.5.h5", "main", seg)
 
-create a flat segmentation at threshold 0.5
+#create a flat segmentation at threshold 0.5
 for i = 0:9
     seg = MergeTrees.flatten(segm, merge_tree, i*0.1)
     thres = round(i*0.1,1)
