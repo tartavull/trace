@@ -1,22 +1,20 @@
 from __future__ import print_function
 from __future__ import division
 
-import os
-
-import h5py
-import subprocess
 import skimage.measure as meas
 import skimage.morphology as morph
-import tifffile as tiff
 
 import cv2
-from utils import *
+
+from trace.common import *
+from trace.utils import convert_between_label_types
+
 
 try:
-    from thirdparty.segascorus import io_utils
-    from thirdparty.segascorus import utils
-    from thirdparty.segascorus.metrics import *
-except Exception:
+    from trace.thirdparty.segascorus import io_utils
+    from trace.thirdparty.segascorus import utils
+    from trace.thirdparty.segascorus.metrics import *
+except ImportError:
     print("Segascorus is not installed. Please install by going to trace/trace/thirdparty/segascorus and run 'make'."
           " If this fails, segascorus is likely not compatible with your computer (i.e. Macs).")
 
@@ -132,7 +130,8 @@ def __rand_error_affinities(pred_affinities, true_seg, aff_type=AFFINITIES_3D):
     pred_segmentation = convert_between_label_types(input_type=aff_type, output_type=SEGMENTATION_3D,
                                                     original_labels=pred_affinities)
 
-    return __rand_error(true_seg, pred_segmentation, calc_variation_information=False, calc_variation_score=False, relabel2d=relabel2d)
+    return __rand_error(true_seg, pred_segmentation, calc_variation_information=False, calc_variation_score=False,
+                        relabel2d=relabel2d)
 
 
 def rand_error_from_prediction(true_labels, pred_values, pred_type=BOUNDARIES):

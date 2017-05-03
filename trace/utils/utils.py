@@ -1,48 +1,60 @@
 import subprocess
-import os
-
-import numpy as np
-
 import shutil
-
-import tensorflow as tf
-
 import h5py
 import time
-
 import os
+import tensorflow as tf
+import numpy as np
 
 import dataprovider.transform as trans
-import augmentation as aug
+
+from trace.common import *
 
 try:
-    from thirdparty.segascorus import io_utils
-    from thirdparty.segascorus import utils
-except Exception:
+    from trace.thirdparty.segascorus import io_utils
+    from trace.thirdparty.segascorus import utils
+except ImportError:
     print("Segascorus is not installed. Please install by going to trace/trace/thirdparty/segascorus and run 'make'."
           " If this fails, segascorus is likely not compatible with your computer (i.e. Macs).")
 
-# LABEL MODES
-BOUNDARIES = 'boundaries'
-AFFINITIES_2D = 'affinities-2d'
-AFFINITIES_3D = 'affinities-3d'
-SEGMENTATION_2D = 'segmentation-2d'
-SEGMENTATION_3D = 'segmentation-3d'
 
-BATCH_AXIS = 0
-Z_AXIS = 1
-Y_AXIS = 2
-X_AXIS = 3
-CHANNEL_AXIS = 4
+# seg is the batch of segmentations to be affinitized. seg should be a 5D tensor
+# dst is the stride of the affinity in each diretion
+def tf_affinitize(seg, dst=(1, 1, 1)):
+    seg_shape = tf.shape(seg)
+    (dz, dy, dx) = dst
 
-SPLIT = ['train', 'validation', 'test']
+    # z-affinity
+    if dz > 0:
+        connected = tf.equal(seg[:, dz:, :, :, :], seg[:, :-dz, :, :, :])
+        background = tf.greater(seg[:, dz:, :, :, :], 0)
+        zero_pad = tf.zeros(tf.concat([(seg_shape[BATCH_AXIS], dz), seg_shape[Y_AXIS:]], axis=0))
+        z_aff = tf.concat([zero_pad, tf.cast(tf.logical_and(connected, background), tf.float32)], axis=Z_AXIS)
+
+    # y-affinity
+    if dy > 0:
+        connected = tf.equal(seg[:, :, dy:, :, :], seg[:, :, :-dy, :, :])
+        background = tf.greater(seg[:, :, dy:, :, :], 0)
+        zero_pad = tf.zeros(tf.concat([seg_shape[:Y_AXIS], (dy,), seg_shape[X_AXIS:]], axis=0))
+        y_aff = tf.concat([zero_pad, tf.cast(tf.logical_and(connected, background), tf.float32)], axis=Y_AXIS)
+
+    # x-affinity
+    if dx > 0:
+        connected = tf.equal(seg[:, :, :, dx:, :], seg[:, :, :, :-dx, :])
+        background = tf.greater(seg[:, :, :, dx:, :], 0)
+        zero_pad = tf.zeros(tf.concat([seg_shape[:X_AXIS], (dx, seg_shape[CHANNEL_AXIS])], axis=0))
+        x_aff = tf.concat([zero_pad, tf.cast(tf.logical_and(connected, background), tf.float32)], axis=X_AXIS)
+
+    aff = tf.concat([x_aff, y_aff, z_aff], axis=CHANNEL_AXIS)
+
+    return aff
 
 
-def cond_apply(inp, fn, cond):
+def cond_apply(inp, fn_true, fn_false, cond):
     if cond:
-        return fn(inp)
+        return fn_true(inp)
     else:
-        return inp
+        return fn_false(inp)
 
 
 def expand_3d_to_5d(data):
@@ -61,7 +73,6 @@ def run_watershed_on_affinities(affinities, relabel2d=False, low=0.9, hi=0.9995)
 
     os.makedirs(base)
 
-
     # Move to the front
     reshaped_aff = np.einsum('zyxd->dzyx', affinities)
 
@@ -74,6 +85,7 @@ def run_watershed_on_affinities(affinities, relabel2d=False, low=0.9, hi=0.9995)
         out[:shape[0], :, :, :] = reshaped_aff
 
     # Do watershed segmentation
+    print('segmenting')
     current_dir = os.path.dirname(os.path.abspath(__file__))
     subprocess.call(["julia",
                      current_dir + "/thirdparty/watershed/watershed.jl",
@@ -82,13 +94,14 @@ def run_watershed_on_affinities(affinities, relabel2d=False, low=0.9, hi=0.9995)
                      str(hi),
                      str(low)])
 
+    print('segmentation complete')
+
     # Load the results of watershedding, and maybe relabel
     pred_seg = io_utils.import_file(base + tmp_label_file)
 
     prep = utils.parse_fns(utils.prep_fns, [relabel2d, False])
     pred_seg, _ = utils.run_preprocessing(pred_seg, pred_seg, prep)
 
-    shutil.rmtree('./tmp/')
 
     return pred_seg
 
@@ -97,7 +110,6 @@ def convert_between_label_types(input_type, output_type, original_labels):
     # No augmentation needed, as we're basically doing e2e learning
     if input_type == output_type:
         return original_labels
-
 
     # This looks like a shit show, but conversion is hard.
     # Also, we will implement this as we go.
@@ -245,7 +257,7 @@ def tf_convert_between_label_types(input_type, output_type, original_labels):
         elif output_type == AFFINITIES_2D:
             raise NotImplementedError('Seg3d->Aff2d not implemented')
         elif output_type == AFFINITIES_3D:
-            return aug.tf_affinitize(original_labels)
+            return tf_affinitize(original_labels)
 
         elif output_type == SEGMENTATION_2D:
             raise NotImplementedError('Seg3d->Seg2d not implemented')
@@ -253,5 +265,3 @@ def tf_convert_between_label_types(input_type, output_type, original_labels):
             raise Exception('Invalid output_type')
     else:
         raise Exception('Invalid input_type')
-
-

@@ -3,21 +3,19 @@ from __future__ import division
 
 import math
 import tensorflow as tf
-import augmentation as aug
-import threading
 
-from tensorflow.python.client import timeline
+import trace.sampling.augmentation as aug
 
 try:
-    from thirdparty.segascorus import io_utils
-    from thirdparty.segascorus import utils
-    from thirdparty.segascorus.metrics import *
-except Exception:
+    from trace.thirdparty.segascorus import io_utils
+    from trace.thirdparty.segascorus import utils
+    from trace.thirdparty.segascorus.metrics import *
+except ImportError:
     print("Segascorus is not installed. Please install by going to trace/trace/thirdparty/segascorus and run 'make'."
           " If this fails, segascorus is likely not compatible with your computer (i.e. Macs).")
 
-import evaluation
-from utils import *
+import trace.evaluation as eva
+from trace.common import *
 
 
 class Hook(object):
@@ -73,9 +71,9 @@ class ValidationHook(Hook):
             tf.summary.scalar('rand_score', self.rand_f_score),
             tf.summary.scalar('rand_merge_score', self.rand_f_score_merge),
             tf.summary.scalar('rand_split_score', self.rand_f_score_split),
-            #tf.summary.scalar('vi_score', self.vi_f_score),
-            #tf.summary.scalar('vi_merge_score', self.vi_f_score_merge),
-            #tf.summary.scalar('vi_split_score', self.vi_f_score_split),
+            # tf.summary.scalar('vi_score', self.vi_f_score),
+            # tf.summary.scalar('vi_merge_score', self.vi_f_score_merge),
+            # tf.summary.scalar('vi_split_score', self.vi_f_score_split),
         ])
 
         # Create image summaries
@@ -84,7 +82,7 @@ class ValidationHook(Hook):
                 summary_image = model.image[0]
             else:
                 summary_image = model.image[0, model.z_fov // 2:(model.z_fov // 2) + 3,
-                                model.fov // 2:-(model.fov // 2), model.fov // 2:-(model.fov // 2), :]
+                                            model.fov // 2:-(model.fov // 2), model.fov // 2:-(model.fov // 2), :]
 
             val_output_patch_summary = tf.summary.image('validation_output_patch', summary_image)
             self.validation_image_summaries = tf.summary.merge([
@@ -96,9 +94,11 @@ class ValidationHook(Hook):
 
     def eval(self, step, model, session, summary_writer):
         if step % self.frequency == 0:
+            print('eval validation hook')
             # Make the prediction
 
-            validation_prediction = model.predict(session, self.mirrored_val_examples, self.inference_params, mirror_inputs=False)
+            validation_prediction = model.predict(session, self.mirrored_val_examples, self.inference_params,
+                                                  mirror_inputs=False)
 
             diff = np.absolute(validation_prediction - self.val_targets)
             validation_cross_entropy = -np.mean(diff * np.log(diff))
@@ -113,12 +113,10 @@ class ValidationHook(Hook):
 
             summary_writer.add_summary(validation_image_summary, step)
 
-
-
             # Calculate rand and VI scores
-            scores = evaluation.rand_error_from_prediction(self.val_labels[0, :, :, :, 0],
-                                                           validation_prediction[0],
-                                                           pred_type=model.architecture.output_mode)
+            scores = eva.rand_error_from_prediction(self.val_labels[0, :, :, :, 0],
+                                                    validation_prediction[0],
+                                                    pred_type=model.architecture.output_mode)
 
             score_summary = session.run(self.validation_summaries,
                                         feed_dict={self.validation_cross_entropy: validation_cross_entropy,
@@ -126,9 +124,9 @@ class ValidationHook(Hook):
                                                    self.rand_f_score: scores['Rand F-Score Full'],
                                                    self.rand_f_score_merge: scores['Rand F-Score Merge'],
                                                    self.rand_f_score_split: scores['Rand F-Score Split'],
-                                                   #self.vi_f_score: scores['VI F-Score Full'],
-                                                   #self.vi_f_score_merge: scores['VI F-Score Merge'],
-                                                   #self.vi_f_score_split: scores['VI F-Score Split'],
+                                                   # self.vi_f_score: scores['VI F-Score Full'],
+                                                   # self.vi_f_score_merge: scores['VI F-Score Merge'],
+                                                   # self.vi_f_score_split: scores['VI F-Score Split'],
                                                    })
 
             summary_writer.add_summary(score_summary, step)
@@ -152,11 +150,12 @@ class ImageVisualizationHook(Hook):
             if model.fov == 1:
                 output_patch_summary = tf.summary.image('output_patch', model.raw_image[0, :3, :, :, :])
             else:
-                output_patch_summary = tf.summary.image('output_patch',
-                                                        model.raw_image[0, model.z_fov // 2:(model.z_fov // 2) + 3,
-                                                        model.fov // 2:-(model.fov // 2),
-                                                        model.fov // 2:-(model.fov // 2),
-                                                        :]),
+                output_patch = model.raw_image[0,
+                                               model.z_fov // 2:(model.z_fov // 2) + 3,
+                                               model.fov // 2:-(model.fov // 2),
+                                               model.fov // 2:-(model.fov // 2),
+                                               :]
+                output_patch_summary = tf.summary.image('output_patch', output_patch),
 
             self.training_summaries = tf.summary.merge([
                 tf.summary.image('input_image', model.raw_image[0, model.z_fov // 2:(model.z_fov // 2) + 3]),
@@ -167,6 +166,7 @@ class ImageVisualizationHook(Hook):
 
     def eval(self, step, model, session, summary_writer):
         if step % self.frequency == 0:
+            print('image vis hook')
             summary = session.run(self.training_summaries)
 
             summary_writer.add_summary(summary, step)
@@ -202,8 +202,8 @@ class LayerVisualizationHook(Hook):
         for layer in model.architecture.layers:
             layer_str = 'layer ' + str(layer.depth) + ' ' + layer.layer_type + \
                         ' activations'
-            activations = self.computeVisualizationGrid(layer.activations,
-                                                        layer.n_feature_maps)
+            activations = self.compute_visualization_grid(layer.activations,
+                                                          layer.n_feature_maps)
             summaries.append(tf.summary.image(layer_str, activations))
 
         self.training_summaries = tf.summary.merge(summaries)
@@ -214,7 +214,8 @@ class LayerVisualizationHook(Hook):
 
             summary_writer.add_summary(summary, step)
 
-    def computeVisualizationGrid(self, activations, num_maps, width=16, height=0):
+    @staticmethod
+    def compute_visualization_grid(activations, num_maps, width=16, height=0):
         if num_maps % width == 0:
             cx = width
             if height == 0:

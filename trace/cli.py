@@ -1,31 +1,36 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 import os
+import sys
 import webbrowser
 import subprocess
 import click
 import tensorflow as tf
-import h5py
+import numpy as np
 
-import em_dataset as em
+# Monkey with the path, so that we can import like rational humans
+try:
+    import deepseg as trace
+except ImportError:
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__)) + '/../'))
+
 import download_data
-# import ensemble as ens
-import learner
-import params as par
+import trace.sampling as samp
+import trace.train as tr
+import trace.utils as utils
+import trace.train.hooks as hooks
 
-from utils import *
-import viewer_utils as vu
-
-import hooks
-
-from em_dataset import DATASET_DICT
-from models import MODEL_DICT, ARCH_DICT
+from trace.common import *
+from trace.dataset import DATASET_DICT
+from trace.models import MODEL_DICT, ARCH_DICT
 
 
 # from ensemble import ENSEMBLE_METHOD_DICT, ENSEMBLE_PARAMS_DICT
 
 
 @click.group()
+@click.option('--dfolder', type=str, default=os.path.dirname(os.path.abspath(__file__)),
+              help='Directory where we can find the data')
 @click.option('--dset', type=click.Choice(DATASET_DICT.keys()), default='isbi')
 @click.option('--arch', type=click.Choice(ARCH_DICT.keys()), default='vd2d_bound')
 @click.option('--model', type=click.Choice(MODEL_DICT.keys()), default='conv')
@@ -39,27 +44,34 @@ from models import MODEL_DICT, ARCH_DICT
 @click.option('--inf-shape', type=click.Tuple([int, int, int]), default=(16, 160, 160),
               help="Output patch size for inference (net input will be calculated based on the output patch size)")
 @click.option('--lr', type=float, default=0.0001, help="Learning rate for the optimizer.")
+@click.option('--aug/--no-aug', default=False, help="Include augmentation in the training.")
 @click.pass_context
-def cli(ctx, dset, arch, model, split, n_iter, run_name, batch, train_shape, inf_shape, lr):
-    data_folder = os.path.dirname(os.path.abspath(__file__)) + '/' + dset + '/'
+def cli(ctx, dfolder, dset, arch, model, split, n_iter, run_name, batch, train_shape, inf_shape, lr, aug):
+    data_folder = dfolder + '/' + dset + '/'
 
     model_constructor = MODEL_DICT[model]
     arch = ARCH_DICT[arch]
     dataset_constructor = DATASET_DICT[dset]
 
-    pipeline = par.PipelineConfig(
+    pipeline = PipelineConfig(
         data_path=data_folder,
         dataset_constructor=dataset_constructor,
         model_constructor=model_constructor,
         model_arch=arch,
-        training_params=par.TrainingParams(
+        training_params=TrainingParams(
             optimizer=tf.train.AdamOptimizer,
             learning_rate=lr,
             n_iterations=n_iter,
             patch_shape=train_shape,
             batch_size=batch
         ),
-        inference_params=par.InferenceParams(
+        augmentation_config=AugmentationConfig(
+            apply_mirroring=aug,
+            apply_flipping=aug,
+            apply_rotation=aug,
+            apply_blur=aug,
+        ),
+        inference_params=InferenceParams(
             patch_shape=inf_shape
         ))
 
@@ -98,13 +110,14 @@ def visualize(ctx, aff, ip, port, remote):
     neuroglancer.set_server_bind_address(bind_address=ip, bind_port=port)
     viewer = neuroglancer.Viewer(voxel_size=[6, 6, 30])
 
-    vu.add_file(data_folder, split + '-input', viewer)
+    utils.add_file(data_folder, split + '-input', viewer)
     if aff:
-        vu.add_affinities(data_folder + 'results/' + model_name + '/' + 'run-' + run_name + '/',
-                          split + '-pred-affinities', viewer)
-    vu.add_labels(data_folder + 'results/' + model_name + '/' + 'run-' + run_name + '/', split + '-predictions', viewer)
+        utils.add_affinities(data_folder + 'results/' + model_name + '/' + 'run-' + run_name + '/',
+                             split + '-pred-affinities', viewer)
+    utils.add_labels(data_folder + 'results/' + model_name + '/' + 'run-' + run_name + '/', split + '-predictions',
+                     viewer)
     if split != 'test':
-        vu.add_labels(data_folder, split, viewer)
+        utils.add_labels(data_folder, split, viewer)
 
     print('open your brower at:')
     print(viewer.__str__().replace('172.17.0.2', remote))
@@ -159,12 +172,13 @@ def train(ctx, cont):
 
     # Construct the dataset sampler
     dataset = pipeline.dataset_constructor(pipeline.data_path)
-    dset_sampler = em.EMDatasetSampler(dataset, sample_shape=sample_shape, batch_size=train_params.batch_size,
-                                       label_output_type=arch.output_mode)
+    dset_sampler = samp.EMDatasetSampler(dataset, sample_shape=sample_shape, batch_size=train_params.batch_size,
+                                         augmentation_config=pipeline.augmentation_config,
+                                         label_output_type=arch.output_mode)
 
     ckpt_folder = pipeline.data_path + 'results/' + model.model_name + '/run-' + run_name + '/'
 
-    classifier = learner.Learner(model, ckpt_folder)
+    classifier = tr.Learner(model, ckpt_folder)
 
     hooks_list = [
         hooks.LossHook(50, model),
@@ -202,8 +216,9 @@ def predict(ctx):
 
     # Create the dataset sampler
     dataset = pipeline.dataset_constructor(pipeline.data_path)
-    dset_sampler = em.EMDatasetSampler(dataset, sample_shape=sample_shape, batch_size=train_params.batch_size,
-                                       label_output_type=arch.output_mode)
+    dset_sampler = samp.EMDatasetSampler(dataset, sample_shape=sample_shape, batch_size=train_params.batch_size,
+                                         augmentation_config=pipeline.augmentation_config,
+                                         label_output_type=arch.output_mode)
 
     if split == 'train':
         inputs, _, _ = dset_sampler.get_full_training_set()
@@ -216,7 +231,7 @@ def predict(ctx):
     ckpt_folder = pipeline.data_path + 'results/' + model.model_name + '/run-' + run_name + '/'
 
     # Create and restore the classifier
-    classifier = learner.Learner(model, ckpt_folder)
+    classifier = tr.Learner(model, ckpt_folder)
     classifier.restore()
 
     # Predict on the classifier

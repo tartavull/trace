@@ -1,5 +1,5 @@
 import tensorflow as tf
-from utils import *
+from trace.common import *
 
 
 def weight_variable(shape):
@@ -9,7 +9,7 @@ def weight_variable(shape):
     return tf.Variable(shape=shape, initializer=tf.contrib.layers.xavier_initializer(uniform=False))
 
 
-def get_weight_variable(name, shape, dtype=tf.float64, trainable=True):
+def get_weight_variable(name, shape, dtype=tf.float32, trainable=True):
     return tf.get_variable(name, shape=shape, dtype=dtype, initializer=tf.contrib.layers.xavier_initializer(uniform=False), trainable=trainable)
 
 
@@ -18,7 +18,7 @@ def bias_variable(shape):
     return tf.Variable(initial)
 
 
-def get_bias_variable(name, shape, dtype=tf.float64, trainable=True):
+def get_bias_variable(name, shape, dtype=tf.float32, trainable=True):
     initial = tf.constant(0.0, shape=shape)
     return tf.get_variable(name, initializer=initial, dtype=dtype, trainable=trainable)
 
@@ -43,7 +43,7 @@ def down_conv2d(x, W, dilation=1):
     return tf.nn.convolution(x, W, strides=[2, 2], padding='SAME', dilation_rate=[dilation, dilation])
 
 
-def down_conv2d(x, W, dilation=1, z_dilation_rate=1):
+def down_conv3d(x, W, dilation=1, z_dilation_rate=1):
     return tf.nn.convolution(x, W, strides=[2, 2, 2], padding='SAME', dilation_rate=[z_dilation, dilation, dilation])
 
 

@@ -1,8 +1,3 @@
-import em_dataset as em
-import models.conv_net as conv
-import tensorflow as tf
-
-
 class InferenceParams(object):
     def __init__(self, patch_shape):
         """Constructor for InferenceParams
@@ -10,6 +5,21 @@ class InferenceParams(object):
         :param patch_shape: Shape of the patch used for inference
         """
         self.patch_shape = patch_shape
+
+
+class AugmentationConfig(object):
+    def __init__(self, apply_mirroring, apply_flipping, apply_rotation, apply_blur):
+        """
+
+        :param apply_mirroring: 
+        :param apply_flipping: 
+        :param apply_rotation: 
+        :param apply_blur: 
+        """
+        self.apply_mirroring = apply_mirroring
+        self.apply_flipping = apply_flipping
+        self.apply_rotation = apply_rotation
+        self.apply_blur = apply_blur
 
 
 class TrainingParams(object):
@@ -31,16 +41,13 @@ class TrainingParams(object):
 
 
 class PipelineConfig(object):
-    '''Everything you might need to define a complete training and inference pipeline
-
-    '''
-
-    def __init__(self, data_path, dataset_constructor, model_constructor, model_arch, training_params,
-                 inference_params, pipeline_name=None):
-        """
+    def __init__(self, data_path, dataset_constructor, augmentation_config, model_constructor, model_arch,
+                 training_params, inference_params, pipeline_name=None):
+        """Everything you might need to define a complete training and inference pipeline
 
         :param data_path: Path where the training data is located
         :param dataset_constructor: Constructor for the type of dataset proposed
+        :param augmentation_config: 
         :param model_constructor: Model constructor (i.e. ConvNet, UNet, etc.)
         :param model_arch: Specific architecture for a model class
         :param training_params: Parameters used for training
@@ -50,6 +57,7 @@ class PipelineConfig(object):
         self.data_path = data_path
         self.dataset_constructor = dataset_constructor
         self.model_constructor = model_constructor
+        self.augmentation_config = augmentation_config
         self.model_arch = model_arch
         self.training_params = training_params
         self.inference_params = inference_params
@@ -59,19 +67,10 @@ class PipelineConfig(object):
             self.pipeline_name = model_arch.model_name
 
 
-vd2d_pipeline = PipelineConfig(
-    data_path='./isbi/',
-    dataset_constructor=em.ISBIDataset,
-    model_constructor=conv.ConvNet,
-    model_arch=conv.VD2D,
-    training_params=TrainingParams(
-        optimizer=tf.train.AdamOptimizer,
-        learning_rate=0.0001,
-        n_iterations=10000,
-        patch_shape=[1, 160, 160],
-        batch_size=1,
-    ),
-    inference_params=InferenceParams(
-        patch_shape=[1, 512, 512]
-    )
-)
+# TODO(beisner): Write the doc up, and clean this class up
+class ComponentParams:
+    def __init__(self, id, model, architecture, training_params):
+        self.id = id
+        self.model = model
+        self.architecture = architecture
+        self.training_params = training_params

@@ -3,23 +3,15 @@
 from __future__ import print_function
 from __future__ import division
 
-import math
 import tensorflow as tf
-import augmentation as aug
-import threading
-
-from tensorflow.python.client import timeline
 
 try:
-    from thirdparty.segascorus import io_utils
-    from thirdparty.segascorus import utils
-    from thirdparty.segascorus.metrics import *
-except Exception:
+    from trace.thirdparty.segascorus import io_utils
+    from trace.thirdparty.segascorus import utils
+    from trace.thirdparty.segascorus.metrics import *
+except ImportError:
     print("Segascorus is not installed. Please install by going to trace/trace/thirdparty/segascorus and run 'make'."
           " If this fails, segascorus is likely not compatible with your computer (i.e. Macs).")
-
-import evaluation
-from utils import *
 
 
 class Learner:
@@ -39,7 +31,8 @@ class Learner:
         summary_writer = tf.summary.FileWriter(self.ckpt_folder + '/events', graph=sess.graph)
 
         # Define an optimizer
-        optimize_step = training_params.optimizer(training_params.learning_rate).minimize(model.cross_entropy, global_step=model.global_step)
+        optimize_step = training_params.optimizer(training_params.learning_rate).minimize(model.cross_entropy,
+                                                                                          global_step=model.global_step)
 
         # Initialize the variables
         sess.run(tf.global_variables_initializer())
@@ -49,7 +42,7 @@ class Learner:
         dset_sampler.initialize_session_variables(sess)
 
         # Create enqueue op and a QueueRunner to handle queueing of training examples
-        enqueue_op = model.queue.enqueue(dset_sampler.training_example_op)
+        enqueue_op = model.queue.enqueue(dset_sampler.get_sample_op())
         qr = tf.train.QueueRunner(model.queue, [enqueue_op] * 4)
 
         '''
@@ -94,7 +87,8 @@ class Learner:
         for step in range(begin_step, training_params.n_iterations):
             if coord.should_stop():
                 break
-            print(step)
+            if step % 10 == 0:
+                print(step)
 
             # Run the optimizer
             sess.run(optimize_step)
@@ -110,10 +104,9 @@ class Learner:
         self.model.saver.restore(self.sess, self.ckpt_folder + 'model.ckpt')
         print("Model restored.")
 
-    def predict(self, inputs, inference_params):
+    def predict(self, inputs, inference_params, mirror_inputs=False):
         # Make sure that the inputs are 5-dimensional, in the form [batch_size, z_dim, y_dim, x_dim, n_chan]
 
         assert (len(inputs.shape) == 5)
 
-        return self.model.predict(self.sess, inputs, inference_params, mirror_inputs=False)
-
+        return self.model.predict(self.sess, inputs, inference_params, mirror_inputs)

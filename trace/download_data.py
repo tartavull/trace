@@ -13,29 +13,10 @@ import dataprovider.transform as transform
 import subprocess
 import numpy as np
 
-import cremi.io as cremiio
+import cremi
 import cremi.evaluation as cremival
 
-TRAIN_INPUT = 'train-input'
-TRAIN_LABELS = 'train-labels'
-TRAIN_AFFINITIES = 'train-affinities'
-VALIDATION_INPUT = 'validation-input'
-VALIDATION_LABELS = 'validation-labels'
-VALIDATION_AFFINITIES = 'validation-affinities'
-TEST_INPUT = 'test-input'
-TEST_LABELS = 'test-labels'
-TEST_AFFINITIES = 'test-affinities'
-
-ZIP = '.zip'
-TIF = '.tif'
-H5 = '.h5'
-
-SNEMI3D = 'snemi3d'
-ISBI = 'isbi'
-CREMI = 'cremi'
-CREMI_A = 'cremi/a'
-CREMI_B = 'cremi/b'
-CREMI_C = 'cremi/c'
+from trace.common import *
 
 
 def __maybe_download(base_url, remote_filename, dest_folder, dest_filename):
@@ -85,8 +66,6 @@ def __maybe_split(folder, train_fraction):
                 num_slices = total_set.shape[0]
 
                 train_slices = int(num_slices * train_fraction)
-
-                print(train_slices)
                 train_set = file.asarray()[:train_slices, :, :]
                 validation_set = file.asarray()[train_slices:, :, :]
 
@@ -100,7 +79,7 @@ def __maybe_split_cremi(folder, train_fraction):
                          folder + 'train-full.hdf', 100 * train_fraction, 100 * (1 - train_fraction)))
 
         # Extract the input and labels from the hdf
-        o_train_file = cremiio.CremiFile(folder + 'train-full.hdf', 'r')
+        o_train_file = cremi.CremiFile(folder + 'train-full.hdf', 'r')
         o_input_volume = o_train_file.read_raw()
         o_input = o_input_volume.data.value
         o_input_res = o_input_volume.resolution
@@ -125,14 +104,14 @@ def __maybe_split_cremi(folder, train_fraction):
         train_labels = o_bounded_labels[:train_slices, :, :]
         validation_labels = o_bounded_labels[train_slices:, :, :]
 
-        train_file = cremiio.CremiFile(folder + 'train.hdf', 'w')
-        train_file.write_raw(cremiio.Volume(train_input, resolution=o_input_res))
-        train_file.write_neuron_ids(cremiio.Volume(train_labels, resolution=o_labels_res))
+        train_file = cremi.CremiFile(folder + 'train.hdf', 'w')
+        train_file.write_raw(cremi.Volume(train_input, resolution=o_input_res))
+        train_file.write_neuron_ids(cremi.Volume(train_labels, resolution=o_labels_res))
         train_file.close()
 
-        validation_file = cremiio.CremiFile(folder + 'validation.hdf', 'w')
-        validation_file.write_raw(cremiio.Volume(validation_input, resolution=o_input_res))
-        validation_file.write_neuron_ids(cremiio.Volume(validation_labels, resolution=o_labels_res))
+        validation_file = cremi.CremiFile(folder + 'validation.hdf', 'w')
+        validation_file.write_raw(cremi.Volume(validation_input, resolution=o_input_res))
+        validation_file.write_neuron_ids(cremi.Volume(validation_labels, resolution=o_labels_res))
         validation_file.close()
 
 
@@ -205,6 +184,15 @@ def __maybe_create_cremi(dest_folder, train_frac):
     if not os.path.exists(dest_folder):
         os.makedirs(dest_folder)
 
+    if not os.path.exists(dest_folder + 'a/'):
+        os.makedirs(dest_folder + 'a/')
+
+    if not os.path.exists(dest_folder + 'b/'):
+        os.makedirs(dest_folder + 'b/')
+
+    if not os.path.exists(dest_folder + 'c/'):
+        os.makedirs(dest_folder + 'c/')
+
     # For now, only download the un-padded versions
     a_train_fn = 'sample_A_20160501.hdf'
     a_test_fn = 'sample_A%2B_20160601.hdf'
@@ -227,8 +215,6 @@ def __maybe_create_cremi(dest_folder, train_frac):
     __maybe_split_cremi(dest_folder + 'a/', train_frac)
     __maybe_split_cremi(dest_folder + 'b/', train_frac)
     __maybe_split_cremi(dest_folder + 'c/', train_frac)
-
-
 
 
 def maybe_create_all_datasets(trace_folder, train_frac):

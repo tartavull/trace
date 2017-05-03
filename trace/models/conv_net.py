@@ -1,6 +1,6 @@
+from trace.common import *
 from .common import *
-from utils import *
-from augmentation import *
+from trace.sampling.augmentation import *
 
 
 class ConvArchitecture(Architecture):
@@ -10,6 +10,7 @@ class ConvArchitecture(Architecture):
         self.layers = layers
 
         n_poolings = 0
+        n_z_poolings = 0
         self.receptive_field = 1
         self.z_receptive_field = 1
 
@@ -20,9 +21,12 @@ class ConvArchitecture(Architecture):
 
             # Double the dilation rate for a given layer every time we pool.
             dilation_rate = 2 ** n_poolings
+            z_dilation_rate = 2 ** n_z_poolings
 
             if issubclass(type(layer), PoolLayer):
                 n_poolings += 1
+            if issubclass(type(layer), Pool3DLayer):
+                n_z_poolings += 1
 
             # Calculate the receptive field
             self.receptive_field += dilation_rate * (layer.filter_size - 1)
@@ -59,8 +63,114 @@ class ConvArchitecture(Architecture):
                                                                         layer.filter_size, receptive_field))
 
 
+class ConvNet(Model):
+    def __init__(self, architecture, is_training=False):
+        super(self.__class__, self).__init__(architecture)
+
+        n_poolings = 0
+        n_z_poolings = 0
+
+        prev_layer = self.image
+        prev_n_feature_maps = 1
+
+        for layer_num, layer in enumerate(self.architecture.layers):
+
+            # Double the dilation rate for a given layer every time we pool.
+            dilation_rate = 2 ** n_poolings
+            z_dilation_rate = 2 ** n_z_poolings
+
+            with tf.variable_scope('layer' + str(layer_num)):
+                layer.depth = layer_num
+                prev_layer, prev_n_feature_maps = layer.connect(prev_layer, prev_n_feature_maps, dilation_rate,
+                                                                is_training, z_dilation_rate=z_dilation_rate)
+
+                if issubclass(type(layer), PoolLayer):
+                    n_poolings += 1
+
+                if issubclass(type(layer), Pool3DLayer):
+                    n_z_poolings += 1
+
+        # prev_layer = tf.Print(prev_layer, [tf.shape(prev_layer)[3]], message="HERE1")
+        # self.target = tf.Print(self.target, [tf.shape(self.target)[3]], message="HERE2")
+
+        # Predictions
+        self.prediction = tf.nn.sigmoid(prev_layer)
+        self.binary_prediction = tf.round(self.prediction)
+
+
+
+        # Loss
+        self.cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=prev_layer,
+                                                                                    labels=self.target))
+        self.pixel_error = tf.reduce_mean(tf.cast(tf.abs(self.binary_prediction - self.target), tf.float32))
+
+        self.saver = tf.train.Saver()
+
+    # def predict_with_evaluation(self, session, inputs, metrics, labels, pred_batch_shape, mirror_inputs=True):
+    #     if mirror_inputs:
+    #         inputs = mirror_across_borders_3d(inputs, self.fov, self.z_fov)
+
+    def predict(self, session, inputs, inference_params, mirror_inputs=True):
+        if mirror_inputs:
+            inputs = mirror_across_borders_3d(inputs, self.fov, self.z_fov)
+
+        return self.__predict_with_evaluation(session, inputs, None, inference_params.patch_shape, mirror_inputs)
+
+    def __predict_with_evaluation(self, session, inputs, metrics, pred_batch_shape, mirror_inputs=True):
+        # Extract the tile sizes from the argument
+        z_patch, y_patch, x_patch = pred_batch_shape[0], pred_batch_shape[1], pred_batch_shape[2]
+        z_inp_patch, y_inp_patch, x_inp_patch = z_patch + self.z_fov - 1, y_patch + self.fov - 1, x_patch + self.fov - 1
+
+        # Extract the input size, so we can reduce to output
+        z_inp_size, y_inp_size, x_inp_size = inputs.shape[1], inputs.shape[2], inputs.shape[3]
+
+        # Create a holder for the output
+
+        all_preds = np.zeros(
+            shape=[inputs.shape[0], z_inp_size - self.z_fov + 1, y_inp_size - self.fov + 1,
+                   x_inp_size - self.fov + 1,
+                   self.architecture.n_outputs], dtype=np.float16)
+
+        for i, _ in enumerate(inputs):
+
+            # Iterate over each batch
+            for z in range(0, all_preds.shape[1], z_patch):
+                for y in range(0, all_preds.shape[2], y_patch):
+                    for x in range(0, all_preds.shape[3], x_patch):
+                        print('z=%d, y=%d, x=%d' % (z, y, x))
+                        # Get the appropriate patch
+                        input_image = inputs[i:i + 1,
+                                      z: z + z_inp_patch,
+                                      y: y + y_inp_patch,
+                                      x: x + x_inp_patch,
+                                      :1]
+
+                        pred = session.run(self.prediction, feed_dict={self.raw_image: input_image})
+
+                        # Fill in the output
+                        all_preds[i, z: z + z_patch, y: y + y_patch, x: x + x_patch, :] = pred
+
+        return all_preds
+
 N4 = ConvArchitecture(
     model_name='n4',
+    output_mode=BOUNDARIES,
+    layers=[
+        Conv2DLayer(filter_size=4, n_feature_maps=48, activation_fn=tf.nn.relu, is_valid=True),
+        Pool2DLayer(filter_size=2),
+        Conv2DLayer(filter_size=5, n_feature_maps=48, activation_fn=tf.nn.relu, is_valid=True),
+        Pool2DLayer(filter_size=2),
+        Conv2DLayer(filter_size=4, n_feature_maps=48, activation_fn=tf.nn.relu, is_valid=True),
+        Pool2DLayer(filter_size=2),
+        Conv2DLayer(filter_size=4, n_feature_maps=48, activation_fn=tf.nn.relu, is_valid=True),
+        Pool2DLayer(filter_size=2),
+        Conv2DLayer(filter_size=3, n_feature_maps=200, activation_fn=tf.nn.relu, is_valid=True),
+        Conv2DLayer(filter_size=1, n_feature_maps=1, is_valid=True),
+    ]
+)
+
+N4_AFF = ConvArchitecture(
+    model_name='n4_2d_aff',
     output_mode=AFFINITIES_2D,
     layers=[
         Conv2DLayer(filter_size=4, n_feature_maps=48, activation_fn=tf.nn.relu, is_valid=True),
@@ -132,29 +242,7 @@ N4_DEEPER = ConvArchitecture(
 )
 
 VD2D = ConvArchitecture(
-    model_name='VD2D',
-    output_mode=AFFINITIES_2D,
-    layers=[
-        Conv2DLayer(filter_size=3, n_feature_maps=24, activation_fn=tf.nn.relu, is_valid=True),
-        Conv2DLayer(filter_size=3, n_feature_maps=24, activation_fn=tf.nn.relu, is_valid=True),
-        Conv2DLayer(filter_size=2, n_feature_maps=24, activation_fn=tf.nn.tanh, is_valid=True),
-        Pool2DLayer(filter_size=2),
-        Conv2DLayer(filter_size=3, n_feature_maps=36, activation_fn=tf.nn.relu, is_valid=True),
-        Conv2DLayer(filter_size=3, n_feature_maps=36, activation_fn=tf.nn.tanh, is_valid=True),
-        Pool2DLayer(filter_size=2),
-        Conv2DLayer(filter_size=3, n_feature_maps=48, activation_fn=tf.nn.relu, is_valid=True),
-        Conv2DLayer(filter_size=3, n_feature_maps=48, activation_fn=tf.nn.tanh, is_valid=True),
-        Pool2DLayer(filter_size=2),
-        Conv2DLayer(filter_size=3, n_feature_maps=60, activation_fn=tf.nn.relu, is_valid=True),
-        Conv2DLayer(filter_size=3, n_feature_maps=60, activation_fn=tf.nn.tanh, is_valid=True),
-        Pool2DLayer(filter_size=2),
-        Conv2DLayer(filter_size=3, n_feature_maps=200, activation_fn=tf.nn.relu, is_valid=True),
-        Conv2DLayer(filter_size=1, n_feature_maps=2, is_valid=True),
-    ]
-)
-
-VD2D_BOUNDARIES = ConvArchitecture(
-    model_name='VD2D_boundaries',
+    model_name='vd2d',
     output_mode=BOUNDARIES,
     layers=[
         Conv2DLayer(filter_size=3, n_feature_maps=24, activation_fn=tf.nn.relu, is_valid=True),
@@ -172,6 +260,28 @@ VD2D_BOUNDARIES = ConvArchitecture(
         Pool2DLayer(filter_size=2),
         Conv2DLayer(filter_size=3, n_feature_maps=200, activation_fn=tf.nn.relu, is_valid=True),
         Conv2DLayer(filter_size=1, n_feature_maps=1, is_valid=True),
+    ]
+)
+
+VD2D_AFF = ConvArchitecture(
+    model_name='vd2d_2d_aff',
+    output_mode=BOUNDARIES,
+    layers=[
+        Conv2DLayer(filter_size=3, n_feature_maps=24, activation_fn=tf.nn.relu, is_valid=True),
+        Conv2DLayer(filter_size=3, n_feature_maps=24, activation_fn=tf.nn.relu, is_valid=True),
+        Conv2DLayer(filter_size=2, n_feature_maps=24, activation_fn=tf.nn.tanh, is_valid=True),
+        Pool2DLayer(filter_size=2),
+        Conv2DLayer(filter_size=3, n_feature_maps=36, activation_fn=tf.nn.relu, is_valid=True),
+        Conv2DLayer(filter_size=3, n_feature_maps=36, activation_fn=tf.nn.tanh, is_valid=True),
+        Pool2DLayer(filter_size=2),
+        Conv2DLayer(filter_size=3, n_feature_maps=48, activation_fn=tf.nn.relu, is_valid=True),
+        Conv2DLayer(filter_size=3, n_feature_maps=48, activation_fn=tf.nn.tanh, is_valid=True),
+        Pool2DLayer(filter_size=2),
+        Conv2DLayer(filter_size=3, n_feature_maps=60, activation_fn=tf.nn.relu, is_valid=True),
+        Conv2DLayer(filter_size=3, n_feature_maps=60, activation_fn=tf.nn.tanh, is_valid=True),
+        Pool2DLayer(filter_size=2),
+        Conv2DLayer(filter_size=3, n_feature_maps=200, activation_fn=tf.nn.relu, is_valid=True),
+        Conv2DLayer(filter_size=1, n_feature_maps=2, is_valid=True),
     ]
 )
 
@@ -219,89 +329,24 @@ BN_VD2D_RELU = ConvArchitecture(
     ]
 )
 
-
-class ConvNet(Model):
-    def __init__(self, architecture, is_training=False):
-        super(ConvNet, self).__init__(architecture)
-
-        n_poolings = 0
-
-        prev_layer = self.image
-        prev_n_feature_maps = 1
-
-        z_dilation_rate = 1
-
-        for layer_num, layer in enumerate(self.architecture.layers):
-
-            # Double the dilation rate for a given layer every time we pool.
-            dilation_rate = 2 ** n_poolings
-
-            with tf.variable_scope('layer' + str(layer_num)):
-                layer.depth = layer_num
-                prev_layer, prev_n_feature_maps = layer.connect(prev_layer, prev_n_feature_maps, dilation_rate,
-                                                                is_training, z_dilation_rate=z_dilation_rate)
-
-                if issubclass(type(layer), PoolLayer):
-                    n_poolings += 1
-
-        # prev_layer = tf.Print(prev_layer, [tf.shape(prev_layer)[3]], message="HERE1")
-        # self.target = tf.Print(self.target, [tf.shape(self.target)[3]], message="HERE2")
-
-        # Predictions
-        self.prediction = tf.nn.sigmoid(prev_layer)
-        self.binary_prediction = tf.round(self.prediction)
-
-
-
-        # Loss
-        self.cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=prev_layer,
-                                                                                    labels=self.target))
-        self.pixel_error = tf.reduce_mean(tf.cast(tf.abs(self.binary_prediction - self.target), tf.float32))
-
-        self.saver = tf.train.Saver()
-
-    # def predict_with_evaluation(self, session, inputs, metrics, labels, pred_batch_shape, mirror_inputs=True):
-    #     if mirror_inputs:
-    #         inputs = mirror_across_borders_3d(inputs, self.fov, self.z_fov)
-
-    def predict(self, session, inputs, inference_params, mirror_inputs=True):
-        if mirror_inputs:
-            inputs = mirror_across_borders_3d(inputs, self.fov, self.z_fov)
-
-        return self.__predict_with_evaluation(session, inputs, None, inference_params.patch_shape, mirror_inputs)
-
-    def __predict_with_evaluation(self, session, inputs, metrics, pred_batch_shape, mirror_inputs=True):
-        # Extract the tile sizes from the argument
-        z_patch, y_patch, x_patch = pred_batch_shape[0], pred_batch_shape[1], pred_batch_shape[2]
-        z_inp_patch, y_inp_patch, x_inp_patch = z_patch + self.z_fov - 1, y_patch + self.fov - 1, x_patch + self.fov - 1
-
-        # Extract the input size, so we can reduce to output
-        z_inp_size, y_inp_size, x_inp_size = inputs.shape[1], inputs.shape[2], inputs.shape[3]
-
-        # Create a holder for the output
-
-        all_preds = np.zeros(
-            shape=[inputs.shape[0], z_inp_size - self.z_fov + 1, y_inp_size - self.fov + 1,
-                   x_inp_size - self.fov + 1,
-                   self.architecture.n_outputs], dtype=np.float16)
-
-        for i, _ in enumerate(inputs):
-
-            # Iterate over each batch
-            for z in range(0, all_preds.shape[1], z_patch):
-                for y in range(0, all_preds.shape[2], y_patch):
-                    for x in range(0, all_preds.shape[3], x_patch):
-                        print('z=%d, y=%d, x=%d' % (z, y, x))
-                        # Get the appropriate patch
-                        input_image = inputs[i:i + 1,
-                                      z: z + z_inp_patch,
-                                      y: y + y_inp_patch,
-                                      x: x + x_inp_patch,
-                                      :1]
-
-                        pred = session.run(self.prediction, feed_dict={self.raw_image: input_image})
-
-                        # Fill in the output
-                        all_preds[i, z: z + z_patch, y: y + y_patch, x: x + x_patch, :] = pred
-
-        return all_preds
+VD2D_3D = ConvArchitecture(
+    model_name='vd2d_3d',
+    output_mode=AFFINITIES_3D,
+    layers=[
+        Conv2DLayer(filter_size=3, n_feature_maps=24, activation_fn=tf.nn.relu, is_valid=True),
+        Conv2DLayer(filter_size=3, n_feature_maps=24, activation_fn=tf.nn.relu, is_valid=True),
+        Conv2DLayer(filter_size=2, n_feature_maps=24, activation_fn=tf.nn.tanh, is_valid=True),
+        Pool2DLayer(filter_size=2),
+        Conv2DLayer(filter_size=3, n_feature_maps=36, activation_fn=tf.nn.relu, is_valid=True),
+        Conv2DLayer(filter_size=3, n_feature_maps=36, activation_fn=tf.nn.tanh, is_valid=True),
+        Pool2DLayer(filter_size=2),
+        Conv2DLayer(filter_size=3, n_feature_maps=48, activation_fn=tf.nn.relu, is_valid=True),
+        Conv2DLayer(filter_size=3, n_feature_maps=48, activation_fn=tf.nn.tanh, is_valid=True),
+        Pool3DLayer(filter_size=2),
+        Conv3DLayer(filter_size=3, z_filter_size=2, n_feature_maps=60, activation_fn=tf.nn.relu, is_valid=True),
+        Conv3DLayer(filter_size=3, z_filter_size=2, n_feature_maps=60, activation_fn=tf.nn.relu, is_valid=True),
+        Conv3DLayer(filter_size=3, z_filter_size=2, n_feature_maps=100, activation_fn=tf.nn.relu, is_valid=True),
+        Conv3DLayer(filter_size=1, z_filter_size=1, n_feature_maps=3, is_valid=True)
+    ],
+    architecture_type='3D'
+)

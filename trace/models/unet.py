@@ -3,8 +3,6 @@ from .common import *
 from collections import OrderedDict
 import numpy as np
 
-from utils import *
-
 FOV = 189
 OUTPT = 192
 INPT = 380

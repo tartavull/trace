@@ -8,3 +8,6 @@
 	path = trace/thirdparty/segascorus
 	url = https://github.com/seung-lab/segascorus.git
 	ignore = dirty
+[submodule "trace/thirdparty/pyjulia"]
+	path = trace/thirdparty/pyjulia
+	url = https://github.com/JuliaPy/pyjulia
