@@ -47,7 +47,7 @@ class Clefts:
         true_positives = self.test_clefts_edt[np.logical_and(mask1, mask2)]
         return true_positives.size
 
-    def f_score(self, tp, fn, fp, beta=2.):
+    def f_score(self, tp, fn, fp, beta=1.):
         return ((1 + beta**2) * tp)/((1 + beta**2) * tp + beta**2 * fn + fp)
 
     def acc_false_positives(self):
