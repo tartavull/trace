@@ -9,6 +9,7 @@ import numpy as np
 import dataprovider.transform as trans
 
 from trace.common import *
+import trace.thirdparty.watershed as wshed
 
 try:
     from trace.thirdparty.segascorus import io_utils
@@ -66,38 +67,45 @@ def expand_3d_to_5d(data):
 
 
 def run_watershed_on_affinities(affinities, relabel2d=False, low=0.9, hi=0.9995):
-    tmp_aff_file = 'tmp-affinities.h5'
-    tmp_label_file = 'tmp-labels.h5'
+    # tmp_aff_file = 'tmp-affinities.h5'
+    # tmp_label_file = 'tmp-labels.h5'
+    #
+    # base = './tmp/' + str(int(round(time.time() * 1000))) + '/'
+    #
+    # os.makedirs(base)
+    #
+    # # Move to the front
+    # reshaped_aff = np.einsum('zyxd->dzyx', affinities)
+    #
+    # shape = reshaped_aff.shape
+    #
+    # # Write predictions to a temporary file
+    # with h5py.File(base + tmp_aff_file, 'w') as output_file:
+    #     output_file.create_dataset('main', shape=(3, shape[1], shape[2], shape[3]))
+    #     out = output_file['main']
+    #     out[:shape[0], :, :, :] = reshaped_aff
+    #
+    # # Do watershed segmentation
+    # print('segmenting')
+    # current_dir = os.path.dirname(os.path.abspath(__file__))
+    # subprocess.call(["julia",
+    #                  current_dir + "/thirdparty/watershed/watershed.jl",
+    #                  base + tmp_aff_file,
+    #                  base + tmp_label_file,
+    #                  str(hi),
+    #                  str(low)])
+    #
+    # print('segmentation complete')
+    #
+    # # Load the results of watershedding, and maybe relabel
+    # pred_seg = io_utils.import_file(base + tmp_label_file)
 
-    base = './tmp/' + str(int(round(time.time() * 1000))) + '/'
+    print('Begin segmentation')
 
-    os.makedirs(base)
+    pred_seg, _ = wshed.watershed(affinities, low, hi)
 
-    # Move to the front
-    reshaped_aff = np.einsum('zyxd->dzyx', affinities)
 
-    shape = reshaped_aff.shape
-
-    # Write predictions to a temporary file
-    with h5py.File(base + tmp_aff_file, 'w') as output_file:
-        output_file.create_dataset('main', shape=(3, shape[1], shape[2], shape[3]))
-        out = output_file['main']
-        out[:shape[0], :, :, :] = reshaped_aff
-
-    # Do watershed segmentation
-    print('segmenting')
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    subprocess.call(["julia",
-                     current_dir + "/thirdparty/watershed/watershed.jl",
-                     base + tmp_aff_file,
-                     base + tmp_label_file,
-                     str(hi),
-                     str(low)])
-
-    print('segmentation complete')
-
-    # Load the results of watershedding, and maybe relabel
-    pred_seg = io_utils.import_file(base + tmp_label_file)
+    print('Segmentation complete')
 
     prep = utils.parse_fns(utils.prep_fns, [relabel2d, False])
     pred_seg, _ = utils.run_preprocessing(pred_seg, pred_seg, prep)

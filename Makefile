@@ -90,5 +90,7 @@ install: clean ## install the package to the active Python's site-packages
 submodules:
 	cd $(PWD)/trace/thirdparty/segascorus && make && touch __init__.py
 	cd $(PWD)/trace/thirdparty/neuroglancer/python &&	python setup.py install
+	cd $(PWD)/trace/thirdparty/pyjulia && python setup.py install
 	julia -e 'Pkg.add("HDF5")'
 	julia -e 'Pkg.add("DataStructures")'
+	julia -e 'Pkg.add("PyCall")'

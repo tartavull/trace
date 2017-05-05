@@ -171,7 +171,7 @@ class UNet(Model):
         x_outp_size  = x_inp_size - self.fov + 1
 
         # Create accumulator for output.
-        combined_pred = np.ones((inputs.shape[0],
+        combined_pred = np.zeros((inputs.shape[0],
                                   z_outp_size, y_outp_size, x_outp_size, 3))
         # Create accumulator for overlaps.
         overlaps = np.zeros((inputs.shape[0], z_outp_size, y_outp_size, x_outp_size, 3))

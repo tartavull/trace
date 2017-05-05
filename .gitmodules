@@ -1,9 +1,11 @@
 [submodule "trace/thirdparty/neuroglancer"]
 	path = trace/thirdparty/neuroglancer
 	url = https://github.com/google/neuroglancer
+	ignore = dirty
 [submodule "trace/thirdparty/watershed"]
 	path = trace/thirdparty/watershed
 	url = https://github.com/tartavull/watershed
+	ignore = dirty
 [submodule "trace/thirdparty/segascorus"]
 	path = trace/thirdparty/segascorus
 	url = https://github.com/seung-lab/segascorus.git
@@ -11,3 +13,4 @@
 [submodule "trace/thirdparty/pyjulia"]
 	path = trace/thirdparty/pyjulia
 	url = https://github.com/JuliaPy/pyjulia
+	ignore = dirty

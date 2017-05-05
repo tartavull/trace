@@ -62,9 +62,6 @@ trace/cremi/a/*
 trace/cremi/b/*
 trace/cremi/c/*
 trace/realignment/
-trace/thirdparty/neuroglancer
-trace/thirdparty/watershed
-trace/thirdparty/DataProvider
 
 .idea/
 
