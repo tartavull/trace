@@ -222,7 +222,7 @@ class CREMIDataset(Dataset):
         scores = {}
         min_thresh = 0.05
         if self.task =='cleft':
-            for threshold in np.arange(0, .7, 0.05):
+            for threshold in np.arange(0.05, 1, 0.05):
                 trans_predictions = convert_label_for_cremi_cleft(predictions, threshold)
                 
                 # write temp file for prediction
@@ -233,10 +233,10 @@ class CREMIDataset(Dataset):
                 stats = cleft_stats_optimize('temp_pred.hdf', self.data_folder + split + '.hdf')
 
                 print('F-Score: %f, TP: %f, FP: %f, FN: %f' % (stats[0], stats[1], stats[2], stats[3]))
-
                 scores[threshold] = stats[0]
                 os.remove('temp_pred.hdf')
             opt_thresh = max(scores, key=scores.get)
+            print('Optimal Threshold: ' + str(opt_thresh))
             trans_predictions = convert_label_for_cremi_cleft(predictions, opt_thresh)
         else:
             trans_predictions = convert_between_label_types(label_type, self.label_type, predictions)
